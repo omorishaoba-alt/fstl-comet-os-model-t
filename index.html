@@ -5,24 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS Model-T</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
-html, body {margin:0;padding:0;height:100%;font-family:Arial,sans-serif;background:#eaf3ff;}
+html, body {margin:0;padding:0;height:100%;font-family:Arial;background:#eaf3ff;}
 
-/* PAGE STRUCTURE */
 .page {
     min-height:100vh;
     padding:40px;
-    box-sizing:border-box;
     display:none;
     flex-direction:column;
     justify-content:center;
 }
 
-/* BLUE LANDING */
+/* LANDING */
 #landing {
     display:flex;
     align-items:center;
@@ -31,203 +27,148 @@ html, body {margin:0;padding:0;height:100%;font-family:Arial,sans-serif;backgrou
     background:#007BFF;
     color:#fff;
 }
-#landing h1, #landing h3, #landing p { color:#fff; }
 
-/* FORM + SYSTEM PAGES (FIXED LEFT ALIGN) */
-#form, #bank, #dashboard {
+/* SYSTEM PAGES */
+#bank,#verifyStage,#form,#dashboard{
     display:flex;
     flex-direction:column;
-    justify-content:flex-start;
-    align-items:stretch; /* KEY FIX */
+    align-items:stretch;
     background:#fff;
-    color:#000;
-    max-width:600px;
+    max-width:650px;
     margin:0 auto;
 }
 
-/* TEXT */
-h1,h2,h3{margin-bottom:20px;color:#007BFF;}
-label{display:block;margin-top:15px;font-weight:bold;text-align:left;}
-input,select{width:100%;padding:12px;margin-top:5px;font-size:14px;}
-button{width:100%;padding:15px;margin-top:25px;background:#007BFF;color:#fff;border:none;font-size:16px;cursor:pointer;border-radius:6px;}
-#crl,#rank{margin-top:20px;font-weight:bold;text-align:left;}
-canvas{display:block;margin:20px auto;}
-table{width:100%;border-collapse:collapse;}
-table, th, td{border:1px solid #ccc;}
-th, td{padding:12px;text-align:center;}
+/* INPUTS */
+label{margin-top:15px;font-weight:bold;}
+input,select{
+    width:100%;
+    padding:14px;
+    margin-top:5px;
+    border:1px solid #ccc;
+    border-radius:6px;
+}
+
+/* BUTTON */
+button{
+    width:100%;
+    padding:15px;
+    margin-top:25px;
+    background:#007BFF;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th,td{border:1px solid #ccc;padding:12px;text-align:center;}
 th{background:#007BFF;color:#fff;}
-.info-box{border:1px solid #007BFF;background:#e0f0ff;padding:15px;margin:20px 0;text-align:left;border-radius:6px;}
 </style>
 </head>
+
 <body>
 
 <!-- LANDING -->
 <div id="landing" class="page" style="display:flex;">
 <h1>FSTL COMET OS Model-T</h1>
-<h3>Digital Property Verification Platform</h3>
-<canvas id="landingQR"></canvas>
-<p>Transforming Idle Property into Trusted Capital</p>
-<button onclick="startForm()">START VERIFICATION</button>
-</div>
-
-<!-- FORM -->
-<div id="form" class="page">
-<h2>Owner Verification</h2>
-
-<label>Full Name</label><input id="name">
-<label>NIN / National ID</label><input id="nin">
-<label>BVN / Bank ID</label><input id="bvn">
-<label>Phone</label><input id="phone">
-<label>Email</label><input id="email">
-<label>WhatsApp</label><input id="whatsapp">
-
-<label>Country</label>
-<select id="country">
-<option value="">Select</option>
-<option>Nigeria</option><option>Ghana</option><option>Kenya</option><option>South Africa</option>
-</select>
-
-<label>Residential Address</label><input id="res">
-<label>Property Address</label><input id="prop">
-
-<label>Ownership</label>
-<select id="own">
-<option>Family</option>
-<option>Inherited</option>
-<option>Purchased</option>
-</select>
-
-<label>Reason</label>
-<select id="reason">
-<option>Sell</option>
-<option>Rent</option>
-<option>Mortgage</option>
-</select>
-
-<h3>Agent Facilitation (Optional)</h3>
-
-<label>Agent Name</label><input id="agentName">
-<label>Agent NIN</label><input id="agentNIN">
-<label>Agent BVN</label><input id="agentBVN">
-<label>Agent Phone</label><input id="agentPhone">
-<label><input type="checkbox" id="agentAuth"> Authorized Agent</label>
-
-<div id="crl">Verification Strength: 0%</div>
-<div id="rank">Verification Rank: N/A</div>
-
-<button onclick="requestVerification()">Request Verification</button>
+<p>Digital Property Verification Platform</p>
+<button onclick="startPayment()">START PROCESS</button>
 </div>
 
 <!-- PAYMENT -->
 <div id="bank" class="page">
-<h2>Bank Deposit (Simulation)</h2>
-
-<div class="info-box">
-You control the process. Pay using your bank with your Reference ID.  
-After payment confirmation, download your PDF.
+<h2>Bank Deposit</h2>
+<p>Amount: ₦5000</p>
+<p>Account: 1234567890 | First Bank</p>
+<p>Reference ID: <span id="ref"></span></p>
+<button onclick="confirmPayment()">I HAVE PAID</button>
 </div>
 
-<p>Amount: <span id="amountDisplay">₦5000</span></p>
-<p>Account: 1234567890 | First Bank</p>
-<p>Reference ID: <span id="refDisplay"></span></p>
+<!-- STAGE 2 -->
+<div id="verifyStage" class="page">
+<h2>Access Granted</h2>
+<p>You can now proceed to verification</p>
+<button onclick="goForm()">CONTINUE</button>
+</div>
 
-<button onclick="confirmPayment()">Simulate Payment</button>
+<!-- FORM -->
+<div id="form" class="page">
+<h2>Verification</h2>
+
+<label>Name</label><input id="name">
+<label>NIN</label><input id="nin">
+<label>BVN</label><input id="bvn">
+<label>Phone</label><input id="phone">
+<label>Email</label><input id="email">
+<label>Property</label><input id="prop">
+
+<h3>Agent (Optional)</h3>
+<label>Agent Name</label><input id="agent">
+
+<button onclick="submit()">COMPLETE</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="page">
 <h2>Dashboard</h2>
-
 <table>
-<thead>
-<tr>
-<th>ID</th><th>Property</th><th>Status</th><th>Action</th>
-</tr>
-</thead>
-<tbody id="dashboardBody"></tbody>
+<thead><tr><th>ID</th><th>Property</th><th>Status</th><th>PDF</th></tr></thead>
+<tbody id="data"></tbody>
 </table>
-
-<button onclick="goHome()">New Verification</button>
+<button onclick="goHome()">NEW</button>
 </div>
 
 <script>
-let verifications=[];
+let list=[];
+let refId=null;
 
-QRCode.toCanvas(document.getElementById("landingQR"), "FSTL SYSTEM");
-
-function startForm(){
+function startPayment(){
+refId=Math.floor(Math.random()*1000000);
+document.getElementById("ref").innerText=refId;
 landing.style.display="none";
-form.style.display="flex";
-}
-
-function calculateStrength(){
-let s=0;
-if(name.value) s+=20;
-if(prop.value) s+=20;
-return s;
-}
-
-function requestVerification(){
-let id=Math.floor(Math.random()*1000000);
-
-let data={
-id:id,
-name:name.value,
-prop:prop.value,
-status:"Pending Payment"
-};
-
-verifications.push(data);
-
-amountDisplay.innerText="₦5000";
-refDisplay.innerText=id;
-
-form.style.display="none";
 bank.style.display="flex";
-
-updateDashboard();
 }
 
 function confirmPayment(){
-let entry=verifications[verifications.length-1];
-entry.status="Paid";
-
-alert("Payment confirmed. Download PDF in dashboard.");
-
-updateDashboard();
-goDashboard();
+bank.style.display="none";
+verifyStage.style.display="flex";
 }
 
-function updateDashboard(){
-let tbody=document.getElementById("dashboardBody");
-tbody.innerHTML="";
+function goForm(){
+verifyStage.style.display="none";
+form.style.display="flex";
+}
 
-verifications.forEach(v=>{
-tbody.innerHTML+=`
-<tr>
-<td>${v.id}</td>
-<td>${v.prop}</td>
-<td>${v.status}</td>
-<td>${v.status=="Paid" ? '<button onclick="generate('+v.id+')">PDF</button>' : '-'}</td>
+function submit(){
+list.push({id:refId,prop:prop.value,status:"Verified"});
+form.style.display="none";
+render();
+dashboard.style.display="flex";
+}
+
+function render(){
+let out="";
+list.forEach(x=>{
+out+=`<tr>
+<td>${x.id}</td>
+<td>${x.prop}</td>
+<td>${x.status}</td>
+<td><button onclick="pdf(${x.id})">PDF</button></td>
 </tr>`;
 });
+data.innerHTML=out;
 }
 
-function goDashboard(){
-bank.style.display="none";
-dashboard.style.display="flex";
+function pdf(id){
+let doc=new jsPDF();
+doc.text("FSTL COMET OS",20,40);
+doc.text("Verification ID: "+id,20,60);
+doc.save("FSTL_"+id+".pdf");
 }
 
 function goHome(){
 dashboard.style.display="none";
 form.style.display="flex";
-}
-
-function generate(id){
-let doc=new jsPDF();
-doc.text("FSTL COMET OS",20,40);
-doc.text("Verification ID: "+id,20,60);
-doc.save("FSTL_"+id+".pdf");
 }
 </script>
 
