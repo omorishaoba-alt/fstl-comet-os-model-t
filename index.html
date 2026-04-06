@@ -3,22 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
+<title>FSTL COMET OS Model-T</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
-html, body {
-    margin:0;
-    padding:0;
-    height:100%;
-    font-family:Arial, sans-serif;
-    background:#eaf3ff;
-}
+html, body {margin:0;padding:0;height:100%;font-family:Arial,sans-serif;background:#eaf3ff;}
 
-/* Full page sections */
+/* GENERAL PAGE STRUCTURE */
 .page {
     min-height:100vh;
     padding:40px;
@@ -28,80 +22,50 @@ html, body {
     justify-content:center;
     align-items:center;
     text-align:center;
-    background:#fff;
 }
 
-/* Blue theme for landing and form headers */
-header {
-    color:#007BFF;
-    margin-bottom:20px;
-}
-
-h1,h2,h3 {
-    margin-bottom:20px;
-}
-
-label {
-    display:block;
-    margin-top:15px;
-    font-weight:bold;
-}
-
-input, select {
-    width:100%;
-    padding:12px;
-    margin-top:5px;
-    font-size:14px;
-}
-
-button {
-    width:100%;
-    padding:15px;
-    margin-top:25px;
-    background:#007BFF;
-    color:#fff;
-    border:none;
-    font-size:16px;
-    cursor:pointer;
-    border-radius:6px;
-}
-
-#crl, #rank {
-    margin-top:20px;
-    font-weight:bold;
-}
-
-canvas {
-    display:block;
-    margin:20px auto;
-}
-
-table {
-    width:100%;
-    border-collapse:collapse;
-}
-
-table, th, td {
-    border:1px solid #ccc;
-}
-
-th, td {
-    padding:12px;
+/* BLUE LANDING PAGE */
+#landing {
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
     text-align:center;
-}
-
-th {
     background:#007BFF;
     color:#fff;
 }
+#landing h1, #landing h3, #landing p { color:#fff; }
+
+/* OTHER PAGES */
+#form, #bank, #dashboard {
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    align-items:center;
+    text-align:left;
+    background:#fff;
+    color:#000;
+}
+
+/* TEXT & INPUTS */
+h1,h2,h3{margin-bottom:20px;color:#007BFF;}
+label{display:block;margin-top:15px;font-weight:bold;text-align:left;}
+input,select{width:100%;padding:12px;margin-top:5px;font-size:14px;}
+button{width:100%;padding:15px;margin-top:25px;background:#007BFF;color:#fff;border:none;font-size:16px;cursor:pointer;border-radius:6px;}
+#crl,#rank{margin-top:20px;font-weight:bold;text-align:left;}
+canvas{display:block;margin:20px auto;}
+table{width:100%;border-collapse:collapse;}
+table, th, td{border:1px solid #ccc;}
+th, td{padding:12px;text-align:center;}
+th{background:#007BFF;color:#fff;}
+.info-box{border:1px solid #007BFF;background:#e0f0ff;padding:15px;margin:20px 0;text-align:left;border-radius:6px;}
 </style>
 </head>
-
 <body>
 
 <!-- Landing Page -->
 <div id="landing" class="page" style="display:flex;">
-<h1>FSTL COMET OS</h1>
+<h1>FSTL COMET OS Model-T</h1>
 <h3>Digital Property Verification Platform</h3>
 <canvas id="landingQR"></canvas>
 <p>Transforming Idle Property into Trusted Capital</p>
@@ -120,32 +84,23 @@ th {
 <label>Country</label>
 <select id="country">
 <option value="">Select</option>
-<option>Nigeria</option>
-<option>Ghana</option>
-<option>Kenya</option>
-<option>South Africa</option>
-<option>Egypt</option>
-<option>USA</option>
-<option>UK</option>
-<option>Canada</option>
-<option>Germany</option>
-<option>France</option>
-<option>Brazil</option>
-<option>Mexico</option>
-<option>Argentina</option>
-<option>China</option>
-<option>India</option>
-<option>Japan</option>
-<option>Singapore</option>
-<option>Australia</option>
-<option>New Zealand</option>
-<option>UAE</option>
-<option>Saudi Arabia</option>
+<option>Nigeria</option><option>Ghana</option><option>Kenya</option><option>South Africa</option><option>Egypt</option>
+<option>USA</option><option>UK</option><option>Canada</option><option>Germany</option><option>France</option>
+<option>Brazil</option><option>Mexico</option><option>Argentina</option><option>China</option><option>India</option>
+<option>Japan</option><option>Singapore</option><option>Australia</option><option>New Zealand</option><option>UAE</option><option>Saudi Arabia</option>
 </select>
 <label>Residential Address</label><input id="res">
 <label>Property Address</label><input id="prop">
 <label>Ownership</label><select id="own"><option>Family</option><option>Inherited</option><option>Purchased</option></select>
 <label>Reason</label><select id="reason"><option>Sell</option><option>Rent</option><option>Mortgage</option></select>
+
+<h3>Agent Facilitation (Optional)</h3>
+<label>Agent Name</label><input id="agentName">
+<label>Agent NIN</label><input id="agentNIN">
+<label>Agent BVN</label><input id="agentBVN">
+<label>Agent Phone / WhatsApp</label><input id="agentPhone">
+<label><input type="checkbox" id="agentAuth"> I confirm I am authorized to facilitate this verification</label>
+
 <div id="crl">Verification Strength: 0%</div>
 <div id="rank">Verification Rank: N/A</div>
 <canvas id="qr"></canvas>
@@ -154,109 +109,84 @@ th {
 
 <!-- Bank Instruction Page -->
 <div id="bank" class="page">
-<h2>Bank Deposit Instructions</h2>
+<h2>Bank Deposit Instructions (Demo)</h2>
+<div class="info-box">
+<h3>How Traditional Payment Works</h3>
+<p>1. You control every step. Fill your verification form and proceed at your pace.</p>
+<p>2. Deposit the shown amount directly into the bank account provided using the Reference ID.</p>
+<p>3. Once payment is complete (simulated in this demo), your status updates to <strong>Payment Confirmed</strong>.</p>
+<p>4. Download your official PDF verification document from your dashboard.</p>
+<p>5. Every step is fully visible. No third-party intermediaries.</p>
+</div>
 <p>Amount: <span id="amountDisplay">₦5000</span></p>
 <p>Account: 1234567890 | First Bank PLC</p>
 <p>Reference ID: <span id="refDisplay"></span></p>
 <canvas id="bankQR"></canvas>
-<button onclick="confirmPayment()">I Have Paid / Confirm Payment</button>
+<button onclick="confirmPayment()">Simulate Payment</button>
 </div>
 
 <!-- Dashboard Page -->
 <div id="dashboard" class="page">
 <h2>Your Verification Dashboard</h2>
 <table>
-<thead>
-<tr><th>ID</th><th>Property</th><th>Strength</th><th>Rank</th><th>Status</th><th>Action</th></tr>
-</thead>
+<thead><tr><th>ID</th><th>Property</th><th>Strength</th><th>Rank</th><th>Status</th><th>Action</th></tr></thead>
 <tbody id="dashboardBody"></tbody>
 </table>
 <button onclick="goHome()">New Verification</button>
 </div>
 
 <script>
-let verifications = [];
+let verifications=[];
 
 // Landing QR
 QRCode.toCanvas(document.getElementById("landingQR"), "FSTL COMET OS SYSTEM");
 
 // Navigation
-function startForm(){
-    document.getElementById("landing").style.display="none";
-    document.getElementById("form").style.display="flex";
-}
+function startForm(){document.getElementById("landing").style.display="none";document.getElementById("form").style.display="flex";}
 
-// Strength & Rank calculation
+// Strength & Rank
 function calculateStrength(){
     let s=0;
-    if(name.value) s+=20;
-    if(nin.value) s+=10;
-    if(bvn.value) s+=10;
-    if(phone.value) s+=10;
-    if(email.value) s+=10;
-    if(whatsapp.value) s+=10;
-    if(prop.value) s+=20;
-    if(reason.value) s+=10;
+    if(name.value) s+=20;if(nin.value) s+=10;if(bvn.value) s+=10;if(phone.value) s+=10;
+    if(email.value) s+=10;if(whatsapp.value) s+=10;if(prop.value) s+=20;if(reason.value) s+=10;
     return s;
 }
-function getRank(){
-    let s = calculateStrength();
-    if(s >= 80) return "A+ (High Trust)";
-    if(s >= 50) return "B (Moderate Trust)";
-    return "C (Low Trust)";
-}
+function getRank(){let s=calculateStrength(); return s>=80?"A+ (High Trust)":s>=50?"B (Moderate Trust)":"C (Low Trust)";}
 
 // Live update
-document.querySelectorAll("input,select").forEach(e=>{
-    e.addEventListener("input",()=>{
-        let s = calculateStrength();
-        crl.innerText="Verification Strength: "+s+"%";
-        let r = getRank();
-        rank.innerText="Verification Rank: "+r;
-        crl.style.color = s>=80?"#007BFF":s>=50?"orange":"red";
-    });
-});
+document.querySelectorAll("input,select").forEach(e=>{e.addEventListener("input",()=>{
+    let s=calculateStrength(); crl.innerText="Verification Strength: "+s+"%";
+    let r=getRank(); rank.innerText="Verification Rank: "+r;
+    crl.style.color=s>=80?"#007BFF":s>=50?"orange":"red";
+})});
 
 // Request Verification
 function requestVerification(){
-    let id = Math.floor(Math.random()*1000000);
-    let strength = calculateStrength();
-    let rankVal = getRank();
-    let data = {
-        id:id, name:name.value, prop:prop.value, strength:strength, rank:rankVal, status:"Pending Payment", amount:5000
-    };
+    let id=Math.floor(Math.random()*1000000);
+    let strength=calculateStrength(); let rankVal=getRank();
+    let data={id:id,name:name.value,prop:prop.value,strength:strength,rank:rankVal,status:"Pending Payment",amount:5000,
+        agentName:agentName.value,agentNIN:agentNIN.value,agentBVN:agentBVN.value,agentPhone:agentPhone.value,agentAuth:agentAuth.checked};
     verifications.push(data);
-
-    // Update bank page
     document.getElementById("amountDisplay").innerText="₦"+data.amount;
     document.getElementById("refDisplay").innerText=data.id;
     QRCode.toCanvas(document.getElementById("bankQR"), JSON.stringify(data));
-
-    // Navigate to bank page
     document.getElementById("form").style.display="none";
     document.getElementById("bank").style.display="flex";
-
     updateDashboard();
 }
 
-// Confirm Payment
+// Simulate Payment
 function confirmPayment(){
-    let ref = prompt("Enter your Bank Payment Reference ID:");
-    let entry = verifications.find(v=>v.id==ref);
-    if(entry){
-        entry.status="Payment Confirmed";
-        alert("Payment confirmed. You control the next step: PDF download in your dashboard.");
-        updateDashboard();
-        goDashboard();
-    } else {
-        alert("Reference not found. Check your Verification ID.");
-    }
+    let entry=verifications[verifications.length-1];
+    entry.status="Payment Confirmed";
+    alert("Payment simulated. PDF download is now available in your dashboard.");
+    updateDashboard();
+    goDashboard();
 }
 
 // Dashboard
 function updateDashboard(){
-    let tbody = document.getElementById("dashboardBody");
-    tbody.innerHTML="";
+    let tbody=document.getElementById("dashboardBody"); tbody.innerHTML="";
     verifications.forEach(v=>{
         tbody.innerHTML+=`<tr>
         <td>${v.id}</td><td>${v.prop}</td><td>${v.strength}%</td><td>${v.rank}</td><td>${v.status}</td>
@@ -264,59 +194,49 @@ function updateDashboard(){
         </tr>`;
     });
 }
-
-function goDashboard(){
-    document.getElementById("bank").style.display="none";
-    document.getElementById("dashboard").style.display="flex";
-}
-
-function goHome(){
-    document.getElementById("dashboard").style.display="none";
-    document.getElementById("form").style.display="flex";
-}
+function goDashboard(){document.getElementById("bank").style.display="none";document.getElementById("dashboard").style.display="flex";}
+function goHome(){document.getElementById("dashboard").style.display="none";document.getElementById("form").style.display="flex";}
 
 // Generate PDF
 function generate(id){
-    let entry = verifications.find(v=>v.id==id);
-    if(!entry) return;
+    let entry=verifications.find(v=>v.id==id); if(!entry) return;
     QRCode.toCanvas(document.getElementById("qr"), JSON.stringify(entry), function(){
-        let doc = new jsPDF();
-        doc.setFontSize(22);
-        doc.text("FSTL COMET OS",105,40,null,null,"center");
-        doc.setFontSize(12);
-        doc.text("Digital Property Verification System",105,55,null,null,"center");
-        var q1=document.getElementById("landingQR").toDataURL();
-        doc.addImage(q1,"PNG",55,90,100,100);
+        let doc=new jsPDF();
+        doc.setFontSize(22); doc.text("FSTL COMET OS Model-T",105,40,null,null,"center");
+        doc.setFontSize(12); doc.text("Digital Property Verification System",105,55,null,null,"center");
+        var q1=document.getElementById("landingQR").toDataURL(); doc.addImage(q1,"PNG",55,90,100,100);
         doc.text("Transforming Property into Trusted Capital",105,220,null,null,"center");
 
-        doc.addPage();
-        doc.text("Verification Report",20,30);
+        doc.addPage(); doc.text("Verification Report",20,30);
         doc.text("Owner: "+entry.name,20,60);
         doc.text("Property: "+entry.prop,20,80);
         doc.text("Verification ID: "+entry.id,20,100);
         doc.text("Verification Strength: "+entry.strength+"%",20,120);
         doc.text("Rank: "+entry.rank,20,140);
-        var q2=document.getElementById("qr").toDataURL();
-        doc.addImage(q2,"PNG",130,70,60,60);
+        if(entry.agentAuth){
+            doc.text("Facilitated By Agent:",20,160);
+            doc.text("Agent Name: "+entry.agentName,20,180);
+            doc.text("Agent NIN: "+entry.agentNIN,20,200);
+            doc.text("Agent BVN: "+entry.agentBVN,20,220);
+            doc.text("Agent Phone: "+entry.agentPhone,20,240);
+        }
+        var q2=document.getElementById("qr").toDataURL(); doc.addImage(q2,"PNG",130,70,60,60);
 
         doc.addPage();
         doc.text("What This Means",105,60,null,null,"center");
         doc.text("This verification improves your ability to transact with confidence.",105,100,null,null,"center");
         doc.text("Sell faster • Rent securely • Access capital",105,130,null,null,"center");
 
-        doc.addPage();
-        doc.text("Acronyms",20,40);
+        doc.addPage(); doc.text("Acronyms",20,40);
         doc.text("NIN: National Identity Number",20,70);
         doc.text("BVN: Bank Verification Number",20,90);
 
-        doc.addPage();
-        doc.text("Legal Notice",20,40);
+        doc.addPage(); doc.text("Legal Notice",20,40);
         doc.text("False inputs are subject to criminal laws of the jurisdiction of verification.",20,80);
 
         doc.save("FSTL_COMET_OS_"+entry.id+".pdf");
     });
 }
 </script>
-
 </body>
 </html>
