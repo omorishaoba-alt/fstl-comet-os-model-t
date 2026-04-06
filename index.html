@@ -4,171 +4,211 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS Model-T</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
-
 <style>
-html, body {margin:0;padding:0;height:100%;font-family:Arial;background:#eaf3ff;}
-
-.page {
-    min-height:100vh;
-    padding:40px;
-    display:none;
-    flex-direction:column;
-    justify-content:center;
-}
-
+html, body {margin:0; padding:0; height:100%; font-family: Arial, sans-serif; background:#eaf3ff;}
+.page {min-height:100vh; padding:40px; display:none; flex-direction:column; justify-content:flex-start;}
 /* LANDING */
-#landing {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    background:#007BFF;
-    color:#fff;
-}
+#landing {display:flex; flex-direction:column; align-items:flex-start; justify-content:center; background:#007BFF; color:#fff; padding:60px;}
+#landing h1 {font-size:2.5em; margin-bottom:10px;}
+#landing p {font-size:1.2em; margin-bottom:30px;}
 
 /* SYSTEM PAGES */
-#bank,#verifyStage,#form,#dashboard{
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    background:#fff;
-    max-width:650px;
-    margin:0 auto;
+#bank,#verifyStage,#form,#dashboard {
+  display:flex; flex-direction:column; align-items:flex-start; background:#fff;
+  max-width:700px; margin:20px auto; padding:30px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);
 }
 
 /* INPUTS */
-label{margin-top:15px;font-weight:bold;}
-input,select{
-    width:100%;
-    padding:14px;
-    margin-top:5px;
-    border:1px solid #ccc;
-    border-radius:6px;
-}
+label {margin-top:15px; font-weight:bold;}
+input, select {width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;}
 
 /* BUTTON */
-button{
-    width:100%;
-    padding:15px;
-    margin-top:25px;
-    background:#007BFF;
-    color:#fff;
-    border:none;
-    border-radius:6px;
-}
+button {width:100%; padding:15px; margin-top:25px; background:#007BFF; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:bold;}
+button:hover {background:#0056b3;}
 
 /* TABLE */
-table{width:100%;border-collapse:collapse;margin-top:20px;}
-th,td{border:1px solid #ccc;padding:12px;text-align:center;}
-th{background:#007BFF;color:#fff;}
+table {width:100%; border-collapse:collapse; margin-top:20px;}
+th, td {border:1px solid #ccc; padding:12px; text-align:center;}
+th {background:#007BFF; color:#fff;}
+
+/* DASHBOARD TOTAL */
+#fstlTotal {font-weight:bold; margin-top:15px; font-size:1.1em;}
 </style>
 </head>
-
 <body>
 
-<!-- LANDING -->
+<!-- LANDING PAGE -->
 <div id="landing" class="page" style="display:flex;">
 <h1>FSTL COMET OS Model-T</h1>
-<p>Digital Property Verification Platform</p>
+<p>Digital Property Verification Platform – OWN IT OR DON’T OWN IT</p>
 <button onclick="startPayment()">START PROCESS</button>
 </div>
 
-<!-- PAYMENT -->
+<!-- PAYMENT PAGE -->
 <div id="bank" class="page">
 <h2>Bank Deposit</h2>
-<p>Amount: ₦5000</p>
+<p>Amount: ₦25,000</p>
 <p>Account: 1234567890 | First Bank</p>
 <p>Reference ID: <span id="ref"></span></p>
 <button onclick="confirmPayment()">I HAVE PAID</button>
 </div>
 
-<!-- STAGE 2 -->
+<!-- ACCESS GRANTED PAGE -->
 <div id="verifyStage" class="page">
 <h2>Access Granted</h2>
-<p>You can now proceed to verification</p>
+<p>You can now proceed to property verification.</p>
 <button onclick="goForm()">CONTINUE</button>
 </div>
 
-<!-- FORM -->
+<!-- VERIFICATION FORM -->
 <div id="form" class="page">
-<h2>Verification</h2>
+<h2>Ownership Verification Form</h2>
 
-<label>Name</label><input id="name">
-<label>NIN</label><input id="nin">
-<label>BVN</label><input id="bvn">
+<label>Country</label>
+<select id="country" onchange="updateIDLabel()">
+  <option value="Nigeria">Nigeria</option>
+  <option value="USA">USA</option>
+  <option value="UK">UK</option>
+  <option value="Other">Other</option>
+</select>
+
+<label id="idLabel">NIN</label>
+<input id="idNumber">
+
+<label>Full Name</label><input id="name">
 <label>Phone</label><input id="phone">
 <label>Email</label><input id="email">
-<label>Property</label><input id="prop">
+<label>Property Description / ID</label><input id="prop">
 
-<h3>Agent (Optional)</h3>
+<h3>Agent Details (Optional)</h3>
 <label>Agent Name</label><input id="agent">
+<label>Agent Margin (₦)</label><input id="agentMargin">
+<label>Agent Processing Fee (₦)</label><input id="agentFee">
 
-<button onclick="submit()">COMPLETE</button>
+<button onclick="submitVerification()">COMPLETE VERIFICATION</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="page">
-<h2>Dashboard</h2>
+<h2>Dashboard / Throughput</h2>
 <table>
-<thead><tr><th>ID</th><th>Property</th><th>Status</th><th>PDF</th></tr></thead>
+<thead>
+<tr>
+<th>Verification ID</th>
+<th>Country</th>
+<th>Property</th>
+<th>Owner</th>
+<th>Agent</th>
+<th>Agent Revenue</th>
+<th>PDF</th>
+</tr>
+</thead>
 <tbody id="data"></tbody>
 </table>
-<button onclick="goHome()">NEW</button>
+<h3 id="fstlTotal">Total FSTL Revenue: ₦<span id="fstlRevenue">0</span></h3>
+<button onclick="goHome()">NEW VERIFICATION</button>
 </div>
 
 <script>
-let list=[];
-let refId=null;
+let verifications = [];
+let refId = null;
+let fstlRevenue = 0;
 
 function startPayment(){
-refId=Math.floor(Math.random()*1000000);
-document.getElementById("ref").innerText=refId;
-landing.style.display="none";
-bank.style.display="flex";
+    refId = Math.floor(Math.random()*1000000);
+    document.getElementById("ref").innerText = refId;
+    landing.style.display="none";
+    bank.style.display="flex";
 }
 
 function confirmPayment(){
-bank.style.display="none";
-verifyStage.style.display="flex";
+    bank.style.display="none";
+    verifyStage.style.display="flex";
 }
 
 function goForm(){
-verifyStage.style.display="none";
-form.style.display="flex";
+    verifyStage.style.display="none";
+    form.style.display="flex";
 }
 
-function submit(){
-list.push({id:refId,prop:prop.value,status:"Verified"});
-form.style.display="none";
-render();
-dashboard.style.display="flex";
+function updateIDLabel(){
+    const country = document.getElementById("country").value;
+    const label = document.getElementById("idLabel");
+    if(country === "Nigeria") label.innerText = "NIN";
+    else if(country === "USA") label.innerText = "SSN";
+    else if(country === "UK") label.innerText = "National Insurance Number";
+    else label.innerText = "Regional ID";
 }
 
-function render(){
-let out="";
-list.forEach(x=>{
-out+=`<tr>
-<td>${x.id}</td>
-<td>${x.prop}</td>
-<td>${x.status}</td>
-<td><button onclick="pdf(${x.id})">PDF</button></td>
-</tr>`;
-});
-data.innerHTML=out;
+function submitVerification(){
+    const country = document.getElementById("country").value;
+    const owner = name.value.trim();
+    const property = prop.value.trim();
+    const idNumberValue = idNumber.value.trim();
+    const agentName = agent.value.trim() || "N/A";
+    const agentMarginValue = parseInt(agentMargin.value || 0);
+    const agentFeeValue = parseInt(agentFee.value || 0);
+    const agentRevenue = agentMarginValue + agentFeeValue;
+
+    fstlRevenue += 25000 + agentFeeValue;
+
+    verifications.push({
+        id: refId,
+        country: country,
+        owner: owner,
+        prop: property,
+        idNumber: idNumberValue,
+        agent: agentName,
+        agentRevenue: agentRevenue
+    });
+
+    form.style.display="none";
+    renderDashboard();
+    dashboard.style.display="flex";
 }
 
-function pdf(id){
-let doc=new jsPDF();
-doc.text("FSTL COMET OS",20,40);
-doc.text("Verification ID: "+id,20,60);
-doc.save("FSTL_"+id+".pdf");
+function renderDashboard(){
+    let out = "";
+    verifications.forEach(v=>{
+        out += `<tr>
+            <td>${v.id}</td>
+            <td>${v.country}</td>
+            <td>${v.prop}</td>
+            <td>${v.owner}</td>
+            <td>${v.agent}</td>
+            <td>₦${v.agentRevenue}</td>
+            <td><button onclick="generatePDF(${v.id})">PDF</button></td>
+        </tr>`;
+    });
+    data.innerHTML = out;
+    document.getElementById("fstlRevenue").innerText = fstlRevenue;
+}
+
+function generatePDF(id){
+    const v = verifications.find(x => x.id === id);
+    if(!v) return;
+
+    let doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("FSTL COMET OS – Ownership Verification", 20, 30);
+    doc.setFontSize(12);
+    doc.text(`Verification ID: ${v.id}`, 20, 50);
+    doc.text(`Country: ${v.country}`, 20, 60);
+    doc.text(`Property: ${v.prop}`, 20, 70);
+    doc.text(`Owner: ${v.owner}`, 20, 80);
+    doc.text(`ID Number: ${v.idNumber}`, 20, 90);
+    doc.text(`Agent: ${v.agent}`, 20, 100);
+    doc.text(`Agent Revenue: ₦${v.agentRevenue}`, 20, 110);
+    doc.text("FSTL Base Fee: ₦25,000", 20, 120);
+    doc.text("Status: Transaction-Ready ✅", 20, 140);
+    doc.save(`FSTL_${v.id}.pdf`);
 }
 
 function goHome(){
-dashboard.style.display="none";
-form.style.display="flex";
+    dashboard.style.display="none";
+    form.style.display="flex";
+    refId = Math.floor(Math.random()*1000000);
 }
 </script>
 
