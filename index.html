@@ -1,8 +1,15 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FSTL COMET OS – Verification Engine (Demo)</title><!-- Stable libs --><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>
+<title>FSTL COMET OS – Verification Engine (Demo)</title>
+
+<!-- Stable libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
   body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef3fb}
   .hidden{display:none}
   #landing{height:100vh;background:#0b4ed7;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
@@ -20,8 +27,12 @@
   th{background:#0b4ed7;color:#fff}
   .row{display:flex;gap:10px;flex-wrap:wrap}
   .row > *{flex:1}
-</style></head>
-<body><!-- LANDING --><div id="landing">
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="landing">
   <h1>FSTL COMET OS</h1>
   <p><b>Secure Property Verification</b></p>
   <p>Complete verification in under <b>3 minutes</b></p>
@@ -31,48 +42,55 @@
     <button class="btn" onclick="nav('form')">START VERIFICATION</button>
     <button class="btn secondary" onclick="nav('verify')">VERIFY RECORD</button>
   </div>
-</div><!-- FORM --><div id="form" class="wrap hidden">
+</div>
+
+<!-- FORM -->
+<div id="form" class="wrap hidden">
   <div class="card">
-    <h2>Verification Form</h2><label>Owner Full Name</label>
-<input id="f_name" placeholder="e.g. John Doe" />
+    <h2>Verification Form</h2>
 
-<label>Owner Residence (Security Reference)</label>
-<input id="f_res" placeholder="Owner's residence address" />
+    <label>Owner Full Name</label>
+    <input id="f_name" placeholder="e.g. John Doe" />
 
-<div class="row">
-  <div>
-    <label>Phone</label>
-    <input id="f_phone" />
-  </div>
-  <div>
-    <label>Email</label>
-    <input id="f_email" />
+    <label>Owner Residence (Security Reference)</label>
+    <input id="f_res" placeholder="Owner's residence address" />
+
+    <div class="row">
+      <div>
+        <label>Phone</label>
+        <input id="f_phone" />
+      </div>
+      <div>
+        <label>Email</label>
+        <input id="f_email" />
+      </div>
+    </div>
+
+    <label>Country</label>
+    <select id="f_country" onchange="renderIds()">
+      <option value="Nigeria">Nigeria</option>
+      <option value="USA">USA</option>
+      <option value="UK">UK</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <div id="idBox"></div>
+
+    <label>Property (Sale / Rent – if applicable)</label>
+    <input id="f_prop" placeholder="Property details (optional)" />
+
+    <div class="notice">Provide accurate information. This document has financial and legal significance.</div>
+
+    <label style="font-weight:normal;margin-top:10px">
+      <input type="checkbox" id="f_consent" /> I confirm information is truthful and consent to verification use only
+    </label>
+
+    <button class="btn" onclick="toPayment()">CONTINUE</button>
   </div>
 </div>
 
-<label>Country</label>
-<select id="f_country" onchange="renderIds()">
-  <option value="Nigeria">Nigeria</option>
-  <option value="USA">USA</option>
-  <option value="UK">UK</option>
-  <option value="Other">Other</option>
-</select>
-
-<div id="idBox"></div>
-
-<label>Property (Sale / Rent – if applicable)</label>
-<input id="f_prop" placeholder="Property details (optional)" />
-
-<div class="notice">Provide accurate information. This document has financial and legal significance.</div>
-
-<label style="font-weight:normal;margin-top:10px">
-  <input type="checkbox" id="f_consent" /> I confirm information is truthful and consent to verification use only
-</label>
-
-<button class="btn" onclick="toPayment()">CONTINUE</button>
-
-  </div>
-</div><!-- PAYMENT / OTP --><div id="payment" class="wrap hidden">
+<!-- PAYMENT / OTP -->
+<div id="payment" class="wrap hidden">
   <div class="card">
     <h2>Payment</h2>
     <p>FSTL Fee: <b>₦25,000</b></p>
@@ -84,7 +102,10 @@
     </div>
     <button class="btn" onclick="confirmOTP()">CONFIRM PAYMENT</button>
   </div>
-</div><!-- COMPLETE --><div id="complete" class="wrap hidden">
+</div>
+
+<!-- COMPLETE -->
+<div id="complete" class="wrap hidden">
   <div class="card">
     <h2>Verification Complete</h2>
     <p>Your record has been created and can be verified.</p>
@@ -93,30 +114,36 @@
       <button class="btn secondary" onclick="nav('verify')">VERIFY RECORD</button>
     </div>
   </div>
-</div><!-- VERIFY PAGE --><div id="verify" class="wrap hidden">
+</div>
+
+<!-- VERIFY PAGE -->
+<div id="verify" class="wrap hidden">
   <div class="card">
     <h2>Verify Record</h2>
     <div class="row">
       <input id="v_input" placeholder="Enter Reference ID" />
       <button class="btn" onclick="runVerify()">VERIFY</button>
     </div>
-    <div id="v_result" style="margin-top:12px"></div><h3 style="margin-top:18px">Registry (Demo)</h3>
-<table>
-  <thead><tr><th>ID</th><th>Owner</th><th>Property</th><th>Status</th></tr></thead>
-  <tbody id="v_table"></tbody>
-</table>
+    <div id="v_result" style="margin-top:12px"></div>
 
-<button class="btn secondary" onclick="nav('landing')">HOME</button>
+    <h3 style="margin-top:18px">Registry (Demo)</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Owner</th><th>Property</th><th>Status</th></tr></thead>
+      <tbody id="v_table"></tbody>
+    </table>
 
+    <button class="btn secondary" onclick="nav('landing')">HOME</button>
   </div>
-</div><script>
+</div>
+
+<script>
   const { jsPDF } = window.jspdf;
 
   // In-memory registry (demo)
   const STORE = [];
   let CURRENT_ID = null;
 
-  // Landing QR (static demo)
+  // Landing QR
   new QRCode(document.getElementById('landingQR'), { text: 'FSTL_COMET_OS', width: 120, height: 120 });
 
   function nav(id){
@@ -130,15 +157,10 @@
   function renderIds(){
     const c = document.getElementById('f_country').value;
     const box = document.getElementById('idBox');
-    if(c==='Nigeria'){
-      box.innerHTML = `<label>NIN</label><input id="id_nin"><label>BVN</label><input id="id_bvn">`;
-    }else if(c==='USA'){
-      box.innerHTML = `<label>SSN</label><input id="id_ssn"><label>Driver License / Passport</label><input id="id_us">`;
-    }else if(c==='UK'){
-      box.innerHTML = `<label>National Insurance Number</label><input id="id_ni"><label>Passport</label><input id="id_uk">`;
-    }else{
-      box.innerHTML = `<label>Passport</label><input id="id_pass"><label>National ID</label><input id="id_nid">`;
-    }
+    if(c==='Nigeria'){ box.innerHTML = `<label>NIN</label><input id="id_nin"><label>BVN</label><input id="id_bvn">`; }
+    else if(c==='USA'){ box.innerHTML = `<label>SSN</label><input id="id_ssn"><label>Driver License / Passport</label><input id="id_us">`; }
+    else if(c==='UK'){ box.innerHTML = `<label>National Insurance Number</label><input id="id_ni"><label>Passport</label><input id="id_uk">`; }
+    else{ box.innerHTML = `<label>Passport</label><input id="id_pass"><label>National ID</label><input id="id_nid">`; }
   }
   renderIds();
 
@@ -179,7 +201,6 @@
   const val = id => (document.getElementById(id)||{}).value || '';
 
   function sendOTP(){ alert('OTP Sent: 1234'); }
-
   function confirmOTP(){
     const otp = document.getElementById('p_otp').value;
     if(otp !== '1234'){ alert('Invalid OTP'); return; }
@@ -195,30 +216,23 @@
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text('FSTL COMET OS – VERIFICATION REPORT', 20, 20);
-
     doc.setFontSize(12);
     doc.text(`Reference ID: ${rec.ref}`, 20, 40);
     doc.text(`Owner: ${rec.name}`, 20, 50);
     doc.text(`Residence: ${rec.residence}`, 20, 60);
     doc.text(`Property: ${rec.property}`, 20, 70);
     doc.text(`Country: ${rec.country}`, 20, 80);
-
     const idStr = Object.keys(rec.ids).map(k=>`${k.toUpperCase()}: ${rec.ids[k]}`).join('  ');
     doc.text(`IDs: ${idStr}`, 20, 90);
-
     doc.text(`Status: ${rec.status}`, 20, 100);
     doc.text(`Date: ${rec.date}`, 20, 110);
     doc.text('Declaration: Information provided by user. Used strictly for verification purposes with user consent.', 20, 120, { maxWidth: 170 });
 
-    // QR (robust: render to hidden div, then add image after small delay)
     const holder = document.createElement('div');
     new QRCode(holder, { text: `FSTL_VERIFY_${rec.ref}`, width: 120, height: 120 });
-
     setTimeout(()=>{
       const img = holder.querySelector('img') || holder.querySelector('canvas');
-      try{
-        doc.addImage(img, 'PNG', 20, 135, 50, 50);
-      }catch(e){}
+      try{ doc.addImage(img, 'PNG', 20, 135, 50, 50); }catch(e){}
       doc.save(`FSTL_${rec.ref}.pdf`);
     }, 300);
   }
@@ -228,7 +242,6 @@
     const rec = STORE.find(r=>r.ref===id);
     const out = document.getElementById('v_result');
     if(!rec){ out.innerHTML = '<p style="color:red"><b>NOT FOUND</b></p>'; return; }
-
     const idStr = Object.keys(rec.ids).map(k=>`${k.toUpperCase()}: ${rec.ids[k]}`).join('  ');
     out.innerHTML = `
       <p><b>Reference:</b> ${rec.ref}</p>
@@ -244,5 +257,6 @@
     const tb = document.getElementById('v_table');
     tb.innerHTML = STORE.map(r=>`<tr><td>${r.ref}</td><td>${r.name}</td><td>${r.property}</td><td>${r.status}</td></tr>`).join('');
   }
-</script></body>
+</script>
+</body>
 </html>
