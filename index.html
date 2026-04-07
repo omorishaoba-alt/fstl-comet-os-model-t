@@ -1,255 +1,166 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
-
+<title>FSTL COMET OS - Global Verification</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-body {margin:0;font-family:Arial;background:#eef4ff;}
-
-.page {display:none;min-height:100vh;justify-content:center;align-items:center;}
-.box {
-background:#fff;
-padding:25px;
-border-radius:10px;
-width:90%;
-max-width:600px;
-box-shadow:0 4px 12px rgba(0,0,0,0.15);
-}
-
-h2 {margin-top:0;}
-label {display:block;margin-top:15px;font-weight:bold;}
-input, select {
-width:100%;
-padding:12px;
-margin-top:5px;
-border:1px solid #ccc;
-border-radius:5px;
-}
-
-button {
-margin-top:20px;
-padding:14px;
-width:100%;
-background:#007BFF;
-color:#fff;
-border:none;
-border-radius:5px;
-font-size:16px;
-}
-
-.progress {
-margin-bottom:15px;
-font-size:13px;
-color:#666;
-}
+html, body {margin:0; padding:0; font-family: Arial, sans-serif; background:#eaf3ff;}
+.page {min-height:100vh; padding:40px; display:none; flex-direction:column;}
+#landing {display:flex; align-items:center; justify-content:flex-start; background:#007BFF; color:#fff; padding-left:50px; flex-direction:column;}
+#bank, #verifyStage, #form, #dashboard, #verifyPage {display:flex; flex-direction:column; align-items:stretch; background:#fff; max-width:700px; margin:20px auto; padding:20px; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.1);}
+label{margin-top:15px;font-weight:bold;}
+input, select{width:100%; padding:12px; margin-top:5px; border:1px solid #ccc; border-radius:6px;}
+button{width:100%; padding:15px; margin-top:20px; background:#007BFF; color:#fff; border:none; border-radius:6px; cursor:pointer;}
+button:hover{opacity:0.9;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th, td{border:1px solid #ccc; padding:12px; text-align:center;}
+th{background:#007BFF;color:#fff;}
+#qrContainer{margin-top:20px;}
+h1 span{color:#FFD700;}
+.checkbox-container{margin-top:20px;}
+.checkbox-container label{font-weight:normal;}
 </style>
 </head>
-
-<body>
-
-<!-- STEP 1: COUNTRY -->
-<div id="step1" class="page" style="display:flex;">
-<div class="box">
-<div class="progress">Step 1 of 6 — Jurisdiction</div>
-<h2>Select Country</h2>
-
-<select id="country">
+<body><!-- LANDING --><div id="landing" class="page" style="display:flex;">
+<h1>FSTL COMET OS <span>GLOBAL</span></h1>
+<p>Fast, Reliable, Trusted Property Verification</p>
+<p><b>Real-time verification in under 3 minutes — simple, secure, universal.</b></p>
+<p>Think Model-T reliability + McDonald's consistency + Coca-Cola trust.</p>
+<div id="qrContainer"></div>
+<button onclick="goForm()">START VERIFICATION</button>
+</div><!-- FORM --><div id="form" class="page">
+<h2>Property Verification Form</h2>
+<label>Owner Full Name</label><input id="ownerName">
+<label>Owner Residence (Security Reference)</label><input id="ownerResidence">
+<label>Phone Number</label><input id="phone">
+<label>Email</label><input id="email">
+<label>Country</label>
+<select id="country" onchange="adjustIDFields()">
+<option value="">Select Country</option>
 <option value="Nigeria">Nigeria</option>
-<option value="UK">United Kingdom</option>
-<option value="USA">United States</option>
+<option value="USA">USA</option>
+<option value="UK">UK</option>
+<option value="Other">Other</option>
 </select>
-
-<button onclick="nextStep(2)">CONTINUE</button>
+<div id="idFields"></div>
+<label>Property for Sale or Rent</label><input id="property">
+<h3>Agent Information (Optional)</h3>
+<label>Agent Name</label><input id="agentName">
+<label>Agent Regional Fee (₦)</label><input id="agentFee">
+<div class="checkbox-container">
+<input type="checkbox" id="consent">
+<label for="consent">I confirm that the information provided is truthful and FSTL may use it for verification purposes only.</label>
 </div>
-</div>
-
-<!-- STEP 2: IDENTITY -->
-<div id="step2" class="page">
-<div class="box">
-<div class="progress">Step 2 of 6 — Identity</div>
-<h2>Owner Identity</h2>
-
-<input id="name" placeholder="Full Name *">
-<input id="id1" placeholder="Primary ID (NIN / SSN etc) *">
-<input id="id2" placeholder="Secondary ID (BVN / Optional)">
-
-<button onclick="validateStep2()">CONTINUE</button>
-</div>
-</div>
-
-<!-- STEP 3: RESIDENCE -->
-<div id="step3" class="page">
-<div class="box">
-<div class="progress">Step 3 of 6 — Security</div>
-<h2>Owner Residence (Security Reference)</h2>
-
-<input id="residence" placeholder="Residence Address *">
-
-<button onclick="validateStep3()">CONTINUE</button>
-</div>
-</div>
-
-<!-- STEP 4: PROPERTY -->
-<div id="step4" class="page">
-<div class="box">
-<div class="progress">Step 4 of 6 — Property</div>
-<h2>Property Details</h2>
-
-<input id="property" placeholder="Property Description">
-<select id="propertyType">
-<option>For Sale</option>
-<option>For Rent</option>
-<option>Investment</option>
-</select>
-
-<button onclick="nextStep(5)">CONTINUE</button>
-</div>
-</div>
-
-<!-- STEP 5: AGENT -->
-<div id="step5" class="page">
-<div class="box">
-<div class="progress">Step 5 of 6 — Agent</div>
-<h2>Agent (Optional)</h2>
-
-<input id="agent" placeholder="Agent Name">
-<input id="agentFee" type="number" placeholder="Agent Fee ₦">
-
-<button onclick="buildReview()">CONTINUE</button>
-</div>
-</div>
-
-<!-- STEP 6: REVIEW -->
-<div id="step6" class="page">
-<div class="box">
-<div class="progress">Step 6 of 6 — Review</div>
-<h2>Verification Summary</h2>
-
-<div id="summary"></div>
-
-<button onclick="goPayment()">PROCEED TO PAYMENT</button>
-</div>
-</div>
-
-<!-- PAYMENT -->
-<div id="payment" class="page">
-<div class="box">
-<h2>Payment</h2>
-
-<p>FSTL Fee: ₦25,000</p>
-<p>Agent Fee: ₦<span id="agentDisplay"></span></p>
-<p><b>Total: ₦<span id="totalDisplay"></span></b></p>
-
-<p>Reference: <span id="ref"></span></p>
-
+<button onclick="startPayment()">PROCEED TO PAYMENT</button>
+</div><!-- PAYMENT --><div id="bank" class="page">
+<h2>Bank Deposit</h2>
+<p>FSTL Flat Fee: ₦25,000</p>
+<p>Agent Fee: Optional (Based on Region)</p>
+<p>Account: 1234567890 | First Bank</p>
+<p>Reference ID: <span id="refIdText"></span></p>
 <button onclick="confirmPayment()">I HAVE PAID</button>
-</div>
-</div>
+</div><!-- STAGE 2 --><div id="verifyStage" class="page">
+<h2>Access Granted</h2>
+<p>Generate your official verification PDF now.</p>
+<button onclick="generatePDF()">GENERATE PDF</button>
+</div><!-- DASHBOARD --><div id="dashboard" class="page">
+<h2>Dashboard</h2>
+<table>
+<thead><tr><th>ID</th><th>Owner</th><th>Property</th><th>Status</th><th>PDF</th></tr></thead>
+<tbody id="data"></tbody>
+</table>
+<button onclick="goHome()">NEW VERIFICATION</button>
+<button onclick="openVerify()">VERIFY RECORD</button>
+</div><!-- VERIFICATION PAGE --><div id="verifyPage" class="page">
+<h2>Verify Record</h2>
+<input id="verifyInput" placeholder="Enter Reference ID">
+<button onclick="runVerify()">VERIFY</button>
+<div id="verifyResult"></div>
+<button onclick="backDashboard()">BACK</button>
+</div><script>
+let store = [];
+let refId = null;
+let landingQR = new QRCode(document.getElementById("qrContainer"), {text:"FSTL COMET OS GLOBAL", width:150, height:150});
 
-<!-- FINAL -->
-<div id="final" class="page">
-<div class="box">
-<h2>Verification Complete</h2>
-<p>Your verification has been recorded successfully.</p>
-
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-</div>
-</div>
-
-<script>
-
-let data = {};
-let ref = null;
-
-function show(id){
-document.querySelectorAll('.page').forEach(p=>p.style.display='none');
-document.getElementById(id).style.display='flex';
+function show(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById(pageId).style.display='flex';
+}
+function goForm(){ show('form'); }
+function adjustIDFields(){
+  let country = document.getElementById('country').value;
+  let container = document.getElementById('idFields');
+  container.innerHTML='';
+  if(country=='Nigeria'){ container.innerHTML=`<label>NIN</label><input id='nin'><label>BVN</label><input id='bvn'>`;
+  } else if(country=='USA'){ container.innerHTML=`<label>SSN</label><input id='ssn'><label>Driver License / Passport</label><input id='usId'>`;
+  } else if(country=='UK'){ container.innerHTML=`<label>National Insurance Number</label><input id='ni'><label>Passport</label><input id='ukPassport'>`;
+  } else if(country=='Other'){ container.innerHTML=`<label>Passport</label><input id='passport'><label>National ID</label><input id='nid'>`;
+  }
 }
 
-function nextStep(n){
-show("step"+n);
-}
-
-function validateStep2(){
-let name = document.getElementById("name").value.trim();
-let id1 = document.getElementById("id1").value.trim();
-
-if(!name || !id1){
-alert("Fill required fields");
-return;
-}
-nextStep(3);
-}
-
-function validateStep3(){
-let res = document.getElementById("residence").value.trim();
-if(!res){
-alert("Residence required");
-return;
-}
-nextStep(4);
-}
-
-function buildReview(){
-
-data = {
-country: document.getElementById("country").value,
-name: document.getElementById("name").value,
-id1: document.getElementById("id1").value,
-id2: document.getElementById("id2").value,
-residence: document.getElementById("residence").value,
-property: document.getElementById("property").value,
-type: document.getElementById("propertyType").value,
-agent: document.getElementById("agent").value,
-agentFee: parseInt(document.getElementById("agentFee").value) || 0
-};
-
-let total = 25000 + data.agentFee;
-
-document.getElementById("summary").innerHTML = `
-<p><b>Country:</b> ${data.country}</p>
-<p><b>Owner:</b> ${data.name}</p>
-<p><b>Residence:</b> ${data.residence}</p>
-<p><b>Property:</b> ${data.property} (${data.type})</p>
-<p><b>Agent:</b> ${data.agent || "None"}</p>
-<p><b>Total:</b> ₦${total}</p>
-`;
-
-nextStep(6);
-}
-
-function goPayment(){
-ref = Math.floor(Math.random()*1000000);
-document.getElementById("agentDisplay").innerText = data.agentFee;
-document.getElementById("totalDisplay").innerText = 25000 + data.agentFee;
-document.getElementById("ref").innerText = ref;
-
-show("payment");
+function startPayment(){
+  if(!document.getElementById('consent').checked){ return alert('You must confirm truthful information'); }
+  let ownerName=document.getElementById('ownerName').value;
+  let ownerResidence=document.getElementById('ownerResidence').value;
+  if(!ownerName||!ownerResidence){return alert('Owner Name and Residence required');}
+  refId=Math.floor(Math.random()*1000000);
+  document.getElementById('refIdText').innerText=refId;
+  let agentFee=parseFloat(document.getElementById('agentFee').value)||0;
+  let ffee=25000;
+  let country=document.getElementById('country').value;
+  let ids={};
+  if(country=='Nigeria'){ ids.nin=document.getElementById('nin').value; ids.bvn=document.getElementById('bvn').value; }
+  else if(country=='USA'){ ids.ssn=document.getElementById('ssn').value; ids.usId=document.getElementById('usId').value; }
+  else if(country=='UK'){ ids.ni=document.getElementById('ni').value; ids.ukPassport=document.getElementById('ukPassport').value; }
+  else if(country=='Other'){ ids.passport=document.getElementById('passport').value; ids.nid=document.getElementById('nid').value; }
+  store.push({ref:refId,name:ownerName,ownerResidence,phone:document.getElementById('phone').value,email:document.getElementById('email').value,property:document.getElementById('property').value,country,agent:document.getElementById('agentName').value,agentFee, fstlFee:ffee, ids,status:'Pending Payment',date:new Date().toLocaleString()});
+  show('bank');
 }
 
 function confirmPayment(){
-show("final");
+  let record=store.find(r=>r.ref==refId); if(record) record.status='Verified'; show('verifyStage');
 }
 
-function downloadPDF(){
-let doc = new jsPDF();
-
-doc.text("FSTL COMET OS REPORT",20,20);
-doc.text("ID: "+ref,20,30);
-doc.text("Owner: "+data.name,20,40);
-doc.text("Residence: "+data.residence,20,50);
-doc.text("Property: "+data.property,20,60);
-doc.text("Type: "+data.type,20,70);
-doc.text("Total Paid: ₦"+(25000+data.agentFee),20,80);
-
-doc.save("FSTL_"+ref+".pdf");
+function generatePDF(){
+  let record=store.find(r=>r.ref==refId); if(!record) return alert('No record found');
+  let doc=new jsPDF();
+  doc.setFontSize(16); doc.text("FSTL COMET OS Verification",20,30);
+  doc.setFontSize(12);
+  doc.text(`Verification ID: ${record.ref}`,20,50);
+  doc.text(`Owner Name: ${record.name}`,20,60);
+  doc.text(`Owner Residence: ${record.ownerResidence}`,20,70);
+  doc.text(`Phone: ${record.phone}`,20,80);
+  doc.text(`Email: ${record.email}`,20,90);
+  doc.text(`Property: ${record.property}`,20,100);
+  doc.text(`Country: ${record.country}`,20,110);
+  let idText=''; for(let k in record.ids){ idText+=`${k}: ${record.ids[k]} `;} doc.text(`IDs: ${idText}`,20,120);
+  doc.text(`FSTL Fee: ₦${record.fstlFee}`,20,130);
+  doc.text(`Agent: ${record.agent} | Fee: ₦${record.agentFee}`,20,140);
+  doc.text(`Status: ${record.status}`,20,150);
+  doc.text(`Date: ${record.date}`,20,160);
+  doc.text('User consented to provide truthful info and data is used only for verification purposes.',20,170);
+  let qrCanvas=document.createElement('div'); new QRCode(qrCanvas,{text:`FSTL_COMET_OS_${record.ref}`,width:80,height:80}); let qrImg=qrCanvas.querySelector('img'); doc.addImage(qrImg.src,"PNG",20,180,50,50);
+  doc.save(`FSTL_${record.ref}.pdf`);
+  show('dashboard'); renderDashboard();
 }
 
-</script>
-
-</body>
+function renderDashboard(){
+  let out=''; store.forEach(r=>{out+=`<tr><td>${r.ref}</td><td>${r.name}</td><td>${r.property}</td><td>${r.status}</td><td><button onclick="generatePDFById(${r.ref})">PDF</button></td></tr>`;});
+  document.getElementById('data').innerHTML=out;
+}
+function generatePDFById(id){ refId=id; generatePDF(); }
+function openVerify(){ show('verifyPage'); }
+function backDashboard(){ show('dashboard'); }
+function runVerify(){
+  let id=document.getElementById('verifyInput').value;
+  let record=store.find(r=>r.ref==id);
+  let output=document.getElementById('verifyResult');
+  if(!record){ output.innerHTML="<p style='color:red;'>Record NOT found</p>"; return;}
+  let idText=''; for(let k in record.ids){ idText+=`${k}: ${record.ids[k]} `;}
+  output.innerHTML=`<p><b>Verification ID:</b> ${record.ref}</p><p><b>Owner:</b> ${record.name}</p><p><b>Property:</b> ${record.property}</p><p><b>IDs:</b> ${idText}</p><p><b>Status:</b> ${record.status}</p><p><b>Date:</b> ${record.date}</p><p style='color:green;'><b>VALID RECORD</b></p>`;
+}
+function goHome(){ show('form'); }
+</script></body>
 </html>
