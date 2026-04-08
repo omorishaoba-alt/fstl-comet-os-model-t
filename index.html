@@ -2,172 +2,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS – MASTER</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>
-body{margin:0;font-family:Arial;background:#eef3fb}
+<title>FSTL COMET OS</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>
+body{margin:0;font-family:Arial;background:#f4f6fb}
 .hidden{display:none}
-#landing{height:100vh;background:#0b4ed7;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.btn{padding:14px;border:none;border-radius:6px;margin-top:10px;width:260px;cursor:pointer}
-.primary{background:#fff;color:#0b4ed7}
+.section{max-width:600px;margin:40px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+button{padding:12px;width:100%;margin-top:10px;border:none;border-radius:6px;cursor:pointer}
+.primary{background:#0b4ed7;color:#fff}
 .secondary{background:#111;color:#fff}
-.wrap{max-width:900px;margin:auto;padding:20px}
-.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-bottom:15px}
-input,select{width:100%;padding:10px;margin-top:6px}
-.notice{background:#e9f0ff;padding:12px;margin-top:10px}
-.badge{padding:6px 10px;border-radius:6px;font-size:12px}
-.low{background:#ffd6d6}
-.med{background:#fff3cd}
-.high{background:#d4edda}
+input{width:100%;padding:10px;margin-top:6px}
 </style></head>
-<body><!-- LANDING --><div id="landing">
-<h1>FSTL COMET OS</h1>
-<p><b>Verify → Guarantee → Stand Still</b></p>
-<p>Complete in under 3 minutes</p>
-<div id="qr"></div>
-<button class="btn primary" onclick="nav('form')">START VERIFICATION</button>
-<button class="btn secondary" onclick="nav('verify')">VERIFY RECORD</button>
-<button class="btn secondary" onclick="nav('admin')">ADMIN</button>
-<button class="btn secondary" onclick="nav('investor')">INVESTOR</button>
-</div><!-- FORM --><div id="form" class="wrap hidden">
-<div class="card">
-<h2>Verification</h2>
-<label>Name</label><input id="name">
-<label>Property</label><input id="prop">
-<label>Agent ID</label><input id="agent">
-<label><input type="checkbox" id="consent"> Confirm truth</label>
-<button class="btn primary" onclick="toDeclaration()">CONTINUE</button>
-</div>
-</div><!-- DECLARATION --><div id="declaration" class="wrap hidden">
-<div class="card">
-<h2>Declaration</h2>
-<label><input type="checkbox" id="d1"> Info is accurate</label>
-<label><input type="checkbox" id="d2"> Claim is valid</label>
-<label><input type="checkbox" id="d3"> I will defend claim</label>
-<button class="btn primary" onclick="toPayment()">PROCEED</button>
-</div>
-</div><!-- PAYMENT --><div id="payment" class="wrap hidden">
-<div class="card">
-<h2>Activation</h2>
-<p>₦25,000</p>
+<body><!-- LANDING --><div id="landing" class="section">
+<h2>FSTL COMET OS</h2>
+<p>Verify Property → Generate Proof → Build Trust</p>
+<p><b>Time: Under 3 Minutes</b></p>
+<button class="primary" onclick="start()">START VERIFICATION</button>
+</div><!-- FORM --><div id="form" class="section hidden">
+<h3>Step 1: Enter Details</h3>
+<input id="name" placeholder="Full Name">
+<input id="property" placeholder="Property Description">
+<input id="agent" placeholder="Agent ID (Optional)">
+<label><input type="checkbox" id="consent"> I confirm this is true</label>
+<button class="primary" onclick="nextToDeclaration()">CONTINUE</button>
+</div><!-- DECLARATION --><div id="declaration" class="section hidden">
+<h3>Step 2: Declaration</h3>
+<label><input type="checkbox" id="d1"> My identity is correct</label>
+<label><input type="checkbox" id="d2"> I own or control this property</label>
+<label><input type="checkbox" id="d3"> I will defend this claim</label>
+<button class="primary" onclick="nextToPayment()">PROCEED</button>
+</div><!-- PAYMENT --><div id="payment" class="section hidden">
+<h3>Step 3: Activation</h3>
+<p>Fee: ₦25,000</p>
 <p id="ref"></p>
-<button onclick="otp()">SEND OTP</button>
-<input id="otpInput">
-<button onclick="confirm()">CONFIRM</button>
-</div>
-</div><!-- GUARANTEE --><div id="guarantee" class="wrap hidden">
-<div class="card">
-<h2>Guarantee</h2>
-<p>Confidence: <span id="scoreBadge"></span></p>
-<select id="gTier">
-<option value="none">None</option>
-<option value="basic">Basic</option>
-<option value="premium">Premium</option>
+<button onclick="sendOTP()">SEND OTP</button>
+<input id="otp" placeholder="Enter OTP">
+<button class="primary" onclick="verifyOTP()">CONFIRM PAYMENT</button>
+</div><!-- GUARANTEE --><div id="guarantee" class="section hidden">
+<h3>Step 4: Guarantee</h3>
+<p id="score"></p>
+<select id="guaranteeTier">
+<option value="none">No Guarantee</option>
+<option value="basic">Basic Guarantee</option>
+<option value="premium">Premium Guarantee</option>
 </select>
-<button class="btn primary" onclick="finalize()">FINALIZE</button>
-</div>
-</div><!-- COMPLETE --><div id="complete" class="wrap hidden">
-<div class="card">
-<h2>Record Ready</h2>
-<button onclick="pdf()">DOWNLOAD PDF</button>
-</div>
-</div><!-- VERIFY --><div id="verify" class="wrap hidden">
-<div class="card">
-<input id="vid"><button onclick="check()">VERIFY</button>
-<div id="out"></div>
-</div>
-</div><!-- ADMIN --><div id="admin" class="wrap hidden">
-<div class="card">
-<h2>Reserve Engine</h2>
-<p>Reserve: ₦<span id="resv"></span></p>
-<p>Exposure: ₦<span id="exp"></span></p>
-<p>Coverage: <span id="cov"></span></p>
-<p>Agent Payouts: ₦<span id="agentPay"></span></p>
-</div>
-</div><!-- INVESTOR --><div id="investor" class="wrap hidden">
-<div class="card">
-<h2>Investor Dashboard</h2>
-<p>Total Records: <b id="totalRec"></b></p>
-<p>Revenue: ₦<b id="rev"></b></p>
-<p>Reserve: ₦<b id="res"></b></p>
-<p>Exposure: ₦<b id="iexp"></b></p>
-<p>Coverage: <b id="icov"></b></p>
-</div>
-<div class="card">
-<h3>Agents</h3>
-<div id="leader"></div>
-</div>
+<button class="primary" onclick="finalStep()">FINALIZE</button>
+</div><!-- COMPLETE --><div id="complete" class="section hidden">
+<h3>Verification Complete</h3>
+<p>Your record is now active</p>
+<div id="qrcode"></div>
+<button class="primary" onclick="generatePDF()">DOWNLOAD PDF</button>
 </div><script>
 const { jsPDF } = window.jspdf;
-let DB=[], current;
-let RESERVE=0, EXPOSURE=0, REVENUE=0;
-let AGENTS={}, AGENT_PAYOUTS=0;
+let record = null;
 
-new QRCode(document.getElementById("qr"),{text:"FSTL",width:100,height:100});
-
-function nav(id){['landing','form','declaration','payment','guarantee','complete','verify','admin','investor'].forEach(x=>document.getElementById(x).classList.add('hidden'));document.getElementById(id).classList.remove('hidden');updateAll();}
-
-function toDeclaration(){if(!consent.checked)return alert('Consent required');nav('declaration');}
-
-function toPayment(){
-if(!d1.checked||!d2.checked||!d3.checked)return alert('Confirm all');
-let rec={ref:Math.floor(Math.random()*1e6),name:name.value,prop:prop.value,agent:agent.value||'DIRECT',score:score(),guarantee:'none',liability:0};
-DB.push(rec);current=rec.ref;ref.innerText='REF:'+rec.ref;nav('payment');}
-
-function score(){let s=0;if(name.value)s++;if(prop.value)s++;return s>=2?'HIGH':'LOW';}
-
-function otp(){alert('1234');}
-
-function confirm(){
-if(otpInput.value!=='1234')return alert('Wrong');
-RESERVE+=15000; REVENUE+=25000;
-let r=DB.find(x=>x.ref===current);
-scoreBadge.innerText=r.score;
-nav('guarantee');}
-
-function finalize(){
-let r=DB.find(x=>x.ref===current);
-r.guarantee=gTier.value;
-let liability= r.guarantee==='basic'?50000:r.guarantee==='premium'?200000:0;
-r.liability=liability; EXPOSURE+=liability;
-
-if(r.agent!=='DIRECT'){
-if(!AGENTS[r.agent]) AGENTS[r.agent]={deals:0,earn:0,paid:0,balance:0};
-AGENTS[r.agent].deals++;
-AGENTS[r.agent].earn+=5000;
-AGENTS[r.agent].balance=AGENTS[r.agent].earn-AGENTS[r.agent].paid;
+function show(id){
+['landing','form','declaration','payment','guarantee','complete']
+.forEach(x=>document.getElementById(x).classList.add('hidden'));
+document.getElementById(id).classList.remove('hidden');
 }
 
-nav('complete');}
+function start(){ show('form'); }
 
-function coverage(){return EXPOSURE===0?'SAFE':(RESERVE/EXPOSURE).toFixed(2);}
-
-function updateAll(){
-resv.innerText=RESERVE; exp.innerText=EXPOSURE; cov.innerText=coverage(); agentPay.innerText=AGENT_PAYOUTS;
-
-totalRec.innerText=DB.length; rev.innerText=REVENUE; res.innerText=RESERVE; iexp.innerText=EXPOSURE; icov.innerText=coverage();
-
-let html=''; Object.entries(AGENTS).forEach(([id,d])=>{html+=`${id} | Deals:${d.deals} | ₦${d.earn} | Bal:${d.balance}<br>`});
-leader.innerHTML=html;
+function nextToDeclaration(){
+if(!consent.checked) return alert('Please confirm truth');
+show('declaration');
 }
 
-function pdf(){
-let r=DB.find(x=>x.ref===current);
-let doc=new jsPDF();
-doc.setFillColor(11,78,215); doc.rect(0,0,210,25,'F');
-doc.setTextColor(255,255,255); doc.text('FSTL VERIFICATION REPORT',20,15);
-doc.setTextColor(0,0,0);
-doc.text('REF:'+r.ref,20,40);
-doc.text('Name:'+r.name,20,50);
-doc.text('Property:'+r.prop,20,60);
-doc.text('Confidence:'+r.score,20,80);
-doc.text('Guarantee:'+r.guarantee,20,90);
-doc.text('User responsible for input accuracy.',20,110);
-doc.text('FSTL guarantees process integrity only.',20,120);
-let q=document.createElement('div');
-new QRCode(q,{text:`FSTL|REF:${r.ref}|CONF:${r.score}|G:${r.guarantee}`,width:100,height:100});
-setTimeout(()=>{let img=q.querySelector('img');doc.addImage(img,'PNG',150,40,40,40);doc.save('FSTL_REPORT.pdf');},300);
+function nextToPayment(){
+if(!d1.checked || !d2.checked || !d3.checked)
+return alert('Complete declarations');
+
+record = {
+ref: Math.floor(Math.random()*1000000),
+name: name.value,
+property: property.value,
+agent: agent.value || 'DIRECT',
+score: (name.value && property.value) ? 'HIGH' : 'LOW',
+guarantee: 'none'
+};
+
+document.getElementById('ref').innerText = 'REF: '+record.ref;
+show('payment');
 }
 
-function check(){let r=DB.find(x=>x.ref==vid.value);
-out.innerHTML=r?`VALID<br>${r.name}<br>${r.score}<br>${r.guarantee}`:'NOT FOUND';}
+function sendOTP(){ alert('Use OTP: 1234'); }
+
+function verifyOTP(){
+if(otp.value !== '1234') return alert('Wrong OTP');
+document.getElementById('score').innerText = 'Confidence: '+record.score;
+show('guarantee');
+}
+
+function finalStep(){
+record.guarantee = guaranteeTier.value;
+
+let qrDiv = document.getElementById('qrcode');
+qrDiv.innerHTML = '';
+new QRCode(qrDiv, {
+text: `FSTL|${record.ref}|${record.score}|${record.guarantee}`,
+width:100,height:100
+});
+
+show('complete');
+}
+
+function generatePDF(){
+let doc = new jsPDF();
+
+doc.text('FSTL VERIFICATION REPORT',20,20);
+doc.text('REF: '+record.ref,20,40);
+doc.text('Name: '+record.name,20,50);
+doc.text('Property: '+record.property,20,60);
+doc.text('Confidence: '+record.score,20,70);
+doc.text('Guarantee: '+record.guarantee,20,80);
+
+doc.text('User responsible for input accuracy.',20,100);
+doc.text('FSTL guarantees process integrity only.',20,110);
+
+doc.save('FSTL_REPORT.pdf');
+}
 </script></body>
 </html>
