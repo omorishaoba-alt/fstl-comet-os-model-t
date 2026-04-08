@@ -11,11 +11,11 @@
 <style>
 body{margin:0;font-family:Arial;background:#f4f6fb}
 .hidden{display:none}
-.section{max-width:650px;margin:30px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.section{max-width:700px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
 button{padding:12px;width:100%;margin-top:10px;border:none;border-radius:6px;cursor:pointer}
 .primary{background:#0b4ed7;color:#fff}
 .secondary{background:#111;color:#fff}
-input{width:100%;padding:10px;margin-top:6px}
+input,select{width:100%;padding:10px;margin-top:6px}
 .stat{background:#eef3ff;padding:10px;margin-top:10px}
 </style>
 </head>
@@ -26,19 +26,20 @@ input{width:100%;padding:10px;margin-top:6px}
 <div id="landing" class="section">
 <h2>FSTL COMET OS</h2>
 <p><b>Verify → Guarantee → Stand Still</b></p>
-<p>Time: Under 3 Minutes</p>
+<p>Bank-Aligned Transaction Engine</p>
 
 <button class="primary" onclick="start()">START VERIFICATION</button>
 <button class="secondary" onclick="show('verify')">VERIFY RECORD</button>
-<button class="secondary" onclick="show('engine')">ENGINE STATUS</button>
+<button class="secondary" onclick="show('dashboard')">CONTROL DASHBOARD</button>
 </div>
 
 <!-- FORM -->
 <div id="form" class="section hidden">
-<h3>Step 1: Enter Details</h3>
+<h3>Step 1: Input</h3>
 <input id="name" placeholder="Full Name">
 <input id="property" placeholder="Property Description">
-<label><input type="checkbox" id="consent"> I confirm this is true</label>
+<input id="agent" placeholder="Agent ID (Optional)">
+<label><input type="checkbox" id="consent"> Confirm truthful input</label>
 <button class="primary" onclick="toDeclaration()">CONTINUE</button>
 </div>
 
@@ -53,23 +54,23 @@ input{width:100%;padding:10px;margin-top:6px}
 
 <!-- PAYMENT -->
 <div id="payment" class="section hidden">
-<h3>Step 3: Activation</h3>
-<p>Fee: ₦25,000</p>
+<h3>Step 3: Bank Transaction</h3>
+<p>Verification Fee: ₦25,000</p>
 <p id="ref"></p>
-<button onclick="sendOTP()">SEND OTP</button>
+<button onclick="sendOTP()">SEND OTP (Bank Simulation)</button>
 <input id="otp" placeholder="Enter OTP">
-<button class="primary" onclick="confirmPayment()">CONFIRM</button>
+<button class="primary" onclick="confirmPayment()">CONFIRM PAYMENT</button>
 </div>
 
 <!-- GUARANTEE -->
 <div id="guarantee" class="section hidden">
-<h3>Step 4: Guarantee</h3>
+<h3>Step 4: Guarantee Layer</h3>
 <p id="score"></p>
 
 <select id="tier">
 <option value="none">No Guarantee</option>
-<option value="basic">Basic (₦50,000 Cover)</option>
-<option value="premium">Premium (₦200,000 Cover)</option>
+<option value="basic">Basic (₦50,000)</option>
+<option value="premium">Premium (₦200,000)</option>
 </select>
 
 <button class="primary" onclick="finalize()">FINALIZE</button>
@@ -85,20 +86,24 @@ input{width:100%;padding:10px;margin-top:6px}
 
 <!-- VERIFY -->
 <div id="verify" class="section hidden">
-<h3>Verify Record</h3>
+<h3>Public Verification</h3>
 <input id="vid" placeholder="Enter REF">
 <button onclick="check()">VERIFY</button>
 <div id="out"></div>
 </div>
 
-<!-- ENGINE -->
-<div id="engine" class="section hidden">
-<h3>Engine Status</h3>
+<!-- DASHBOARD -->
+<div id="dashboard" class="section hidden">
+<h3>Control Dashboard</h3>
+
 <div class="stat">Total Records: <span id="total"></span></div>
 <div class="stat">Revenue: ₦<span id="rev"></span></div>
 <div class="stat">Reserve: ₦<span id="res"></span></div>
 <div class="stat">Exposure: ₦<span id="exp"></span></div>
 <div class="stat">Coverage Ratio: <span id="cov"></span></div>
+
+<h4>Agent Activity</h4>
+<div id="agents"></div>
 </div>
 
 <script>
@@ -108,6 +113,7 @@ const { jsPDF } = window.jspdf;
 let DB = JSON.parse(localStorage.getItem('DB')) || [];
 let STATS = JSON.parse(localStorage.getItem('STATS')) || {rev:0,res:0};
 let EXPOSURE = JSON.parse(localStorage.getItem('EXP')) || 0;
+let AGENTS = JSON.parse(localStorage.getItem('AGENTS')) || {};
 
 let record = null;
 
@@ -115,14 +121,15 @@ function save(){
 localStorage.setItem('DB', JSON.stringify(DB));
 localStorage.setItem('STATS', JSON.stringify(STATS));
 localStorage.setItem('EXP', JSON.stringify(EXPOSURE));
+localStorage.setItem('AGENTS', JSON.stringify(AGENTS));
 }
 
 // NAV
 function show(id){
-['landing','form','declaration','payment','guarantee','complete','verify','engine']
+['landing','form','declaration','payment','guarantee','complete','verify','dashboard']
 .forEach(x=>document.getElementById(x).classList.add('hidden'));
 document.getElementById(id).classList.remove('hidden');
-updateEngine();
+updateDashboard();
 }
 
 function start(){ show('form'); }
@@ -134,53 +141,58 @@ show('declaration');
 }
 
 function toPayment(){
-if(!d1.checked || !d2.checked || !d3.checked)
-return alert('Complete declaration');
+if(!d1.checked||!d2.checked||!d3.checked) return alert('Complete declaration');
 
-record = {
-ref: Math.floor(Math.random()*1000000),
-name: name.value,
-property: property.value,
-score: (name.value && property.value) ? 'HIGH' : 'LOW',
-guarantee: 'none',
-liability: 0
+record={
+ref:Math.floor(Math.random()*1000000),
+name:name.value,
+property:property.value,
+agent:agent.value||'DIRECT',
+score:(name.value&&property.value)?'HIGH':'LOW',
+guarantee:'none',
+liability:0
 };
 
-ref.innerText = "REF: " + record.ref;
+ref.innerText='REF: '+record.ref;
 show('payment');
 }
 
-function sendOTP(){ alert('Use OTP: 1234'); }
+function sendOTP(){ alert('OTP: 1234'); }
 
 function confirmPayment(){
-if(otp.value !== '1234') return alert('Wrong OTP');
-
-score.innerText = "Confidence: " + record.score;
+if(otp.value!=='1234') return alert('Wrong OTP');
+score.innerText='Confidence: '+record.score;
 show('guarantee');
 }
 
 function finalize(){
 
-let liability = 0;
-if(tier.value === 'basic') liability = 50000;
-if(tier.value === 'premium') liability = 200000;
+let liability=0;
+if(tier.value==='basic') liability=50000;
+if(tier.value==='premium') liability=200000;
 
-record.guarantee = tier.value;
-record.liability = liability;
+record.guarantee=tier.value;
+record.liability=liability;
 
-// STORE
 DB.push(record);
 
-// FINANCIALS
-STATS.rev += 25000;
-STATS.res += 15000;
-EXPOSURE += liability;
+// financials
+STATS.rev+=25000;
+STATS.res+=15000;
+EXPOSURE+=liability;
+
+// agent logic
+if(record.agent!=='DIRECT'){
+if(!AGENTS[record.agent]) AGENTS[record.agent]={count:0,earn:0};
+AGENTS[record.agent].count++;
+AGENTS[record.agent].earn+=5000;
+}
 
 save();
 
 // QR
-let q = document.getElementById("qrcode");
-q.innerHTML = "";
+let q=document.getElementById('qrcode');
+q.innerHTML='';
 new QRCode(q,{
 text:`FSTL|REF:${record.ref}|CONF:${record.score}|G:${record.guarantee}|L:${liability}`,
 width:100,height:100
@@ -191,39 +203,43 @@ show('complete');
 
 // PDF
 function generatePDF(){
-let doc = new jsPDF();
+let doc=new jsPDF();
 
-doc.text("FSTL VERIFICATION REPORT",20,20);
-doc.text("REF: "+record.ref,20,40);
-doc.text("Name: "+record.name,20,50);
-doc.text("Property: "+record.property,20,60);
-doc.text("Confidence: "+record.score,20,70);
-doc.text("Guarantee: "+record.guarantee,20,80);
-doc.text("Liability: ₦"+record.liability,20,90);
+doc.text('FSTL VERIFICATION REPORT',20,20);
+doc.text('REF:'+record.ref,20,40);
+doc.text('Name:'+record.name,20,50);
+doc.text('Property:'+record.property,20,60);
+doc.text('Confidence:'+record.score,20,70);
+doc.text('Guarantee:'+record.guarantee,20,80);
+doc.text('Liability: ₦'+record.liability,20,90);
 
-doc.text("User responsible for input accuracy.",20,110);
-doc.text("FSTL guarantees process integrity only.",20,120);
+doc.text('User responsible for input accuracy.',20,110);
+doc.text('FSTL guarantees process integrity only.',20,120);
 
-doc.save("FSTL_REPORT.pdf");
+doc.save('FSTL_REPORT.pdf');
 }
 
 // VERIFY
 function check(){
-let r = DB.find(x=>x.ref == vid.value);
-out.innerHTML = r ? 
-`VALID<br>${r.name}<br>${r.score}<br>${r.guarantee}` 
-: "NOT FOUND";
+let r=DB.find(x=>x.ref==vid.value);
+out.innerHTML=r?`VALID<br>${r.name}<br>${r.score}<br>${r.guarantee}`:'NOT FOUND';
 }
 
-// ENGINE
-function updateEngine(){
-total.innerText = DB.length;
-rev.innerText = STATS.rev;
-res.innerText = STATS.res;
-exp.innerText = EXPOSURE;
+// DASHBOARD
+function updateDashboard(){
+total.innerText=DB.length;
+rev.innerText=STATS.rev;
+res.innerText=STATS.res;
+exp.innerText=EXPOSURE;
 
-let cov = EXPOSURE === 0 ? "SAFE" : (STATS.res / EXPOSURE).toFixed(2);
-cov.innerText = cov;
+let cov=EXPOSURE===0?'SAFE':(STATS.res/EXPOSURE).toFixed(2);
+cov.innerText=cov;
+
+let html='';
+Object.keys(AGENTS).forEach(a=>{
+html+=a+': '+AGENTS[a].count+' deals | ₦'+AGENTS[a].earn+'<br>';
+});
+agents.innerHTML=html;
 }
 </script>
 
