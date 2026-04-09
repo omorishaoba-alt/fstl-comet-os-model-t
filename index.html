@@ -2,135 +2,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS - Simulation</title>
+<title>FSTL COMET OS</title>
 <style>
-    body { margin:0; font-family: Arial, sans-serif; background-color:#1E3A8A; color:#fff; }
-    .container { max-width:480px; margin:auto; padding:20px; }
-    h1 { text-align:center; font-size:1.8em; margin-bottom:20px; }
-    label { display:block; margin-top:15px; font-weight:bold; }
-    select, input[type=text], input[type=number], input[type=checkbox] { width:100%; padding:10px; margin-top:5px; border-radius:5px; border:none; }
-    .error { color: #FFBABA; font-size: 0.9em; margin-top: 3px; }
-    button { background-color:#FACC15; color:#1E3A8A; font-weight:bold; padding:12px; border:none; border-radius:5px; width:100%; margin-top:20px; font-size:1em; cursor:pointer; }
-    .hidden { display:none; }
-    .qr { margin-top:15px; background:#fff; padding:10px; border-radius:5px; color:#000; word-break:break-word; }
-    .manual { margin-top:20px; background:#F3F4F6; padding:10px; border-radius:5px; color:#000; font-size:0.9em; }
+  body {margin:0; font-family: Arial, sans-serif; background-color:#1a73e8; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;}
+  .container {width:90%; max-width:400px; text-align:center;}
+  button {padding:15px 30px; font-size:18px; margin-top:20px; border:none; border-radius:8px; cursor:pointer; background-color:#ffcd00; color:#000;}
+  input, select {width:100%; padding:10px; margin:10px 0; border-radius:5px; border:none;}
+  .hidden {display:none;}
+  .qr {margin:20px 0;}
+  .ai-badge {font-size:12px; margin-top:10px; color:#ffcd00;}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>FSTL COMET OS - Kickstart Verification</h1>
-<form id="verificationForm"><label>Transaction Type</label> <select id="transactionType" required> <option value="">Select Type</option> <option value="SALE">SALE</option> <option value="RENT">RENT</option> </select>
+<div class="container" id="frontPage">
+  <h1>FSTL COMET OS</h1>
+  <p>Everything you input is truthful, captured, and secure.</p>
+  <div class="qr" id="frontQR">QR: [Informational]</div>
+  <div class="ai-badge">Powered by ChatGPT AI</div>
+  <button onclick="startVerification()">START</button>
+</div><div class="container hidden" id="truthPage">
+  <h2>Truth Declaration</h2>
+  <p>I declare that all information I provide is truthful and traceable.</p>
+  <input type="checkbox" id="truthCheck"> I agree<br>
+  <button onclick="submitTruth()">Proceed</button>
+</div><div class="container hidden" id="securityPage">
+  <h2>Security Details</h2>
+  <select id="roleSelect">
+    <option value="">Select your role</option>
+    <option value="owner">Owner (for self or estate/trust)</option>
+    <option value="seller">Seller (for self or estate)</option>
+    <option value="buyer">Buyer</option>
+    <option value="renter">Renter</option>
+    <option value="tenant">Tenant</option>
+    <option value="agent">Agent</option>
+  </select>
+  <input type="text" id="name" placeholder="Full Name">
+  <input type="text" id="bvn" placeholder="BVN">
+  <input type="text" id="nin" placeholder="NIN">
+  <input type="text" id="address" placeholder="Residential Address">
+  <input type="text" id="agent" placeholder="Agent (optional)">
+  <button onclick="submitSecurity()">Proceed</button>
+</div><div class="container hidden" id="assetPage">
+  <h2>Property Details</h2>
+  <input type="text" id="propertyType" placeholder="Property Type">
+  <input type="text" id="scope" placeholder="Scope of Possession">
+  <input type="text" id="location" placeholder="Property Location">
+  <button onclick="submitAsset()">Proceed</button>
+</div><div class="container hidden" id="paymentPage">
+  <h2>Payment</h2>
+  <p>Simulated verification fee: $10</p>
+  <button onclick="submitPayment()">Pay & Verify</button>
+</div><div class="container hidden" id="pdfPage">
+  <h2>Verification Complete</h2>
+  <p>Final PDF Generated</p>
+  <div class="qr" id="finalQR">Final PDF QR: [Master]</div>
+  <div class="ai-badge">Powered by ChatGPT AI</div>
+  <button onclick="downloadPDF()">Download PDF</button>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script>
+const { jsPDF } = window.jspdf;
 
-<div class="error" id="transactionTypeError"></div><label>Role</label> <select id="role" required> <option value="">Select Role</option> <option value="Owner">Owner</option> <option value="Seller">Seller</option> <option value="Family Estate Representative">Family Estate Representative</option> <option value="Landlord">Landlord</option> <option value="Tenant">Tenant</option> <option value="Agent">Agent (Optional)</option> </select>
+function startVerification() {
+  document.getElementById('frontPage').classList.add('hidden');
+  document.getElementById('truthPage').classList.remove('hidden');
+}
 
-<div class="error" id="roleError"></div><label>Full Name</label> <input type="text" id="fullName" required />
+function submitTruth() {
+  if (!document.getElementById('truthCheck').checked) {alert('You must declare truthfulness'); return;}
+  document.getElementById('truthPage').classList.add('hidden');
+  document.getElementById('securityPage').classList.remove('hidden');
+}
 
-<div class="error" id="nameError"></div><label>Residential Address</label> <input type="text" id="address" required />
+function submitSecurity() {
+  const role = document.getElementById('roleSelect').value;
+  const name = document.getElementById('name').value;
+  const bvn = document.getElementById('bvn').value;
+  const nin = document.getElementById('nin').value;
+  const address = document.getElementById('address').value;
+  if(!role || !name || !bvn || !nin || !address){alert('All compulsory fields must be filled'); return;}
+  document.getElementById('securityPage').classList.add('hidden');
+  document.getElementById('assetPage').classList.remove('hidden');
+}
 
-<div class="error" id="addressError"></div><label>BVN</label> <input type="number" id="bvn" required />
+function submitAsset() {
+  const propertyType = document.getElementById('propertyType').value;
+  const scope = document.getElementById('scope').value;
+  const location = document.getElementById('location').value;
+  if(!propertyType || !scope || !location){alert('All fields must be filled'); return;}
+  document.getElementById('assetPage').classList.add('hidden');
+  document.getElementById('paymentPage').classList.remove('hidden');
+}
 
-<div class="error" id="bvnError"></div><label>NIN</label> <input type="number" id="nin" required />
+function submitPayment() {
+  alert('Payment successful. Verification in progress...');
+  document.getElementById('paymentPage').classList.add('hidden');
+  document.getElementById('pdfPage').classList.remove('hidden');
+}
 
-<div class="error" id="ninError"></div><label>Property Type</label> <select id="propertyType" required> <option value="">Select Property Type</option> <option value="Land">Land</option> <option value="Residential">Residential</option> <option value="Commercial">Commercial</option> <option value="Mixed">Mixed</option> </select>
+function downloadPDF() {
+  const doc = new jsPDF();
+  const role = document.getElementById('roleSelect').value;
+  const name = document.getElementById('name').value;
+  const bvn = document.getElementById('bvn').value;
+  const nin = document.getElementById('nin').value;
+  const address = document.getElementById('address').value;
+  const propertyType = document.getElementById('propertyType').value;
+  const scope = document.getElementById('scope').value;
+  const location = document.getElementById('location').value;
 
-<div class="error" id="propertyTypeError"></div><label>Scope of Possession</label> <select id="scope" required> <option value="">Select Scope</option> <option value="Full">Full</option> <option value="Partial">Partial</option> <option value="Leasehold">Leasehold</option> <option value="Community">Community</option> </select>
+  doc.setFontSize(16);
+  doc.text('FSTL COMET OS Verification Report', 20, 20);
+  doc.setFontSize(12);
+  doc.text(`Role: ${role}`, 20, 40);
+  doc.text(`Name: ${name}`, 20, 50);
+  doc.text(`BVN: ${bvn}`, 20, 60);
+  doc.text(`NIN: ${nin}`, 20, 70);
+  doc.text(`Address: ${address}`, 20, 80);
+  doc.text(`Property Type: ${propertyType}`, 20, 90);
+  doc.text(`Scope of Possession: ${scope}`, 20, 100);
+  doc.text(`Property Location: ${location}`, 20, 110);
+  doc.text('QR Codes:', 20, 130);
+  doc.text('[Front QR]', 20, 140);
+  doc.text('[Identity QR]', 20, 150);
+  doc.text('[Property QR]', 20, 160);
+  doc.text('[Payment QR]', 20, 170);
+  doc.text('[Master QR]', 20, 180);
+  doc.text('Powered by ChatGPT AI', 20, 200);
 
-<div class="error" id="scopeError"></div><label>Truth Confirmation</label> <input type="checkbox" id="truthCheck" /> I confirm all information is TRUE and accurate
-
-<div class="error" id="truthError"></div><button type="submit">Submit Verification</button>
-
-</form><div id="paymentSection" class="hidden">
-<h2>Payment Simulation (ALETT)</h2>
-<p>Verification fee sent to reserve pool: <strong>₦50,000</strong></p>
-<button id="generatePdfBtn">Generate PDF + QR Series & User Manual</button>
-</div><div id="pdfSection" class="hidden">
-<h2>Verification PDF & QR Series</h2>
-<div class="qr" id="qr1"></div>
-<div class="qr" id="qr2"></div>
-<div class="qr" id="qr3"></div>
-<div class="qr" id="qr4"></div>
-<div class="manual" id="manualSection"></div>
-</div><script>
-const form = document.getElementById('verificationForm');
-const paymentSection = document.getElementById('paymentSection');
-const pdfSection = document.getElementById('pdfSection');
-const generatePdfBtn = document.getElementById('generatePdfBtn');
-const manualSection = document.getElementById('manualSection');
-
-form.addEventListener('submit', function(e){
-    e.preventDefault();
-    document.querySelectorAll('.error').forEach(el => el.textContent = '');
-    let valid = true;
-
-    const transactionType = document.getElementById('transactionType').value;
-    const role = document.getElementById('role').value;
-    const name = document.getElementById('fullName').value;
-    const address = document.getElementById('address').value;
-    const bvn = document.getElementById('bvn').value;
-    const nin = document.getElementById('nin').value;
-    const propertyType = document.getElementById('propertyType').value;
-    const scope = document.getElementById('scope').value;
-    const truthCheck = document.getElementById('truthCheck').checked;
-
-    if(!transactionType){ document.getElementById('transactionTypeError').textContent = 'Please select transaction type.'; valid=false; }
-    if(!role){ document.getElementById('roleError').textContent = 'Please select your role.'; valid=false; }
-    if(!name){ document.getElementById('nameError').textContent = 'Please enter your full name.'; valid=false; }
-    if(!address){ document.getElementById('addressError').textContent = 'Please enter your residential address.'; valid=false; }
-    if(!bvn){ document.getElementById('bvnError').textContent = 'Please enter your BVN.'; valid=false; }
-    if(!nin){ document.getElementById('ninError').textContent = 'Please enter your NIN.'; valid=false; }
-    if(!propertyType){ document.getElementById('propertyTypeError').textContent = 'Please select property type.'; valid=false; }
-    if(!scope){ document.getElementById('scopeError').textContent = 'Please select scope of possession.'; valid=false; }
-    if(!truthCheck){ document.getElementById('truthError').textContent = 'You must confirm truth before proceeding.'; valid=false; }
-
-    if(!valid) return;
-
-    if(role === 'Tenant' && transactionType === 'RENT'){
-        const landlordVerified = true;
-        if(!landlordVerified){
-            alert('Tenant cannot proceed until landlord verification is complete.');
-            return;
-        }
-    }
-
-    paymentSection.classList.remove('hidden');
-    form.classList.add('hidden');
-});
-
-generatePdfBtn.addEventListener('click', function(){
-    const role = document.getElementById('role').value;
-    const transactionType = document.getElementById('transactionType').value;
-    const name = document.getElementById('fullName').value;
-    const address = document.getElementById('address').value;
-    const bvn = document.getElementById('bvn').value;
-    const nin = document.getElementById('nin').value;
-    const propertyType = document.getElementById('propertyType').value;
-    const scope = document.getElementById('scope').value;
-    const timestamp = new Date().toISOString();
-
-    document.getElementById('qr1').textContent = `IDENTITY: Role=${role}, Name=${name}, BVN=${bvn}, NIN=${nin}`;
-    document.getElementById('qr2').textContent = `PROPERTY: Type=${propertyType}, Scope=${scope}, Address=${address}`;
-    document.getElementById('qr3').textContent = `TRANSACTION: Type=${transactionType}, Verification SUCCESS, Truth Confirmed`;
-    document.getElementById('qr4').textContent = `TIMESTAMP: ${timestamp}, VerificationID: ${bvn}-${nin}-${timestamp}`;
-
-    // User manual content with acronyms explained
-    manualSection.innerHTML = `
-<h3>User Manual & Explanation</h3>
-<ul>
-<li><strong>BVN:</strong> Bank Verification Number</li>
-<li><strong>NIN:</strong> National Identification Number</li>
-<li><strong>ALETT:</strong> Simulated reserve pool payment engine</li>
-<li><strong>SALE / RENT:</strong> Transaction types</li>
-<li><strong>Truth Confirmation:</strong> Checkbox confirms input is accurate</li>
-<li><strong>PDF & QR:</strong> Immutable record, contains Identity, Property, Transaction, Timestamp</li>
-<li>Tenant cannot proceed without Landlord verification for RENT</li>
-<li>Agent participation is optional but fully integrated</li>
-<li>All steps are mobile-optimized and correction-friendly</li>
-</ul>
-    `;
-
-    pdfSection.classList.remove('hidden');
-    paymentSection.classList.add('hidden');
-});
-</script></div>
-</body>
+  doc.save('FSTL_COMET_OS_Verification.pdf');
+}
+</script></body>
 </html>
