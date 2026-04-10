@@ -7,158 +7,145 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{margin:0;font-family:Arial;background:#0a2a66;color:#fff;display:flex;justify-content:center}
-.container{width:100%;max-width:420px}
-.screen{display:none;padding:20px;text-align:center}
+.screen{display:none;max-width:420px;width:100%;padding:20px;text-align:center}
 .active{display:block}
 button{width:100%;padding:15px;margin-top:15px;border:none;border-radius:8px;background:#FFD700;color:#000;font-weight:bold}
 input,select{width:100%;padding:12px;margin-top:10px;border-radius:6px;border:none}
 .qr{background:#fff;padding:10px;margin:15px auto;width:120px}
+h2,h3,p{text-align:center}
 </style>
 </head>
-<body>
-<div class="container"><!-- FRONT PAGE --><div id="front" class="screen active">
+<body><div id="front" class="screen active">
 <h2>FSTL COMET OS</h2>
-<p>Global Property Trust • Verification • Probate System</p>
+<p>Secure Pre-Transaction Trust System</p>
 <div id="frontQR" class="qr"></div>
-<button onclick="go('truth')">START</button>
-</div><!-- TRUTH --><div id="truth" class="screen">
+<button onclick="next('truth')">START</button>
+</div><div id="truth" class="screen">
 <h3>TRUTH DECLARATION</h3>
-<p>All inputs are legally binding and traceable.</p>
+<p>I confirm all inputs are truthful and legally traceable.</p>
 <label><input type="checkbox" id="truthCheck"> ACCEPT</label>
-<button onclick="toIdentity()">PROCEED</button>
-</div><!-- IDENTITY PAGE --><div id="identity" class="screen">
+<button onclick="toSecurity()">PROCEED</button>
+</div><div id="identity" class="screen">
 <h3>IDENTITY</h3>
 <select id="role">
 <option value="">Select Role</option>
 <option>Owner</option>
 <option>Seller</option>
-<option>Landlord</option>
+<option>Buyer</option>
 <option>Tenant</option>
 <option>Agent</option>
 </select>
 <input id="name" placeholder="Full Name">
-<input id="bvn" placeholder="BVN">
-<input id="nin" placeholder="NIN">
-<div id="qrIdentity" class="qr"></div>
-<button onclick="toAsset()">NEXT</button>
-</div><!-- ASSET PAGE --><div id="asset" class="screen">
-<h3>ASSET / TRANSACTION</h3>
+<input id="bvn" placeholder="BVN (Optional)">
+<input id="nin" placeholder="NIN (Optional)">
+<input id="address" placeholder="Address (Optional)">
+<button onclick="toAsset()">PROCEED</button>
+</div><div id="asset" class="screen">
+<h3>ASSET</h3>
 <input id="property" placeholder="Property Description">
-<input id="location" placeholder="Location">
-<input id="transaction" placeholder="Transaction Type (Sale/Rent/Transfer)">
-<input id="value" placeholder="Transaction Value">
-<div id="qrAsset" class="qr"></div>
-<button onclick="verify()">VERIFY</button>
-</div><!-- RESULT --><div id="result" class="screen">
-<h3>VERIFICATION COMPLETE</h3>
+<input id="location" placeholder="Property Location">
+<input id="scope" placeholder="Scope of Possession">
+<button onclick="finalize()">VERIFY</button>
+</div><div id="result" class="screen">
+<h3>TRUST RECORD</h3>
 <p id="vid"></p>
-<div id="qrMaster" class="qr"></div>
-<button onclick="downloadPDF()">DOWNLOAD PROBATE PDF</button>
-<button onclick="go('verifyPortal')">VERIFY RECORD</button>
-</div><!-- VERIFY PORTAL --><div id="verifyPortal" class="screen">
+<div id="qr1" class="qr"></div>
+<div id="qr2" class="qr"></div>
+<div id="qr3" class="qr"></div>
+<div id="qr4" class="qr"></div>
+<div id="qr5" class="qr"></div>
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+<button onclick="next('verify')">VERIFY RECORD</button>
+</div><div id="verify" class="screen">
 <h3>VERIFY</h3>
 <input id="verifyInput" placeholder="Enter Verification ID">
-<button onclick="check()">VERIFY</button>
+<button onclick="verifyRecord()">VERIFY</button>
 <p id="verifyResult"></p>
-</div></div><script>
+</div><script>
 const { jsPDF } = window.jspdf;
 
-function go(id){
+function next(id){
  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
  document.getElementById(id).classList.add('active');
 }
 
-function toIdentity(){
+function toSecurity(){
  if(!truthCheck.checked) return alert('Accept truth');
- go('identity');
+ next('identity');
 }
 
 function toAsset(){
- if(!role.value) return alert('Role required');
- if(!name.value) return alert('Full name required');
- if(!bvn.value && !nin.value) return alert('BVN or NIN required');
+ // ALL PARTICIPANTS MUST PROVIDE IDENTITY
+ if(!role.value){
+  alert('Role is required');
+  return;
+ }
+ if(!name.value){
+  alert('Full Name is required');
+  return;
+ }
+ if(!bvn.value && !nin.value){
+  alert('Provide BVN or NIN for identity verification');
+  return;
+ }
 
- const identityData = `${name.value}|${role.value}|${bvn.value}|${nin.value}`;
- document.getElementById('qrIdentity').innerHTML='';
- new QRCode(qrIdentity,{text:identityData,width:100,height:100});
-
- go('asset');
+ next('asset');
+}
+ next('asset');
 }
 
-function verify(){
- if(!property.value || !location.value) return alert('Property + Location required');
+function finalize(){
+ if(!property.value || !location.value){
+  alert('Property and Location required');
+  return;
+ }
 
  const id = 'FSTL-'+Date.now();
  const time = new Date().toISOString();
 
- const identity = `${name.value}|${role.value}|${bvn.value}|${nin.value}`;
- const asset = `${property.value}|${location.value}|${transaction.value}|${value.value}`;
- const master = btoa(identity + asset + time);
+ const identityData = `${name.value}|${role.value}|${bvn.value}|${nin.value}`;
+ const assetData = `${property.value}|${location.value}|${scope.value}`;
+ const networkData = `Agent:N/A`;
+ const timeData = time;
+ const masterData = btoa(identityData+assetData+networkData+timeData);
 
- localStorage.setItem(id, JSON.stringify({identity,asset,master,time}));
+ const record = {id,identityData,assetData,networkData,timeData,masterData};
+ localStorage.setItem(id, JSON.stringify(record));
 
  vid.innerText = id;
 
- document.getElementById('qrAsset').innerHTML='';
- new QRCode(qrAsset,{text:asset,width:100,height:100});
+ document.getElementById('qr1').innerHTML='';
+ document.getElementById('qr2').innerHTML='';
+ document.getElementById('qr3').innerHTML='';
+ document.getElementById('qr4').innerHTML='';
+ document.getElementById('qr5').innerHTML='';
 
- document.getElementById('qrMaster').innerHTML='';
- new QRCode(qrMaster,{text:master,width:100,height:100});
+ new QRCode(qr1,{text:identityData,width:100,height:100});
+ new QRCode(qr2,{text:assetData,width:100,height:100});
+ new QRCode(qr3,{text:networkData,width:100,height:100});
+ new QRCode(qr4,{text:timeData,width:100,height:100});
+ new QRCode(qr5,{text:masterData,width:100,height:100});
 
- go('result');
+ next('result');
 }
 
-function check(){
+function verifyRecord(){
  const id = verifyInput.value;
  const data = localStorage.getItem(id);
- verifyResult.innerText = data ? 'VALID RECORD' : 'INVALID RECORD';
+
+ if(data){
+  verifyResult.innerText = 'VALID RECORD: '+id;
+ } else {
+  verifyResult.innerText = 'INVALID RECORD';
+ }
 }
 
 function downloadPDF(){
  const doc = new jsPDF();
- const id = vid.innerText;
- const time = new Date().toLocaleString();
-
- const identity = `${name.value} (${role.value})`;
- const idProof = `BVN: ${bvn.value || 'N/A'} | NIN: ${nin.value || 'N/A'}`;
- const assetInfo = `${property.value}, ${location.value}`;
- const txn = `${transaction.value || 'N/A'} | Value: ${value.value || 'N/A'}`;
-
- const qr1 = btoa(identity + idProof);
- const qr2 = btoa(assetInfo + txn);
- const qr3 = btoa(id + time);
-
- // PAGE 1
- doc.text('FSTL COMET OS – TRUST & PROBATE RECORD',10,20);
- doc.text('ID: '+id,10,30);
- doc.text('Declaration of property interest and intent.',10,50);
- doc.text('Timestamp: '+time,10,70);
- doc.text('QR:',10,100);
- doc.text(qr1,10,110);
-
- // PAGE 2
- doc.addPage();
- doc.text('IDENTITY & LEGAL POSITION',10,20);
- doc.text(identity,10,40);
- doc.text(idProof,10,60);
- doc.text('QR:',10,100);
- doc.text(qr2,10,110);
-
- // PAGE 3
- doc.addPage();
- doc.text('ASSET & TRANSACTION / PROBATE',10,20);
- doc.text(assetInfo,10,40);
- doc.text(txn,10,60);
- doc.text('QR:',10,100);
- doc.text(qr3,10,110);
-
- // PAGE 4
- doc.addPage();
- doc.text('SYSTEM CERTIFICATION',10,20);
- doc.text('Generated via FSTL COMET OS',10,40);
- doc.text('End of Record',10,80);
-
- doc.save('FSTL_PROBATE_TRUST.pdf');
+ doc.text('FSTL COMET OS TRUST DOCUMENT',10,20);
+ doc.text('ID: '+vid.innerText,10,40);
+ doc.text('Pre-transaction trust established.',10,60);
+ doc.save('FSTL_TRUST.pdf');
 }
 
 new QRCode(frontQR,{text:'FSTL ENTRY LOCK',width:100,height:100});
