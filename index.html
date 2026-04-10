@@ -3,132 +3,138 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  body {margin:0; font-family: Arial, sans-serif; background-color:#1a73e8; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;}
-  .container {width:90%; max-width:400px; text-align:center;}
-  button {padding:15px 30px; font-size:18px; margin-top:20px; border:none; border-radius:8px; cursor:pointer; background-color:#ffcd00; color:#000;}
-  input, select {width:100%; padding:10px; margin:10px 0; border-radius:5px; border:none;}
-  .hidden {display:none;}
-  .qr {margin:20px 0;}
-  .ai-badge {font-size:12px; margin-top:10px; color:#ffcd00;}
+body{margin:0;font-family:Arial;background:#0a2a66;color:#fff}
+.screen{display:none;padding:20px;max-width:420px;margin:auto}
+.active{display:block}
+button{width:100%;padding:15px;margin-top:15px;border:none;border-radius:8px;background:#FFD700;color:#000;font-weight:bold}
+input,select{width:100%;padding:12px;margin-top:10px;border-radius:6px;border:none}
+.qr{background:#fff;padding:10px;margin-top:15px}
+h2,h3{text-align:center}
 </style>
 </head>
-<body>
-<div class="container" id="frontPage">
-  <h1>FSTL COMET OS</h1>
-  <p>Everything you input is truthful, captured, and secure.</p>
-  <div class="qr" id="frontQR">QR: [Informational]</div>
-  <div class="ai-badge">Powered by ChatGPT AI</div>
-  <button onclick="startVerification()">START</button>
-</div><div class="container hidden" id="truthPage">
-  <h2>Truth Declaration</h2>
-  <p>I declare that all information I provide is truthful and traceable.</p>
-  <input type="checkbox" id="truthCheck"> I agree<br>
-  <button onclick="submitTruth()">Proceed</button>
-</div><div class="container hidden" id="securityPage">
-  <h2>Security Details</h2>
-  <select id="roleSelect">
-    <option value="">Select your role</option>
-    <option value="owner">Owner (for self or estate/trust)</option>
-    <option value="seller">Seller (for self or estate)</option>
-    <option value="buyer">Buyer</option>
-    <option value="renter">Renter</option>
-    <option value="tenant">Tenant</option>
-    <option value="agent">Agent</option>
-  </select>
-  <input type="text" id="name" placeholder="Full Name">
-  <input type="text" id="bvn" placeholder="BVN">
-  <input type="text" id="nin" placeholder="NIN">
-  <input type="text" id="address" placeholder="Residential Address">
-  <input type="text" id="agent" placeholder="Agent (optional)">
-  <button onclick="submitSecurity()">Proceed</button>
-</div><div class="container hidden" id="assetPage">
-  <h2>Property Details</h2>
-  <input type="text" id="propertyType" placeholder="Property Type">
-  <input type="text" id="scope" placeholder="Scope of Possession">
-  <input type="text" id="location" placeholder="Property Location">
-  <button onclick="submitAsset()">Proceed</button>
-</div><div class="container hidden" id="paymentPage">
-  <h2>Payment</h2>
-  <p>Simulated verification fee: $10</p>
-  <button onclick="submitPayment()">Pay & Verify</button>
-</div><div class="container hidden" id="pdfPage">
-  <h2>Verification Complete</h2>
-  <p>Final PDF Generated</p>
-  <div class="qr" id="finalQR">Final PDF QR: [Master]</div>
-  <div class="ai-badge">Powered by ChatGPT AI</div>
-  <button onclick="downloadPDF()">Download PDF</button>
-</div><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script>
+<body><!-- FRONT --><div id="front" class="screen active">
+<h2>FSTL COMET OS</h2>
+<p style="text-align:center">Secure Pre-Transaction Trust System</p>
+<div id="frontQR" class="qr"></div>
+<button onclick="next('truth')">START</button>
+</div><!-- TRUTH --><div id="truth" class="screen">
+<h3>TRUTH DECLARATION</h3>
+<p>I confirm all inputs are truthful and legally traceable.</p>
+<input type="checkbox" id="truthCheck"> ACCEPT
+<button onclick="toSecurity()">PROCEED</button>
+</div><!-- IDENTITY --><div id="identity" class="screen">
+<h3>IDENTITY</h3>
+<select id="role">
+<option value="">Select Role</option>
+<option>Owner</option>
+<option>Seller</option>
+<option>Buyer</option>
+<option>Tenant</option>
+<option>Agent</option>
+</select>
+<input id="name" placeholder="Full Name">
+<input id="bvn" placeholder="BVN">
+<input id="nin" placeholder="NIN">
+<input id="address" placeholder="Address">
+<button onclick="toAsset()">PROCEED</button>
+</div><!-- ASSET --><div id="asset" class="screen">
+<h3>ASSET</h3>
+<input id="property" placeholder="Property Description">
+<input id="location" placeholder="Property Location">
+<input id="scope" placeholder="Scope of Possession">
+<button onclick="finalize()">VERIFY</button>
+</div><!-- RESULT --><div id="result" class="screen">
+<h3>TRUST RECORD</h3>
+<p id="vid"></p>
+<div id="qr1" class="qr"></div>
+<div id="qr2" class="qr"></div>
+<div id="qr3" class="qr"></div>
+<div id="qr4" class="qr"></div>
+<div id="qr5" class="qr"></div>
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+<button onclick="next('verify')">VERIFY RECORD</button>
+</div><!-- VERIFY --><div id="verify" class="screen">
+<h3>VERIFY</h3>
+<input id="verifyInput" placeholder="Enter Verification ID">
+<button onclick="verifyRecord()">VERIFY</button>
+<p id="verifyResult"></p>
+</div><script>
 const { jsPDF } = window.jspdf;
 
-function startVerification() {
-  document.getElementById('frontPage').classList.add('hidden');
-  document.getElementById('truthPage').classList.remove('hidden');
+function next(id){
+ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
 }
 
-function submitTruth() {
-  if (!document.getElementById('truthCheck').checked) {alert('You must declare truthfulness'); return;}
-  document.getElementById('truthPage').classList.add('hidden');
-  document.getElementById('securityPage').classList.remove('hidden');
+function toSecurity(){
+ if(!truthCheck.checked) return alert('Accept truth');
+ next('identity');
 }
 
-function submitSecurity() {
-  const role = document.getElementById('roleSelect').value;
-  const name = document.getElementById('name').value;
-  const bvn = document.getElementById('bvn').value;
-  const nin = document.getElementById('nin').value;
-  const address = document.getElementById('address').value;
-  if(!role || !name || !bvn || !nin || !address){alert('All compulsory fields must be filled'); return;}
-  document.getElementById('securityPage').classList.add('hidden');
-  document.getElementById('assetPage').classList.remove('hidden');
+function toAsset(){
+ if(!role.value||!name.value||!bvn.value||!nin.value) return alert('Complete identity');
+ next('asset');
 }
 
-function submitAsset() {
-  const propertyType = document.getElementById('propertyType').value;
-  const scope = document.getElementById('scope').value;
-  const location = document.getElementById('location').value;
-  if(!propertyType || !scope || !location){alert('All fields must be filled'); return;}
-  document.getElementById('assetPage').classList.add('hidden');
-  document.getElementById('paymentPage').classList.remove('hidden');
+function finalize(){
+ if(!property.value||!location.value||!scope.value) return alert('Complete asset');
+
+ const id = 'FSTL-'+Date.now();
+ const time = new Date().toISOString();
+
+ const identityData = `${name.value}|${role.value}|${bvn.value}|${nin.value}`;
+ const assetData = `${property.value}|${location.value}|${scope.value}`;
+ const networkData = `Agent:N/A`;
+ const timeData = time;
+ const masterData = btoa(identityData+assetData+networkData+timeData);
+
+ const record = {id,identityData,assetData,networkData,timeData,masterData};
+ localStorage.setItem(id, JSON.stringify(record));
+
+ vid.innerText = id;
+
+ new QRCode(qr1,{text:identityData,width:100,height:100});
+ new QRCode(qr2,{text:assetData,width:100,height:100});
+ new QRCode(qr3,{text:networkData,width:100,height:100});
+ new QRCode(qr4,{text:timeData,width:100,height:100});
+ new QRCode(qr5,{text:masterData,width:100,height:100});
+
+ next('result');
 }
 
-function submitPayment() {
-  alert('Payment successful. Verification in progress...');
-  document.getElementById('paymentPage').classList.add('hidden');
-  document.getElementById('pdfPage').classList.remove('hidden');
+function verifyRecord(){
+ const id = verifyInput.value;
+ const data = localStorage.getItem(id);
+
+ if(data){
+  const d = JSON.parse(data);
+  verifyResult.innerText = 'VALID RECORD: '+d.id;
+ } else {
+  verifyResult.innerText = 'INVALID RECORD';
+ }
 }
 
-function downloadPDF() {
-  const doc = new jsPDF();
-  const role = document.getElementById('roleSelect').value;
-  const name = document.getElementById('name').value;
-  const bvn = document.getElementById('bvn').value;
-  const nin = document.getElementById('nin').value;
-  const address = document.getElementById('address').value;
-  const propertyType = document.getElementById('propertyType').value;
-  const scope = document.getElementById('scope').value;
-  const location = document.getElementById('location').value;
-
-  doc.setFontSize(16);
-  doc.text('FSTL COMET OS Verification Report', 20, 20);
-  doc.setFontSize(12);
-  doc.text(`Role: ${role}`, 20, 40);
-  doc.text(`Name: ${name}`, 20, 50);
-  doc.text(`BVN: ${bvn}`, 20, 60);
-  doc.text(`NIN: ${nin}`, 20, 70);
-  doc.text(`Address: ${address}`, 20, 80);
-  doc.text(`Property Type: ${propertyType}`, 20, 90);
-  doc.text(`Scope of Possession: ${scope}`, 20, 100);
-  doc.text(`Property Location: ${location}`, 20, 110);
-  doc.text('QR Codes:', 20, 130);
-  doc.text('[Front QR]', 20, 140);
-  doc.text('[Identity QR]', 20, 150);
-  doc.text('[Property QR]', 20, 160);
-  doc.text('[Payment QR]', 20, 170);
-  doc.text('[Master QR]', 20, 180);
-  doc.text('Powered by ChatGPT AI', 20, 200);
-
-  doc.save('FSTL_COMET_OS_Verification.pdf');
+function downloadPDF(){
+ const doc = new jsPDF();
+ doc.text('FSTL COMET OS TRUST DOCUMENT',10,20);
+ doc.text('ID: '+vid.innerText,10,40);
+ doc.text('This document establishes pre-transaction trust.',10,60);
+ doc.addPage();
+ doc.text('IDENTITY',10,20);
+ doc.text(name.value,10,40);
+ doc.text(role.value,10,50);
+ doc.addPage();
+ doc.text('ASSET',10,20);
+ doc.text(property.value,10,40);
+ doc.text(location.value,10,50);
+ doc.addPage();
+ doc.text('VERIFICATION STATUS: CONFIRMED',10,20);
+ doc.save('FSTL_TRUST.pdf');
 }
+
+new QRCode(frontQR,{text:'FSTL ENTRY LOCK',width:100,height:100});
 </script></body>
 </html>
