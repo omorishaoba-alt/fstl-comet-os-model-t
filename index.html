@@ -2,152 +2,132 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>
-body{margin:0;font-family:Arial;background:#0a2a66;color:#fff;display:flex;justify-content:center}
-.screen{display:none;max-width:420px;width:100%;padding:20px;text-align:center}
-.active{display:block}
-button{width:100%;padding:15px;margin-top:15px;border:none;border-radius:8px;background:#FFD700;color:#000;font-weight:bold}
-input,select{width:100%;padding:12px;margin-top:10px;border-radius:6px;border:none}
-.qr{background:#fff;padding:10px;margin:15px auto;width:120px}
-h2,h3,p{text-align:center}
-</style>
-</head>
-<body><div id="front" class="screen active">
-<h2>FSTL COMET OS</h2>
-<p>Secure Pre-Transaction Trust System</p>
-<div id="frontQR" class="qr"></div>
-<button onclick="next('truth')">START</button>
-</div><div id="truth" class="screen">
-<h3>TRUTH DECLARATION</h3>
-<p>I confirm all inputs are truthful and legally traceable.</p>
-<label><input type="checkbox" id="truthCheck"> ACCEPT</label>
-<button onclick="toSecurity()">PROCEED</button>
-</div><div id="identity" class="screen">
-<h3>IDENTITY</h3>
-<select id="role">
-<option value="">Select Role</option>
-<option>Owner</option>
-<option>Seller</option>
-<option>Buyer</option>
-<option>Tenant</option>
-<option>Agent</option>
-</select>
+<title>FSTL COMET OS – Clean Core</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><style>
+body{margin:0;font-family:Arial;background:#f4f6fb}
+.hidden{display:none}
+
+#landing{
+height:100vh;
+background:#0b4ed7;
+color:#fff;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+text-align:center;
+padding:20px;
+}
+
+.section{padding:16px}
+input{
+width:100%;
+padding:16px;
+margin-top:10px;
+border-radius:8px;
+border:1px solid #ccc;
+font-size:16px;
+}
+
+button{
+width:100%;
+padding:16px;
+margin-top:14px;
+border:none;
+border-radius:8px;
+font-size:16px;
+font-weight:bold;
+}
+
+.primary{background:#0b4ed7;color:#fff}
+
+.box{
+margin-top:12px;
+padding:12px;
+border:2px solid #0b4ed7;
+border-radius:8px;
+display:flex;
+gap:10px;
+align-items:center;
+}
+</style></head>
+<body><!-- LANDING --><div id="landing">
+<h1>FSTL COMET OS</h1>
+<p>Property Verification</p>
+<button class="primary" onclick="start()">START</button>
+</div><!-- FORM --><div id="form" class="section hidden">
+<h3>Verification</h3>
 <input id="name" placeholder="Full Name">
-<input id="bvn" placeholder="BVN (Optional)">
-<input id="nin" placeholder="NIN (Optional)">
-<input id="address" placeholder="Address (Optional)">
-<button onclick="toAsset()">PROCEED</button>
-</div><div id="asset" class="screen">
-<h3>ASSET</h3>
-<input id="property" placeholder="Property Description">
-<input id="location" placeholder="Property Location">
-<input id="scope" placeholder="Scope of Possession">
-<button onclick="finalize()">VERIFY</button>
-</div><div id="result" class="screen">
-<h3>TRUST RECORD</h3>
-<p id="vid"></p>
-<div id="qr1" class="qr"></div>
-<div id="qr2" class="qr"></div>
-<div id="qr3" class="qr"></div>
-<div id="qr4" class="qr"></div>
-<div id="qr5" class="qr"></div>
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-<button onclick="next('verify')">VERIFY RECORD</button>
-</div><div id="verify" class="screen">
-<h3>VERIFY</h3>
-<input id="verifyInput" placeholder="Enter Verification ID">
-<button onclick="verifyRecord()">VERIFY</button>
-<p id="verifyResult"></p>
+<input id="nin" placeholder="NIN">
+<input id="bvn" placeholder="BVN">
+<input id="property" placeholder="Property Description"><div class="box">
+<input type="checkbox" id="truth">
+<span>I confirm this information is true</span>
+</div><button class="primary" onclick="generate()">GENERATE RECORD</button>
+
+</div><!-- OUTPUT --><div id="output" class="section hidden">
+<h3>Record Generated</h3>
+<div id="qr"></div>
+<button class="primary" onclick="downloadPDF()">DOWNLOAD PDF</button>
+<button onclick="start()">NEW</button>
 </div><script>
 const { jsPDF } = window.jspdf;
+let record = null;
 
-function next(id){
- document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
- document.getElementById(id).classList.add('active');
+function show(id){
+['landing','form','output'].forEach(x=>document.getElementById(x).classList.add('hidden'));
+document.getElementById(id).classList.remove('hidden');
+window.scrollTo(0,0);
 }
 
-function toSecurity(){
- if(!truthCheck.checked) return alert('Accept truth');
- next('identity');
+function start(){ show('form'); }
+
+function validate(){
+if(!name.value||!nin.value||!bvn.value||!property.value)
+return "Complete all fields";
+if(!truth.checked) return "Confirm truth";
+return null;
 }
 
-function toAsset(){
- // ALL PARTICIPANTS MUST PROVIDE IDENTITY
- if(!role.value){
-  alert('Role is required');
-  return;
- }
- if(!name.value){
-  alert('Full Name is required');
-  return;
- }
- if(!bvn.value && !nin.value){
-  alert('Provide BVN or NIN for identity verification');
-  return;
- }
+function generate(){
+let v = validate();
+if(v) return alert(v);
 
- next('asset');
-}
- next('asset');
-}
+record = {
+ref: Date.now(),
+name: name.value,
+nin: nin.value,
+bvn: bvn.value,
+property: property.value,
+time: new Date().toISOString()
+};
 
-function finalize(){
- if(!property.value || !location.value){
-  alert('Property and Location required');
-  return;
- }
+Object.freeze(record);
 
- const id = 'FSTL-'+Date.now();
- const time = new Date().toISOString();
+let q = document.getElementById("qr");
+q.innerHTML = "";
+new QRCode(q, {
+text: JSON.stringify(record),
+width: 140,
+height: 140
+});
 
- const identityData = `${name.value}|${role.value}|${bvn.value}|${nin.value}`;
- const assetData = `${property.value}|${location.value}|${scope.value}`;
- const networkData = `Agent:N/A`;
- const timeData = time;
- const masterData = btoa(identityData+assetData+networkData+timeData);
-
- const record = {id,identityData,assetData,networkData,timeData,masterData};
- localStorage.setItem(id, JSON.stringify(record));
-
- vid.innerText = id;
-
- document.getElementById('qr1').innerHTML='';
- document.getElementById('qr2').innerHTML='';
- document.getElementById('qr3').innerHTML='';
- document.getElementById('qr4').innerHTML='';
- document.getElementById('qr5').innerHTML='';
-
- new QRCode(qr1,{text:identityData,width:100,height:100});
- new QRCode(qr2,{text:assetData,width:100,height:100});
- new QRCode(qr3,{text:networkData,width:100,height:100});
- new QRCode(qr4,{text:timeData,width:100,height:100});
- new QRCode(qr5,{text:masterData,width:100,height:100});
-
- next('result');
-}
-
-function verifyRecord(){
- const id = verifyInput.value;
- const data = localStorage.getItem(id);
-
- if(data){
-  verifyResult.innerText = 'VALID RECORD: '+id;
- } else {
-  verifyResult.innerText = 'INVALID RECORD';
- }
+show('output');
 }
 
 function downloadPDF(){
- const doc = new jsPDF();
- doc.text('FSTL COMET OS TRUST DOCUMENT',10,20);
- doc.text('ID: '+vid.innerText,10,40);
- doc.text('Pre-transaction trust established.',10,60);
- doc.save('FSTL_TRUST.pdf');
-}
+let doc = new jsPDF();
 
-new QRCode(frontQR,{text:'FSTL ENTRY LOCK',width:100,height:100});
+doc.text("FSTL VERIFICATION RECORD",20,20);
+doc.text("REF: " + record.ref,20,40);
+doc.text("NAME: " + record.name,20,50);
+doc.text("NIN: " + record.nin,20,60);
+doc.text("BVN: " + record.bvn,20,70);
+doc.text("PROPERTY: " + record.property,20,80);
+doc.text("TIME: " + record.time,20,90);
+
+doc.text("IMMUTABLE RECORD",20,110);
+
+doc.save("FSTL_RECORD.pdf");
+}
 </script></body>
 </html>
