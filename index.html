@@ -5,133 +5,173 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
 
-<!-- QR + PDF LIBRARIES -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {font-family: Arial; margin:0; background:#f4f6f8;}
-.screen {display:none; padding:20px;}
-.active {display:block;}
-button {width:100%; padding:15px; margin-top:15px; background:#0a2a66; color:#fff; border:none;}
-input, textarea, select {width:100%; padding:12px; margin-top:10px;}
-.qr {margin:20px auto; width:200px;}
-.center {text-align:center;}
-.step {font-size:12px; color:#555;}
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0a2a66;
+    display:flex;
+    justify-content:center;
+}
+
+.container{
+    width:95%;
+    max-width:420px;
+    background:#fff;
+    margin:20px 0;
+    border-radius:12px;
+    padding:15px;
+}
+
+h2{font-size:16px;margin:10px 0;}
+input, select, textarea{
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border:1px solid #ccc;
+}
+
+button{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    background:#0a2a66;
+    color:#fff;
+    border:none;
+}
+
+.qr{
+    display:flex;
+    justify-content:center;
+    margin:10px 0;
+}
+
+.small{font-size:12px;color:#555;}
 </style>
 </head>
 
 <body>
 
-<!-- LANDING -->
-<div id="s1" class="screen active center">
-<h2>FSTL COMET OS</h2>
-<p>Structured Record System</p>
-<button onclick="go('s2')">START</button>
-</div>
+<div class="container">
 
-<!-- FORM -->
-<div id="s2" class="screen">
-<div class="step">STEP 1 — Identity</div>
-<input id="name" placeholder="Full Name">
-<input id="bvn" placeholder="BVN">
-<input id="nin" placeholder="NIN">
-<input id="addr" placeholder="Address">
-<button onclick="go('s3')">CONTINUE</button>
-</div>
+    <h2>FSTL COMET OS</h2>
+    <div class="small">Structured Transaction Record</div>
 
-<!-- ASSET -->
-<div id="s3" class="screen">
-<div class="step">STEP 2 — Asset</div>
-<textarea id="asset" placeholder="Property Details"></textarea>
-<select id="role">
-<option>Owner</option>
-<option>Buyer</option>
-<option>Tenant</option>
-<option>Agent</option>
-</select>
-<button onclick="go('s4')">CONTINUE</button>
-</div>
+    <!-- QR ALWAYS ACTIVE -->
+    <div id="qr" class="qr"></div>
 
-<!-- CONFIRM -->
-<div id="s4" class="screen">
-<div class="step">STEP 3 — Confirm</div>
-<label><input type="checkbox" id="ok"> Confirm details</label>
-<button onclick="activate()">ACTIVATE</button>
-</div>
+    <!-- IDENTITY -->
+    <h2>Identity</h2>
+    <input id="nin" placeholder="NIN">
+    <input id="bvn" placeholder="BVN">
+    <input id="address" placeholder="Residential / Office Address">
 
-<!-- LIVE -->
-<div id="s5" class="screen center">
-<div class="step">STEP 4 — System Posting</div>
-<p id="status">Posting...</p>
-<div id="qrlive" class="qr"></div>
-<button id="fin" onclick="finalize()" disabled>FINALIZE</button>
-</div>
+    <!-- ROLE -->
+    <h2>Role</h2>
+    <select id="role">
+        <option>Owner / Landlord</option>
+        <option>Buyer</option>
+        <option>Tenant</option>
+        <option>Agent</option>
+    </select>
 
-<!-- FINAL -->
-<div id="s6" class="screen center">
-<h3>RECORD COMPLETED</h3>
-<div id="qrfinal" class="qr"></div>
-<p id="rid"></p>
-<button onclick="pdf()">DOWNLOAD PDF</button>
+    <!-- PURPOSE -->
+    <h2>Purpose</h2>
+    <select id="purpose">
+        <option>Sale</option>
+        <option>Rent</option>
+    </select>
+
+    <!-- ASSET -->
+    <h2>Asset Details</h2>
+    <input id="type" placeholder="Property Type">
+    <input id="location" placeholder="Location">
+    <input id="value" placeholder="Value">
+    <textarea id="desc" placeholder="Description"></textarea>
+
+    <!-- POSSESSION -->
+    <h2>Possession Disclosure</h2>
+    <textarea id="possession" placeholder="How was the property acquired?"></textarea>
+
+    <!-- TERMS -->
+    <h2>Confirmation</h2>
+    <label class="small">
+        <input type="checkbox" id="terms">
+        I accept full responsibility for all information provided.
+    </label>
+
+    <!-- PAYMENT SIMULATION -->
+    <button onclick="pay()">PAY ₦25,000</button>
+
+    <!-- OUTPUT -->
+    <button onclick="generatePDF()">DOWNLOAD PDF</button>
+
 </div>
 
 <script>
-let r = {};
+let recordId = "FSTL-" + Date.now();
 
-function go(id){
-document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
-document.getElementById(id).classList.add('active');
+/* QR GENERATION */
+new QRCode(document.getElementById("qr"), {
+    text: recordId,
+    width:120,
+    height:120
+});
+
+/* PAYMENT GATE */
+let paid = false;
+
+function pay(){
+    if(!document.getElementById("terms").checked){
+        alert("Accept terms first");
+        return;
+    }
+    paid = true;
+    alert("Payment Successful (Simulation)");
 }
 
-function activate(){
-if(!document.getElementById('ok').checked){alert("Confirm first");return;}
+/* PDF GENERATION */
+function generatePDF(){
 
-r = {
-id: "FSTL-"+Date.now(),
-name: name.value,
-bvn: bvn.value,
-nin: nin.value,
-addr: addr.value,
-asset: asset.value,
-role: role.value
-};
+    if(!paid){
+        alert("Payment required");
+        return;
+    }
 
-go('s5');
+    const { jsPDF } = window.jspdf;
+    let doc = new jsPDF();
 
-setTimeout(()=>{status.innerText="Generating QR...";},1000);
+    doc.text("FSTL COMET OS RECORD",20,20);
+    doc.text("ID: "+recordId,20,30);
 
-setTimeout(()=>{
-new QRCode(qrlive,{text:r.id,width:200,height:200});
-},2000);
+    doc.text("IDENTITY",20,45);
+    doc.text("NIN: "+val("nin"),20,55);
+    doc.text("BVN: "+val("bvn"),20,65);
+    doc.text("Address: "+val("address"),20,75);
 
-setTimeout(()=>{
-status.innerText="Record Active";
-fin.disabled=false;
-},3000);
+    doc.text("ROLE & PURPOSE",20,90);
+    doc.text("Role: "+val("role"),20,100);
+    doc.text("Purpose: "+val("purpose"),20,110);
+
+    doc.text("ASSET",20,125);
+    doc.text("Type: "+val("type"),20,135);
+    doc.text("Location: "+val("location"),20,145);
+    doc.text("Value: "+val("value"),20,155);
+
+    doc.text("DISCLOSURE",20,170);
+    doc.text(val("possession"),20,180);
+
+    doc.text("SYSTEM NOTE:",20,200);
+    doc.text("User is responsible for all inputs.",20,210);
+
+    doc.save("FSTL_Record.pdf");
 }
 
-function finalize(){
-go('s6');
-rid.innerText=r.id;
-new QRCode(qrfinal,{text:r.id,width:200,height:200});
-}
-
-function pdf(){
-const { jsPDF } = window.jspdf;
-let doc = new jsPDF();
-
-doc.text("FSTL COMET OS RECORD",20,20);
-doc.text("ID: "+r.id,20,30);
-doc.text("Name: "+r.name,20,40);
-doc.text("BVN: "+r.bvn,20,50);
-doc.text("NIN: "+r.nin,20,60);
-doc.text("Address: "+r.addr,20,70);
-doc.text("Asset: "+r.asset,20,80);
-doc.text("Role: "+r.role,20,90);
-doc.text("STATUS: FINALIZED",20,110);
-
-doc.save("FSTL_Record.pdf");
+function val(id){
+    return document.getElementById(id).value;
 }
 </script>
 
