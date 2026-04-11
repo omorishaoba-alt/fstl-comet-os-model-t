@@ -3,240 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS - Simulation</title>
+<title>FSTL COMET OS</title>
+
+<!-- QR + PDF LIBRARIES -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    background: #f4f6f8;
-    color: #111;
-}
-
-.screen {
-    display: none;
-    padding: 20px;
-}
-
-.active {
-    display: block;
-}
-
-h1, h2 {
-    margin: 0 0 10px 0;
-}
-
-button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 15px;
-    font-size: 16px;
-    border: none;
-    background: #0a2a66;
-    color: #fff;
-    border-radius: 6px;
-}
-
-input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-}
-
-.step {
-    font-size: 12px;
-    margin-bottom: 10px;
-    color: #555;
-}
-
-.status {
-    margin-top: 10px;
-    font-size: 13px;
-}
-
-.qr-box {
-    width: 200px;
-    height: 200px;
-    background: #ddd;
-    margin: 20px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-}
-
-.center {
-    text-align: center;
-}
+body {font-family: Arial; margin:0; background:#f4f6f8;}
+.screen {display:none; padding:20px;}
+.active {display:block;}
+button {width:100%; padding:15px; margin-top:15px; background:#0a2a66; color:#fff; border:none;}
+input, textarea, select {width:100%; padding:12px; margin-top:10px;}
+.qr {margin:20px auto; width:200px;}
+.center {text-align:center;}
+.step {font-size:12px; color:#555;}
 </style>
 </head>
 
 <body>
 
 <!-- LANDING -->
-<div id="landing" class="screen active center">
-    <h1>FSTL COMET OS</h1>
-    <p>Structured Record System</p>
-    <button onclick="goTo('form1')">START NEW RECORD</button>
+<div id="s1" class="screen active center">
+<h2>FSTL COMET OS</h2>
+<p>Structured Record System</p>
+<button onclick="go('s2')">START</button>
 </div>
 
-<!-- FORM 1 -->
-<div id="form1" class="screen">
-    <div class="step">STEP 1 OF 5 — Identity Capture</div>
-
-    <input id="name" placeholder="Full Name">
-    <input id="bvn" placeholder="BVN">
-    <input id="nin" placeholder="NIN">
-    <input id="address" placeholder="Residential Address">
-
-    <button onclick="goTo('form2')">CONTINUE</button>
+<!-- FORM -->
+<div id="s2" class="screen">
+<div class="step">STEP 1 — Identity</div>
+<input id="name" placeholder="Full Name">
+<input id="bvn" placeholder="BVN">
+<input id="nin" placeholder="NIN">
+<input id="addr" placeholder="Address">
+<button onclick="go('s3')">CONTINUE</button>
 </div>
 
-<!-- FORM 2 -->
-<div id="form2" class="screen">
-    <div class="step">STEP 2 OF 5 — Asset Details</div>
-
-    <textarea id="asset" placeholder="Property / Asset Description"></textarea>
-
-    <select id="role">
-        <option>Owner</option>
-        <option>Buyer</option>
-        <option>Tenant</option>
-        <option>Agent</option>
-    </select>
-
-    <button onclick="goTo('confirm')">CONTINUE</button>
+<!-- ASSET -->
+<div id="s3" class="screen">
+<div class="step">STEP 2 — Asset</div>
+<textarea id="asset" placeholder="Property Details"></textarea>
+<select id="role">
+<option>Owner</option>
+<option>Buyer</option>
+<option>Tenant</option>
+<option>Agent</option>
+</select>
+<button onclick="go('s4')">CONTINUE</button>
 </div>
 
 <!-- CONFIRM -->
-<div id="confirm" class="screen">
-    <div class="step">STEP 3 OF 5 — Confirmation</div>
-
-    <p>Please confirm all inputs are correct.</p>
-
-    <label>
-        <input type="checkbox" id="confirmBox"> I confirm this information is accurate
-    </label>
-
-    <button onclick="activate()">ACTIVATE RECORD</button>
+<div id="s4" class="screen">
+<div class="step">STEP 3 — Confirm</div>
+<label><input type="checkbox" id="ok"> Confirm details</label>
+<button onclick="activate()">ACTIVATE</button>
 </div>
 
-<!-- LIVE RECORD -->
-<div id="live" class="screen center">
-    <div class="step">STEP 4 OF 5 — Live Record</div>
-
-    <div class="status">🟢 Record Structure Initialized</div>
-
-    <div class="qr-box" id="qrBox">
-        QR GENERATING...
-    </div>
-
-    <button onclick="finalize()">FINALIZE RECORD</button>
+<!-- LIVE -->
+<div id="s5" class="screen center">
+<div class="step">STEP 4 — System Posting</div>
+<p id="status">Posting...</p>
+<div id="qrlive" class="qr"></div>
+<button id="fin" onclick="finalize()" disabled>FINALIZE</button>
 </div>
 
 <!-- FINAL -->
-<div id="final" class="screen center">
-    <div class="step">STEP 5 OF 5 — Completed</div>
-
-    <h2>RECORD COMPLETED</h2>
-
-    <div class="qr-box" id="finalQR">
-        QR CODE
-    </div>
-
-    <p id="recordId"></p>
-
-    <button onclick="downloadPDF()">DOWNLOAD PDF</button>
-    <button onclick="goTo('verify')">VERIFY RECORD</button>
-</div>
-
-<!-- VERIFY -->
-<div id="verify" class="screen">
-    <h2>Verify Record</h2>
-
-    <input id="verifyInput" placeholder="Enter Record ID">
-
-    <button onclick="verify()">CHECK</button>
-
-    <p id="verifyResult"></p>
+<div id="s6" class="screen center">
+<h3>RECORD COMPLETED</h3>
+<div id="qrfinal" class="qr"></div>
+<p id="rid"></p>
+<button onclick="pdf()">DOWNLOAD PDF</button>
 </div>
 
 <script>
-let record = {};
+let r = {};
 
-function goTo(screen) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screen).classList.add('active');
+function go(id){
+document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+document.getElementById(id).classList.add('active');
 }
 
-function activate() {
-    if (!document.getElementById("confirmBox").checked) {
-        alert("Please confirm your input");
-        return;
-    }
+function activate(){
+if(!document.getElementById('ok').checked){alert("Confirm first");return;}
 
-    record = {
-        name: document.getElementById("name").value,
-        bvn: document.getElementById("bvn").value,
-        nin: document.getElementById("nin").value,
-        address: document.getElementById("address").value,
-        asset: document.getElementById("asset").value,
-        role: document.getElementById("role").value,
-        id: "FSTL-" + Date.now()
-    };
+r = {
+id: "FSTL-"+Date.now(),
+name: name.value,
+bvn: bvn.value,
+nin: nin.value,
+addr: addr.value,
+asset: asset.value,
+role: role.value
+};
 
-    goTo('live');
+go('s5');
 
-    setTimeout(() => {
-        document.getElementById("qrBox").innerText = record.id;
-    }, 1000);
+setTimeout(()=>{status.innerText="Generating QR...";},1000);
+
+setTimeout(()=>{
+new QRCode(qrlive,{text:r.id,width:200,height:200});
+},2000);
+
+setTimeout(()=>{
+status.innerText="Record Active";
+fin.disabled=false;
+},3000);
 }
 
-function finalize() {
-    goTo('final');
-
-    document.getElementById("recordId").innerText = record.id;
-    document.getElementById("finalQR").innerText = record.id;
+function finalize(){
+go('s6');
+rid.innerText=r.id;
+new QRCode(qrfinal,{text:r.id,width:200,height:200});
 }
 
-function downloadPDF() {
-    let content = `
-FSTL COMET OS RECORD
+function pdf(){
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF();
 
-Transaction ID: ${record.id}
+doc.text("FSTL COMET OS RECORD",20,20);
+doc.text("ID: "+r.id,20,30);
+doc.text("Name: "+r.name,20,40);
+doc.text("BVN: "+r.bvn,20,50);
+doc.text("NIN: "+r.nin,20,60);
+doc.text("Address: "+r.addr,20,70);
+doc.text("Asset: "+r.asset,20,80);
+doc.text("Role: "+r.role,20,90);
+doc.text("STATUS: FINALIZED",20,110);
 
-Name: ${record.name}
-BVN: ${record.bvn}
-NIN: ${record.nin}
-Address: ${record.address}
-
-Asset: ${record.asset}
-Role: ${record.role}
-
-STATUS: FINALIZED
-
-This is a structured record. It does not validate ownership.
-`;
-
-    let blob = new Blob([content], { type: 'text/plain' });
-    let link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "FSTL_Record.txt";
-    link.click();
-}
-
-function verify() {
-    let input = document.getElementById("verifyInput").value;
-
-    if (input === record.id) {
-        document.getElementById("verifyResult").innerText =
-            "VALID RECORD FOUND\n" + record.name + " - " + record.asset;
-    } else {
-        document.getElementById("verifyResult").innerText =
-            "NO RECORD FOUND";
-    }
+doc.save("FSTL_Record.pdf");
 }
 </script>
 
