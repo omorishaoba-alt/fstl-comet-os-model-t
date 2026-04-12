@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,29 +11,32 @@
 <style>
 body{
     margin:0;
-    font-family:Arial, sans-serif;
+    font-family:Arial;
     background:#0a2a66;
-    display:flex;
-    justify-content:center;
 }
-
-.container{
-    width:95%;
+.app{
     max-width:420px;
+    margin:auto;
     background:#fff;
-    margin:20px 0;
-    border-radius:12px;
-    padding:15px;
+    min-height:100vh;
+    padding:16px;
 }
-
-h2{font-size:16px;margin:10px 0;}
-input, select, textarea{
-    width:100%;
+h2{
+    text-align:center;
+    color:#0a2a66;
+}
+.fee{
+    text-align:center;
     padding:10px;
-    margin:6px 0;
-    border:1px solid #ccc;
+    background:#eef3ff;
+    margin-bottom:10px;
+    font-weight:bold;
 }
-
+input,textarea,select{
+    width:100%;
+    padding:12px;
+    margin:6px 0;
+}
 button{
     width:100%;
     padding:14px;
@@ -42,137 +45,158 @@ button{
     color:#fff;
     border:none;
 }
-
-.qr{
+#qr{
     display:flex;
     justify-content:center;
+    margin:12px 0;
+}
+.status{
+    text-align:center;
     margin:10px 0;
 }
-
-.small{font-size:12px;color:#555;}
+.hidden{
+    display:none;
+}
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="app">
 
-    <h2>FSTL COMET OS</h2>
-    <div class="small">Structured Transaction Record</div>
+<h2>PROPERTY VERIFICATION</h2>
 
-    <!-- QR ALWAYS ACTIVE -->
-    <div id="qr" class="qr"></div>
+<div class="fee">
+Fee: ₦5,000 — Complete Verification Record
+</div>
 
-    <!-- IDENTITY -->
-    <h2>Identity</h2>
-    <input id="nin" placeholder="NIN">
-    <input id="bvn" placeholder="BVN">
-    <input id="address" placeholder="Residential / Office Address">
+<div class="status" id="status">ENTER DETAILS</div>
 
-    <!-- ROLE -->
-    <h2>Role</h2>
-    <select id="role">
-        <option>Owner / Landlord</option>
-        <option>Buyer</option>
-        <option>Tenant</option>
-        <option>Agent</option>
-    </select>
+<input id="name" placeholder="Full Name">
+<input id="nin" placeholder="NIN / ID">
+<input id="bvn" placeholder="BVN (optional)">
 
-    <!-- PURPOSE -->
-    <h2>Purpose</h2>
-    <select id="purpose">
-        <option>Sale</option>
-        <option>Rent</option>
-    </select>
+<select id="role">
+<option>Owner</option>
+<option>Buyer</option>
+<option>Tenant</option>
+<option>Agent</option>
+</select>
 
-    <!-- ASSET -->
-    <h2>Asset Details</h2>
-    <input id="type" placeholder="Property Type">
-    <input id="location" placeholder="Location">
-    <input id="value" placeholder="Value">
-    <textarea id="desc" placeholder="Description"></textarea>
+<input id="property" placeholder="Property Type">
+<input id="location" placeholder="Location">
+<input id="value" placeholder="Value">
 
-    <!-- POSSESSION -->
-    <h2>Possession Disclosure</h2>
-    <textarea id="possession" placeholder="How was the property acquired?"></textarea>
+<textarea id="ownership" placeholder="Ownership / Possession History"></textarea>
 
-    <!-- TERMS -->
-    <h2>Confirmation</h2>
-    <label class="small">
-        <input type="checkbox" id="terms">
-        I accept full responsibility for all information provided.
-    </label>
+<label>
+<input type="checkbox" id="confirm">
+I confirm all information is accurate
+</label>
 
-    <!-- PAYMENT SIMULATION -->
-    <button onclick="pay()">PAY ₦25,000</button>
+<button onclick="process()">VERIFY & PAY</button>
 
-    <!-- OUTPUT -->
-    <button onclick="generatePDF()">DOWNLOAD PDF</button>
+<div id="output" class="hidden">
+<div id="qr"></div>
+<div id="ref" class="status"></div>
+<button onclick="pdf()">DOWNLOAD PDF</button>
+</div>
 
 </div>
 
 <script>
-let recordId = "FSTL-" + Date.now();
 
-/* QR GENERATION */
-new QRCode(document.getElementById("qr"), {
-    text: recordId,
-    width:120,
-    height:120
-});
+const TX = {
+    id: "FSTL-" + Date.now(),
+    data: {},
+    hash: null
+};
 
-/* PAYMENT GATE */
-let paid = false;
-
-function pay(){
-    if(!document.getElementById("terms").checked){
-        alert("Accept terms first");
-        return;
-    }
-    paid = true;
-    alert("Payment Successful (Simulation)");
+function hash(data){
+    return btoa(JSON.stringify(data)).slice(0,40);
 }
 
-/* PDF GENERATION */
-function generatePDF(){
+function process(){
 
-    if(!paid){
-        alert("Payment required");
+    if(!document.getElementById("confirm").checked){
+        alert("Confirm details");
         return;
     }
+
+    TX.data = {
+        name: v("name"),
+        nin: v("nin"),
+        bvn: v("bvn"),
+        role: v("role"),
+        property: v("property"),
+        location: v("location"),
+        value: v("value"),
+        ownership: v("ownership")
+    };
+
+    TX.hash = hash(TX.data);
+
+    // simulate payment success
+    document.getElementById("status").innerText = "PROCESSING...";
+    
+    setTimeout(()=>{
+        complete();
+    },1000);
+}
+
+function complete(){
+
+    document.getElementById("status").innerText = "VERIFIED";
+
+    document.getElementById("output").classList.remove("hidden");
+
+    document.getElementById("ref").innerText = TX.id;
+
+    new QRCode(document.getElementById("qr"), {
+        text: JSON.stringify({
+            id: TX.id,
+            hash: TX.hash
+        }),
+        width:130,
+        height:130
+    });
+}
+
+function pdf(){
 
     const { jsPDF } = window.jspdf;
     let doc = new jsPDF();
 
-    doc.text("FSTL COMET OS RECORD",20,20);
-    doc.text("ID: "+recordId,20,30);
+    let y = 20;
 
-    doc.text("IDENTITY",20,45);
-    doc.text("NIN: "+val("nin"),20,55);
-    doc.text("BVN: "+val("bvn"),20,65);
-    doc.text("Address: "+val("address"),20,75);
+    doc.text("FSTL COMET OS VERIFICATION RECORD",20,y); y+=10;
+    doc.text("ID: " + TX.id,20,y); y+=10;
+    doc.text("HASH: " + TX.hash,20,y); y+=10;
 
-    doc.text("ROLE & PURPOSE",20,90);
-    doc.text("Role: "+val("role"),20,100);
-    doc.text("Purpose: "+val("purpose"),20,110);
+    for(let k in TX.data){
+        doc.text(k + ": " + TX.data[k],20,y);
+        y+=10;
+    }
 
-    doc.text("ASSET",20,125);
-    doc.text("Type: "+val("type"),20,135);
-    doc.text("Location: "+val("location"),20,145);
-    doc.text("Value: "+val("value"),20,155);
+    doc.addPage();
+    doc.text("DECLARATION",20,20);
+    doc.text("User confirms accuracy of all submitted data.",20,30);
 
-    doc.text("DISCLOSURE",20,170);
-    doc.text(val("possession"),20,180);
+    doc.addPage();
+    doc.text("TRACEABILITY",20,20);
+    doc.text("QR-linked transaction record.",20,30);
 
-    doc.text("SYSTEM NOTE:",20,200);
-    doc.text("User is responsible for all inputs.",20,210);
+    doc.addPage();
+    doc.text("FINAL STATUS",20,20);
+    doc.text("VERIFIED RECORD ISSUED",20,30);
 
-    doc.save("FSTL_Record.pdf");
+    doc.save("FSTL_RECORD.pdf");
 }
 
-function val(id){
+function v(id){
     return document.getElementById(id).value;
 }
+
 </script>
 
 </body>
