@@ -1,202 +1,126 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
+<title>FSTL COMET OS - MVP</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
-    margin:0;
-    font-family:Arial;
-    background:#0a2a66;
-}
-.app{
-    max-width:420px;
-    margin:auto;
-    background:#fff;
-    min-height:100vh;
-    padding:16px;
-}
-h2{
-    text-align:center;
-    color:#0a2a66;
-}
-.fee{
-    text-align:center;
-    padding:10px;
-    background:#eef3ff;
-    margin-bottom:10px;
-    font-weight:bold;
-}
-input,textarea,select{
-    width:100%;
-    padding:12px;
-    margin:6px 0;
-}
-button{
-    width:100%;
-    padding:14px;
-    margin-top:10px;
-    background:#0a2a66;
-    color:#fff;
-    border:none;
-}
-#qr{
-    display:flex;
-    justify-content:center;
-    margin:12px 0;
-}
-.status{
-    text-align:center;
-    margin:10px 0;
-}
-.hidden{
-    display:none;
-}
+body{font-family:Arial;background:#0b1c2c;color:#fff;text-align:center;padding:10px}
+input,textarea{width:90%;padding:10px;margin:5px;border-radius:5px;border:none}
+button{width:92%;padding:12px;margin:8px;background:#1f6feb;color:#fff;border:none;border-radius:5px}
+.card{background:#13263a;padding:10px;border-radius:10px;margin-top:10px}
 </style>
 </head>
 
 <body>
 
-<div class="app">
+<h2>FSTL COMET OS</h2>
+<p>Mobile Property Verification MVP</p>
 
-<h2>PROPERTY VERIFICATION</h2>
+<div class="card">
 
-<div class="fee">
-Fee: ₦5,000 — Complete Verification Record
-</div>
+<input id="owner" placeholder="Owner Name">
+<input id="buyer" placeholder="Buyer Name">
+<input id="tenant" placeholder="Tenant (optional)">
+<textarea id="property" placeholder="Property Details"></textarea>
 
-<div class="status" id="status">ENTER DETAILS</div>
-
-<input id="name" placeholder="Full Name">
-<input id="nin" placeholder="NIN / ID">
-<input id="bvn" placeholder="BVN (optional)">
-
-<select id="role">
-<option>Owner</option>
-<option>Buyer</option>
-<option>Tenant</option>
-<option>Agent</option>
-</select>
-
-<input id="property" placeholder="Property Type">
-<input id="location" placeholder="Location">
-<input id="value" placeholder="Value">
-
-<textarea id="ownership" placeholder="Ownership / Possession History"></textarea>
-
-<label>
-<input type="checkbox" id="confirm">
-I confirm all information is accurate
-</label>
-
-<button onclick="process()">VERIFY & PAY</button>
-
-<div id="output" class="hidden">
-<div id="qr"></div>
-<div id="ref" class="status"></div>
-<button onclick="pdf()">DOWNLOAD PDF</button>
-</div>
+<button onclick="createTX()">CREATE TRANSACTION</button>
+<button onclick="lockTX()" id="lockBtn" style="display:none">LOCK TRANSACTION</button>
 
 </div>
+
+<div id="output" class="card"></div>
+<div id="qrcode" class="card"></div>
 
 <script>
-
-const TX = {
-    id: "FSTL-" + Date.now(),
-    data: {},
-    hash: null
-};
+let TX = null;
+let REGISTRY = JSON.parse(localStorage.getItem("REGISTRY")||"{}");
 
 function hash(data){
-    return btoa(JSON.stringify(data)).slice(0,40);
+let str = JSON.stringify(data);
+let h = 0;
+for(let i=0;i<str.length;i++){
+h = (h<<5)-h+str.charCodeAt(i);
+h|=0;
+}
+return "FSTL-"+Math.abs(h);
 }
 
-function process(){
+function createTX(){
 
-    if(!document.getElementById("confirm").checked){
-        alert("Confirm details");
-        return;
-    }
+let data = {
+owner:owner.value,
+buyer:buyer.value,
+tenant:tenant.value,
+property:property.value
+};
 
-    TX.data = {
-        name: v("name"),
-        nin: v("nin"),
-        bvn: v("bvn"),
-        role: v("role"),
-        property: v("property"),
-        location: v("location"),
-        value: v("value"),
-        ownership: v("ownership")
-    };
+TX = {
+id:"TX-"+Date.now(),
+data:data,
+hash:hash(data),
+state:"EDGE",
+time:Date.now()
+};
 
-    TX.hash = hash(TX.data);
+document.getElementById("output").innerHTML =
+"<b>TX CREATED</b><br>ID: "+TX.id+"<br>STATE: "+TX.state;
 
-    // simulate payment success
-    document.getElementById("status").innerText = "PROCESSING...";
-    
-    setTimeout(()=>{
-        complete();
-    },1000);
+document.getElementById("lockBtn").style.display="block";
+
+showQR(TX);
 }
 
-function complete(){
+function lockTX(){
 
-    document.getElementById("status").innerText = "VERIFIED";
+TX.state = "NATIONAL_LOCKED";
 
-    document.getElementById("output").classList.remove("hidden");
+REGISTRY[TX.id] = TX;
+localStorage.setItem("REGISTRY",JSON.stringify(REGISTRY));
 
-    document.getElementById("ref").innerText = TX.id;
+document.getElementById("output").innerHTML =
+"<b>LOCKED CERTIFICATE</b><br>ID: "+TX.id+"<br>STATE: "+TX.state;
 
-    new QRCode(document.getElementById("qr"), {
-        text: JSON.stringify({
-            id: TX.id,
-            hash: TX.hash
-        }),
-        width:130,
-        height:130
-    });
+generatePDF(TX);
+showQR(TX);
 }
 
-function pdf(){
-
-    const { jsPDF } = window.jspdf;
-    let doc = new jsPDF();
-
-    let y = 20;
-
-    doc.text("FSTL COMET OS VERIFICATION RECORD",20,y); y+=10;
-    doc.text("ID: " + TX.id,20,y); y+=10;
-    doc.text("HASH: " + TX.hash,20,y); y+=10;
-
-    for(let k in TX.data){
-        doc.text(k + ": " + TX.data[k],20,y);
-        y+=10;
-    }
-
-    doc.addPage();
-    doc.text("DECLARATION",20,20);
-    doc.text("User confirms accuracy of all submitted data.",20,30);
-
-    doc.addPage();
-    doc.text("TRACEABILITY",20,20);
-    doc.text("QR-linked transaction record.",20,30);
-
-    doc.addPage();
-    doc.text("FINAL STATUS",20,20);
-    doc.text("VERIFIED RECORD ISSUED",20,30);
-
-    doc.save("FSTL_RECORD.pdf");
+function showQR(tx){
+document.getElementById("qrcode").innerHTML="";
+new QRCode(document.getElementById("qrcode"),{
+text: JSON.stringify(tx),
+width:150,
+height:150
+});
 }
 
-function v(id){
-    return document.getElementById(id).value;
+function verify(id){
+let tx = REGISTRY[id];
+if(!tx) return "INVALID";
+
+let recomputed = hash(tx.data);
+if(recomputed !== tx.hash) return "TAMPERED";
+
+if(tx.state !== "NATIONAL_LOCKED") return "PENDING";
+
+return "VALID";
 }
 
+function generatePDF(tx){
+const { jsPDF } = window.jspdf;
+let doc = new jsPDF();
+
+doc.text("FSTL COMET OS CERTIFICATE",10,10);
+doc.text("TX ID: "+tx.id,10,20);
+doc.text("OWNER: "+tx.data.owner,10,30);
+doc.text("BUYER: "+tx.data.buyer,10,40);
+doc.text("STATE: "+tx.state,10,50);
+
+doc.save(tx.id+".pdf");
+}
 </script>
 
 </body>
