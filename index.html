@@ -18,7 +18,7 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 .secondary{background:#444;}
 .center{text-align:center;}
 .warning{color:#ffcc00;font-size:13px;}
-.small{font-size:13px; line-height:1.4;}
+.small{font-size:13px;line-height:1.4;}
 </style>
 </head>
 
@@ -30,29 +30,22 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <div id="p0" class="page active center">
 <div class="card">
 <h2>Property Verification System</h2>
-<p>All information must be accurate.</p>
 <p class="warning">False information INVALIDATES this transaction.</p>
 
 <p class="small" style="margin-top:15px;">
 First Standard Title Limited<br>
-No. 19 Egbor Avenue, off Benoni Hospital Road,<br>
-GRA, Benin City, Edo State, Nigeria<br><br>
+No. 19 Egbor Avenue, GRA, Benin City<br><br>
 
 Phone/WhatsApp: +2348035888622<br>
 Email: fstlsite@gmail.com<br><br>
 
 Business Hours:<br>
-Mon – Fri: 9:00 AM – 5:00 PM<br>
-Sat: 10:00 AM – 2:00 PM<br>
+Mon–Fri: 9AM–5PM<br>
+Sat: 10AM–2PM<br>
 Sun: Closed<br><br>
 
-Enquiries Notice:<br>
-Enquiries will be responded to promptly.<br><br>
-
-Verification Timeline:<br>
-Processing depends on prompt payment confirmation.<br>
-Standard completion: 24–72 hours after payment.<br>
-Agent involvement and location may affect timing.
+Enquiries: Responded promptly<br>
+Verification: 24–72 hours after payment confirmation
 </p>
 
 </div>
@@ -112,21 +105,20 @@ Agent involvement and location may affect timing.
 <p><strong>Verification Fee: ₦25,000</strong></p>
 
 <div class="card" style="background:#0f2233;">
-<p><strong>Payment Details</strong></p>
 <p>Bank: First Bank Nigeria</p>
-<p>Account Name: FIRST STANDARD TITLE LIMITED</p>
-<p>Account Number: 2025222557</p>
+<p>Account: FIRST STANDARD TITLE LIMITED</p>
+<p>Acct No: 2025222557</p>
 </div>
 
 <p class="small warning">
-Processing begins only after verification fee confirmation.<br>
-Agent fee (if applicable) is separate and depends on location.
+Processing starts only after payment confirmation.<br>
+Agent fee depends on location.
 </p>
 
 <input id="receipt" placeholder="Transfer Reference">
 
 <label><input type="checkbox" id="paid"> Payment Confirmed</label><br>
-<label><input type="checkbox" id="undertake"> I confirm all information is correct</label>
+<label><input type="checkbox" id="undertake"> I confirm correctness</label>
 </div>
 
 <button onclick="go(5)">Continue</button>
@@ -135,8 +127,8 @@ Agent fee (if applicable) is separate and depends on location.
 <!-- SCREEN 5 -->
 <div id="p5" class="page">
 <div class="card">
-<h3>Final Commitment</h3>
-<p class="warning">Incorrect or false information invalidates this verification.</p>
+<h3>Final Confirmation</h3>
+<p class="warning">Incorrect data invalidates verification.</p>
 </div>
 <button onclick="generate()">Generate Verification</button>
 </div>
@@ -149,7 +141,7 @@ Agent fee (if applicable) is separate and depends on location.
 <p id="tx"></p>
 </div>
 <button onclick="downloadPDF()">Download PDF</button>
-<button class="secondary" onclick="resetAll()">New Verification</button>
+<button class="secondary" onclick="resetAll()">Reset</button>
 </div>
 
 <script>
@@ -157,12 +149,36 @@ Agent fee (if applicable) is separate and depends on location.
 let LOCK=false;
 let DATA={};
 
+/* =========================
+   NAVIGATION CONTROLLER
+========================= */
 function go(n){
-if(n===1){show(n);return;}
-if(n===2 && !validateIdentity()) return alert("Complete identity");
-if(n===3 && !validateNINBVN()) return alert("Enter NIN/BVN");
-if(n===4 && !validateProperty()) return alert("Complete property details");
-if(n===5 && !validatePayment()) return alert("Complete payment");
+
+if(n === 1){
+show(n);
+return;
+}
+
+if(n === 2 && !validateIdentity()){
+alert("Complete identity");
+return;
+}
+
+if(n === 3 && !validateNINBVN()){
+alert("Enter NIN/BVN");
+return;
+}
+
+if(n === 4 && !validateProperty()){
+alert("Complete property details");
+return;
+}
+
+if(n === 5 && !validatePayment()){
+alert("Complete payment");
+return;
+}
+
 show(n);
 }
 
@@ -171,66 +187,90 @@ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
 document.getElementById("p"+n).classList.add("active");
 }
 
+/* =========================
+   STABLE VALIDATION LAYER
+========================= */
+function val(id){
+return document.getElementById(id).value.trim();
+}
+
 function validateIdentity(){
-return name.value.trim()!=="" &&
-phone.value.trim()!=="" &&
-address.value.trim()!=="" &&
-role.value!=="";
+return val("name") !== "" &&
+       val("phone") !== "" &&
+       val("address") !== "" &&
+       val("role") !== "";
 }
 
 function validateNINBVN(){
-return nin.value.trim()!=="" && bvn.value.trim()!=="";
+return val("nin") !== "" && val("bvn") !== "";
 }
 
 function validateProperty(){
-return desc.value.trim()!=="" &&
-location.value.trim()!=="" &&
-type.value!=="";
+return val("desc") !== "" &&
+       val("location") !== "" &&
+       val("type") !== "";
 }
 
 function validatePayment(){
-return receipt.value.trim()!=="" &&
-paid.checked &&
-undertake.checked;
+return val("receipt") !== "" &&
+       document.getElementById("paid").checked &&
+       document.getElementById("undertake").checked;
 }
 
+/* =========================
+   BUSINESS RULES
+========================= */
 function roleCheck(){
-if(type.value==="sale" && role.value==="Tenant"){
-alert("Invalid role for sale transaction");
-role.value="";
+let type=val("type");
+let role=val("role");
+
+if(type==="sale" && role==="Tenant"){
+alert("Invalid role for sale");
+document.getElementById("role").value="";
 }
-if(type.value==="rent" && role.value==="Buyer"){
-alert("Invalid role for rent transaction");
-role.value="";
+
+if(type==="rent" && role==="Buyer"){
+alert("Invalid role for rent");
+document.getElementById("role").value="";
 }
 }
 
+/* =========================
+   GENERATION ENGINE
+========================= */
 function generate(){
+
 if(LOCK) return;
 LOCK=true;
 
 DATA={
-name:name.value,
-phone:phone.value,
-address:address.value,
-nin:nin.value,
-bvn:bvn.value,
-role:role.value,
-desc:desc.value,
-location:location.value,
-type:type.value,
+name:val("name"),
+phone:val("phone"),
+address:val("address"),
+nin:val("nin"),
+bvn:val("bvn"),
+role:val("role"),
+desc:val("desc"),
+location:val("location"),
+type:val("type"),
 tx:"TX-"+Date.now()
 };
 
 qr.innerHTML="";
-new QRCode(qr,{text:JSON.stringify(DATA),width:180,height:180});
+new QRCode(qr,{
+text:JSON.stringify(DATA),
+width:180,
+height:180
+});
 
 tx.innerText=DATA.tx;
 
 show(6);
 }
 
-/* PDF ENGINE */
+/* =========================
+   PDF ENGINE (MULTI-PAGE)
+========================= */
 function downloadPDF(){
 
 const { jsPDF } = window.jspdf;
@@ -243,73 +283,52 @@ doc.text(t,10,y);
 y+=8;
 }
 
-add("FSTL COMET OS VERIFICATION REPORT");
+add("FSTL COMET OS REPORT");
 add("TX: "+DATA.tx);
 add("Date: "+new Date().toLocaleString());
 
-add("------------------------------");
-
-add("USER DETAILS");
+add("--- USER ---");
 add(DATA.name);
 add(DATA.phone);
 add(DATA.address);
 add(DATA.role);
 
-add("------------------------------");
-
-add("IDENTITY");
+add("--- IDENTITY ---");
 add("NIN: "+DATA.nin);
 add("BVN: "+DATA.bvn);
 
-add("------------------------------");
-
-add("PROPERTY");
+add("--- PROPERTY ---");
 add(DATA.desc);
 add(DATA.location);
 add(DATA.type);
 
-add("------------------------------");
+add("--- RULES ---");
+add("False info invalidates verification");
+add("Processing: 24–72h after payment");
 
-add("DECLARATION");
-add("All information is true.");
-add("False data invalidates this transaction.");
+add("--- PAYMENT ---");
+add("₦25,000 Verification Fee");
+add("First Bank Nigeria");
+add("FIRST STANDARD TITLE LIMITED");
+add("2025222557");
 
-add("------------------------------");
+add("--- CONTACT ---");
+add("+2348035888622");
+add("fstlsite@gmail.com");
+add("Benin City, Edo State");
 
-add("VERIFICATION TIMELINE");
-add("Depends on prompt payment confirmation.");
-add("Standard: 24–72 hours after payment.");
-add("Agent/location may affect timing.");
+add("--- HOURS ---");
+add("Mon–Fri 9–5");
+add("Sat 10–2");
+add("Sun Closed");
 
-add("------------------------------");
+add("--- ENQUIRY ---");
+add("Responded promptly");
 
-add("FEES");
-add("Verification Fee: ₦25,000");
-add("Agent Fee: varies by location");
-
-add("------------------------------");
-
-add("FSTL CONTACT");
-add("First Standard Title Limited");
-add("No. 19 Egbor Avenue, GRA, Benin City, Edo State");
-add("Phone: +2348035888622");
-add("Email: fstlsite@gmail.com");
-
-add("------------------------------");
-
-add("BUSINESS HOURS");
-add("Mon–Fri: 9AM–5PM");
-add("Sat: 10AM–2PM");
-add("Sun: Closed");
-
-add("------------------------------");
-
-add("ENQUIRIES");
-add("Responded to promptly.");
-
-doc.save("FSTL_COMET_FULL.pdf");
+doc.save("FSTL_COMET.pdf");
 }
 
+/* RESET */
 function resetAll(){
 location.reload();
 }
