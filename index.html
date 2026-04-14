@@ -29,7 +29,7 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <div id="p0" class="page active center">
 <div class="card">
 <h2>Property Verification System</h2>
-<p>All information provided must be accurate.</p>
+<p>All information must be accurate.</p>
 <p class="warning">False information INVALIDATES this transaction.</p>
 </div>
 <button onclick="go(1)">Start Verification</button>
@@ -59,7 +59,6 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <h3>Verification Inputs</h3>
 <input id="nin" placeholder="NIN (Mandatory)">
 <input id="bvn" placeholder="BVN (Mandatory)">
-<p class="warning">Required for identity verification</p>
 </div>
 <button onclick="go(3)">Continue</button>
 </div>
@@ -133,48 +132,58 @@ document.getElementById("p"+n).classList.add("active");
 }
 
 function v1(){
-return name.value && phone.value && address.value && role.value;
+return document.getElementById("name").value.trim() !== "" &&
+       document.getElementById("phone").value.trim() !== "" &&
+       document.getElementById("address").value.trim() !== "" &&
+       document.getElementById("role").value !== "";
 }
 
 function v2(){
-return nin.value && bvn.value;
+return document.getElementById("nin").value.trim() !== "" &&
+       document.getElementById("bvn").value.trim() !== "";
 }
 
 function v3(){
-return desc.value && location.value && type.value;
+return document.getElementById("desc").value.trim() !== "" &&
+       document.getElementById("location").value.trim() !== "" &&
+       document.getElementById("type").value !== "";
 }
 
 function v4(){
-return receipt.value && paid.checked && undertake.checked;
+return document.getElementById("receipt").value.trim() !== "" &&
+       document.getElementById("paid").checked &&
+       document.getElementById("undertake").checked;
 }
 
 function roleCheck(){
-if(type.value==="sale" && role.value==="Tenant"){
+let type=document.getElementById("type").value;
+let role=document.getElementById("role").value;
+
+if(type==="sale" && role==="Tenant"){
 alert("Tenant cannot be in Sale");
-role.value="";
+document.getElementById("role").value="";
 }
-if(type.value==="rent" && role.value==="Buyer"){
+if(type==="rent" && role==="Buyer"){
 alert("Buyer cannot be in Rent");
-role.value="";
+document.getElementById("role").value="";
 }
 }
 
 function generate(){
 
 if(LOCK) return;
-
 LOCK=true;
 
 DATA={
-name:name.value,
-phone:phone.value,
-address:address.value,
-nin:nin.value,
-bvn:bvn.value,
-role:role.value,
-desc:desc.value,
-location:location.value,
-type:type.value,
+name:document.getElementById("name").value,
+phone:document.getElementById("phone").value,
+address:document.getElementById("address").value,
+nin:document.getElementById("nin").value,
+bvn:document.getElementById("bvn").value,
+role:document.getElementById("role").value,
+desc:document.getElementById("desc").value,
+location:document.getElementById("location").value,
+type:document.getElementById("type").value,
 tx:"TX-"+Date.now()
 };
 
@@ -185,7 +194,7 @@ width:180,
 height:180
 });
 
-tx.innerText=DATA.tx;
+document.getElementById("tx").innerText=DATA.tx;
 
 show(6);
 }
@@ -197,9 +206,10 @@ let doc=new jsPDF();
 doc.text("FSTL COMET OS VERIFICATION",10,10);
 doc.text("TX: "+DATA.tx,10,20);
 doc.text("Name: "+DATA.name,10,30);
-doc.text("Role: "+DATA.role,10,40);
-doc.text("Location: "+DATA.location,10,50);
-doc.text("Type: "+DATA.type,10,60);
+doc.text("Phone: "+DATA.phone,10,40);
+doc.text("Role: "+DATA.role,10,50);
+doc.text("Location: "+DATA.location,10,60);
+doc.text("Type: "+DATA.type,10,70);
 
 doc.save("FSTL_COMET.pdf");
 }
