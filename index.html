@@ -8,283 +8,204 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
-font-family:Arial;
-background:#0b1c2c;
-color:#fff;
-margin:0;
-}
-
-.page{
-display:none;
-min-height:100vh;
-}
-
-.active{display:block}
-
-.centered{
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-height:100vh;
-text-align:center;
-padding:20px;
-}
-
-input,textarea{
-width:95%;
-padding:12px;
-margin:6px;
-border-radius:6px;
-border:none;
-}
-
-button{
-width:100%;
-padding:14px;
-margin:10px 0;
-background:#1f6feb;
-color:#fff;
-border:none;
-border-radius:6px;
-}
-
-.card{
-background:#13263a;
-padding:12px;
-border-radius:10px;
-margin-top:10px;
-}
+body{font-family:Arial;margin:0;background:#0b1c2c;color:#fff;}
+.header{text-align:center;padding:20px;background:#071521;font-size:22px;font-weight:bold;}
+.page{display:none;padding:15px;}
+.active{display:block;}
+.card{background:#13263a;padding:15px;border-radius:12px;margin-bottom:12px;}
+input,textarea,select{width:100%;padding:14px;margin:8px 0;border-radius:8px;border:none;font-size:16px;}
+button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:bold;}
+.secondary{background:#444;}
+.center{text-align:center;}
+.warning{color:#ffcc00;font-size:13px;}
 </style>
 </head>
 
 <body>
 
-<!-- FRONT -->
-<div id="p1" class="page active centered">
-<h1>FSTL COMET OS</h1>
+<div class="header">FSTL COMET OS</div>
 
-<p style="font-size:18px;font-weight:bold;">
-Verify Property. Prevent Fraud. Get Certified.
-</p>
-
-<p style="opacity:0.8;">
-Secure property transactions with identity verification, agent validation, and QR-certified proof.
-</p>
-
-<button onclick="go(2)">START VERIFICATION</button>
+<!-- COVER -->
+<div id="p0" class="page active center">
+<div class="card">
+<h2>Property Verification System</h2>
+<p>All information provided must be accurate.</p>
+<p class="warning">False information INVALIDATES this transaction.</p>
+</div>
+<button onclick="go(1)">Start Verification</button>
 </div>
 
-<!-- ROLES -->
+<!-- SCREEN 1 -->
+<div id="p1" class="page">
+<div class="card">
+<h3>User Identity</h3>
+<input id="name" placeholder="Full Name">
+<input id="phone" placeholder="Phone Number">
+<input id="address" placeholder="Residential Address">
+<select id="role">
+<option value="">Select Role</option>
+<option>Owner</option>
+<option>Buyer</option>
+<option>Tenant</option>
+<option>Agent</option>
+</select>
+</div>
+<button onclick="go(2)">Continue</button>
+</div>
+
+<!-- SCREEN 2 -->
 <div id="p2" class="page">
-<h3>Select Participants</h3>
-
-<label><input type="checkbox" checked disabled> Owner</label><br>
-<label><input type="checkbox" checked disabled> Buyer</label><br>
-<label><input type="checkbox" id="tenantToggle" onchange="tenant=this.checked"> Tenant</label><br>
-<label><input type="checkbox" checked disabled> Agent</label><br>
-
-<button onclick="go(3)">CONTINUE</button>
+<div class="card">
+<h3>Verification Inputs</h3>
+<input id="nin" placeholder="NIN (Mandatory)">
+<input id="bvn" placeholder="BVN (Mandatory)">
+<p class="warning">Required for identity verification</p>
+</div>
+<button onclick="go(3)">Continue</button>
 </div>
 
-<!-- PROPERTY -->
+<!-- SCREEN 3 -->
 <div id="p3" class="page">
+<div class="card">
 <h3>Property Details</h3>
-<textarea id="property" placeholder="Enter property description / location"></textarea>
-<button onclick="go(4)">NEXT</button>
+<textarea id="desc" placeholder="Property Description"></textarea>
+<input id="location" placeholder="Property Location">
+<select id="type" onchange="roleCheck()">
+<option value="">Transaction Type</option>
+<option value="sale">Sale</option>
+<option value="rent">Rent</option>
+</select>
+</div>
+<button onclick="go(4)">Continue</button>
 </div>
 
-<!-- OWNER -->
+<!-- SCREEN 4 -->
 <div id="p4" class="page">
-<h3>Owner</h3>
-<input id="oName" placeholder="Full Name">
-<input id="oPhone" placeholder="Phone">
-<input id="oAddress" placeholder="Address">
-<input id="oNIN" placeholder="NIN">
-<input id="oBVN" placeholder="BVN">
-<button onclick="go(5)">NEXT</button>
+<div class="card">
+<h3>Commitment</h3>
+<p>Verification Fee: ₦25,000</p>
+<input id="receipt" placeholder="Transfer Reference">
+<label><input type="checkbox" id="paid"> Payment Confirmed</label><br>
+<label><input type="checkbox" id="undertake"> I confirm all information is correct</label>
+</div>
+<button onclick="go(5)">Continue</button>
 </div>
 
-<!-- BUYER -->
+<!-- SCREEN 5 -->
 <div id="p5" class="page">
-<h3>Buyer</h3>
-<input id="bName" placeholder="Full Name">
-<input id="bPhone" placeholder="Phone">
-<input id="bAddress" placeholder="Address">
-<input id="bNIN" placeholder="NIN">
-<input id="bBVN" placeholder="BVN">
-<button onclick="tenant?go(6):go(7)">NEXT</button>
-</div>
-
-<!-- TENANT -->
-<div id="p6" class="page">
-<h3>Tenant</h3>
-<input id="tName" placeholder="Full Name">
-<input id="tPhone" placeholder="Phone">
-<input id="tAddress" placeholder="Address">
-<input id="tNIN" placeholder="NIN">
-<input id="tBVN" placeholder="BVN">
-<button onclick="go(7)">NEXT</button>
-</div>
-
-<!-- AGENT -->
-<div id="p7" class="page">
-<h3>Agent Authority</h3>
-
 <div class="card">
-Estate markets lack structured verification.  
-FSTL COMET OS enhances credibility and standardizes trust.
+<h3>Final Check</h3>
+<p class="warning">Incorrect information INVALIDATES verification.</p>
 </div>
-
-<input id="aName" placeholder="Full Name">
-<input id="aPhone" placeholder="Phone">
-<input id="aAddress" placeholder="Address">
-<input id="aNIN" placeholder="NIN">
-<input id="aBVN" placeholder="BVN">
-
-<button onclick="validate()">VALIDATE</button>
-</div>
-
-<!-- PAYMENT -->
-<div id="p8" class="page">
-<h3>Verification Fee</h3>
-<p><b>₦25,000</b> (Fixed FSTL Fee)</p>
-
-<div class="card">
-<b>First Standard Title Limited</b><br>
-No. 19 Egbor Avenue,<br>
-Off Benoni Hospital Road,<br>
-GRA, Benin City, Edo State<br><br>
-
-First Bank Nigeria<br>
-Acct: 2025222557<br><br>
-
-Phone/WhatsApp: +2348035888622<br>
-Email: fstlsite@gmail.com
-</div>
-
-<p style="font-size:13px;opacity:0.8;">
-Verification proceeds only after payment confirmation.
-</p>
-
-<label><input type="checkbox" id="paid"> Payment Confirmed</label>
-
-<button onclick="generate()">GENERATE CERTIFICATE</button>
+<button onclick="generate()">Generate Verification</button>
 </div>
 
 <!-- OUTPUT -->
-<div id="p9" class="page">
-<h3>Certificate Ready</h3>
+<div id="p6" class="page center">
+<div class="card">
+<h3>Verification Complete</h3>
 <div id="qr"></div>
-<button onclick="pdf()">Download PDF</button>
+<p id="tx"></p>
+</div>
+<button onclick="downloadPDF()">Download PDF</button>
+<button class="secondary" onclick="resetAll()">New Verification</button>
 </div>
 
 <script>
 
-let tenant=false;
-let TX=null;
+let LOCK=false;
+let DATA={};
 
 function go(n){
+if(n===1){show(n);return;}
 
-document.querySelectorAll(".page").forEach(p=>{
-p.classList.remove("active");
-p.style.display="none";
-});
+if(n===2 && !v1()) return alert("Complete identity");
+if(n===3 && !v2()) return alert("Enter NIN/BVN");
+if(n===4 && !v3()) return alert("Complete property details");
+if(n===5 && !v4()) return alert("Complete payment");
 
-let el=document.getElementById("p"+n);
-el.classList.add("active");
-el.style.display="block";
-
-window.scrollTo(0,0);
+show(n);
 }
 
-function validate(){
-
-if(!property.value.trim()){
-alert("Property details required"); return;
+function show(n){
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+document.getElementById("p"+n).classList.add("active");
 }
 
-if(!oName.value||!oPhone.value||!oAddress.value||!oNIN.value||!oBVN.value){
-alert("Complete Owner details required"); return;
+function v1(){
+return name.value && phone.value && address.value && role.value;
 }
 
-if(!bName.value||!bPhone.value||!bAddress.value||!bNIN.value||!bBVN.value){
-alert("Complete Buyer details required"); return;
+function v2(){
+return nin.value && bvn.value;
 }
 
-if(tenant && (!tName.value||!tPhone.value||!tAddress.value||!tNIN.value||!tBVN.value)){
-alert("Complete Tenant details required"); return;
+function v3(){
+return desc.value && location.value && type.value;
 }
 
-if(!aName.value||!aPhone.value||!aAddress.value||!aNIN.value||!aBVN.value){
-alert("Complete Agent details required"); return;
+function v4(){
+return receipt.value && paid.checked && undertake.checked;
 }
 
-go(8);
+function roleCheck(){
+if(type.value==="sale" && role.value==="Tenant"){
+alert("Tenant cannot be in Sale");
+role.value="";
+}
+if(type.value==="rent" && role.value==="Buyer"){
+alert("Buyer cannot be in Rent");
+role.value="";
+}
 }
 
 function generate(){
 
-if(!paid.checked){
-alert("Payment must be confirmed"); return;
-}
+if(LOCK) return;
 
-TX="TX-"+Date.now();
+LOCK=true;
 
-let qrData = TX + "|" + property.value.slice(0,50) + "|" + new Date().toISOString();
+DATA={
+name:name.value,
+phone:phone.value,
+address:address.value,
+nin:nin.value,
+bvn:bvn.value,
+role:role.value,
+desc:desc.value,
+location:location.value,
+type:type.value,
+tx:"TX-"+Date.now()
+};
 
-go(9);
-
-qr.innerHTML="";
-new QRCode(qr,{
-text:qrData,
-width:160,
-height:160
+document.getElementById("qr").innerHTML="";
+new QRCode(document.getElementById("qr"),{
+text:JSON.stringify(DATA),
+width:180,
+height:180
 });
+
+tx.innerText=DATA.tx;
+
+show(6);
 }
 
-function pdf(){
-
+function downloadPDF(){
 const { jsPDF } = window.jspdf;
 let doc=new jsPDF();
-let time=new Date().toLocaleString();
 
-doc.text("FSTL COMET OS CERTIFICATE",10,10);
-doc.text("TX: "+TX,10,20);
-doc.text("Status: VERIFIED & LOCKED",10,30);
-doc.text("Payment: CONFIRMED",10,40);
-doc.text("Time: "+time,10,50);
+doc.text("FSTL COMET OS VERIFICATION",10,10);
+doc.text("TX: "+DATA.tx,10,20);
+doc.text("Name: "+DATA.name,10,30);
+doc.text("Role: "+DATA.role,10,40);
+doc.text("Location: "+DATA.location,10,50);
+doc.text("Type: "+DATA.type,10,60);
 
-doc.addPage();
-doc.text("PROPERTY:",10,20);
-doc.text(property.value,10,30);
-
-doc.addPage();
-doc.text("OWNER:",10,20);
-doc.text(oName.value+" | "+oPhone.value,10,30);
-doc.text(oAddress.value,10,40);
-
-doc.addPage();
-doc.text("BUYER:",10,20);
-doc.text(bName.value+" | "+bPhone.value,10,30);
-doc.text(bAddress.value,10,40);
-
-if(tenant){
-doc.addPage();
-doc.text("TENANT:",10,20);
-doc.text(tName.value+" | "+tPhone.value,10,30);
-doc.text(tAddress.value,10,40);
+doc.save("FSTL_COMET.pdf");
 }
 
-doc.addPage();
-doc.text("FSTL CONTACT:",10,20);
-doc.text("First Standard Title Limited",10,30);
-doc.text("No. 19 Egbor Avenue, Benin City",10,40);
-doc.text("WhatsApp: +2348035888622",10,50);
-doc.text("Email: fstlsite@gmail.com",10,60);
-
-doc.save(TX+".pdf");
+function resetAll(){
+location.reload();
 }
 
 </script>
