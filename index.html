@@ -42,13 +42,15 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <input id="name" placeholder="Full Name">
 <input id="phone" placeholder="Phone Number">
 <input id="address" placeholder="Residential Address">
+
 <select id="role">
 <option value="">Select Role</option>
-<option>Owner</option>
-<option>Buyer</option>
-<option>Tenant</option>
-<option>Agent</option>
+<option value="Owner">Owner</option>
+<option value="Buyer">Buyer</option>
+<option value="Tenant">Tenant</option>
+<option value="Agent">Agent</option>
 </select>
+
 </div>
 <button onclick="go(2)">Continue</button>
 </div>
@@ -69,11 +71,13 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <h3>Property Details</h3>
 <textarea id="desc" placeholder="Property Description"></textarea>
 <input id="location" placeholder="Property Location">
+
 <select id="type" onchange="roleCheck()">
 <option value="">Transaction Type</option>
 <option value="sale">Sale</option>
 <option value="rent">Rent</option>
 </select>
+
 </div>
 <button onclick="go(4)">Continue</button>
 </div>
@@ -84,8 +88,10 @@ button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;borde
 <h3>Commitment</h3>
 <p>Verification Fee: ₦25,000</p>
 <input id="receipt" placeholder="Transfer Reference">
+
 <label><input type="checkbox" id="paid"> Payment Confirmed</label><br>
 <label><input type="checkbox" id="undertake"> I confirm all information is correct</label>
+
 </div>
 <button onclick="go(5)">Continue</button>
 </div>
@@ -116,12 +122,24 @@ let LOCK=false;
 let DATA={};
 
 function go(n){
+
 if(n===1){show(n);return;}
 
-if(n===2 && !v1()) return alert("Complete identity");
-if(n===3 && !v2()) return alert("Enter NIN/BVN");
-if(n===4 && !v3()) return alert("Complete property details");
-if(n===5 && !v4()) return alert("Complete payment");
+if(n===2){
+if(!validateIdentity()) return alert("Complete identity");
+}
+
+if(n===3){
+if(!validateNINBVN()) return alert("Enter NIN/BVN");
+}
+
+if(n===4){
+if(!validateProperty()) return alert("Complete property details");
+}
+
+if(n===5){
+if(!validatePayment()) return alert("Complete payment");
+}
 
 show(n);
 }
@@ -131,28 +149,42 @@ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
 document.getElementById("p"+n).classList.add("active");
 }
 
-function v1(){
-return document.getElementById("name").value.trim() !== "" &&
-       document.getElementById("phone").value.trim() !== "" &&
-       document.getElementById("address").value.trim() !== "" &&
-       document.getElementById("role").value !== "";
+/* ✅ FIXED IDENTITY VALIDATION */
+function validateIdentity(){
+
+let name = document.getElementById("name").value.trim();
+let phone = document.getElementById("phone").value.trim();
+let address = document.getElementById("address").value.trim();
+let role = document.getElementById("role").value;
+
+if(name === "") return false;
+if(phone === "") return false;
+if(address === "") return false;
+if(role === "") return false;
+
+return true;
 }
 
-function v2(){
-return document.getElementById("nin").value.trim() !== "" &&
-       document.getElementById("bvn").value.trim() !== "";
+function validateNINBVN(){
+let nin = document.getElementById("nin").value.trim();
+let bvn = document.getElementById("bvn").value.trim();
+return nin !== "" && bvn !== "";
 }
 
-function v3(){
-return document.getElementById("desc").value.trim() !== "" &&
-       document.getElementById("location").value.trim() !== "" &&
-       document.getElementById("type").value !== "";
+function validateProperty(){
+let desc = document.getElementById("desc").value.trim();
+let location = document.getElementById("location").value.trim();
+let type = document.getElementById("type").value;
+
+return desc !== "" && location !== "" && type !== "";
 }
 
-function v4(){
-return document.getElementById("receipt").value.trim() !== "" &&
-       document.getElementById("paid").checked &&
-       document.getElementById("undertake").checked;
+function validatePayment(){
+let receipt = document.getElementById("receipt").value.trim();
+let paid = document.getElementById("paid").checked;
+let undertake = document.getElementById("undertake").checked;
+
+return receipt !== "" && paid && undertake;
 }
 
 function roleCheck(){
@@ -163,6 +195,7 @@ if(type==="sale" && role==="Tenant"){
 alert("Tenant cannot be in Sale");
 document.getElementById("role").value="";
 }
+
 if(type==="rent" && role==="Buyer"){
 alert("Buyer cannot be in Rent");
 document.getElementById("role").value="";
