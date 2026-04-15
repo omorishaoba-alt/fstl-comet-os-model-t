@@ -1,283 +1,261 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
 
+<!-- QR + PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#0b1c2c;color:#fff;}
-.header{text-align:center;padding:20px;background:#071521;font-size:22px;font-weight:bold;}
-.page{display:none;padding:15px;}
+body{margin:0;font-family:Arial;background:#0b1020;color:#fff;}
+.page{display:none;padding:20px;}
 .active{display:block;}
-.card{background:#13263a;padding:15px;border-radius:12px;margin-bottom:12px;}
-input,textarea,select{width:100%;padding:14px;margin:8px 0;border-radius:8px;border:none;font-size:16px;}
-button{width:100%;padding:15px;margin:10px 0;background:#1f6feb;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:bold;}
-.secondary{background:#444;}
-.warning{color:#ffcc00;font-size:13px;}
 .center{text-align:center;}
+.card{background:#151f3d;padding:15px;margin:12px 0;border-radius:10px;}
+input{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;}
+button{width:100%;padding:12px;background:#2f6bff;border:none;color:#fff;border-radius:6px;margin-top:10px;}
+.small{font-size:12px;opacity:.85;white-space:pre-line;}
+.warning{color:#ffcc00;}
+.danger{color:#ff4d4d;}
+.success{color:#4dff88;}
+footer{text-align:center;padding:15px;background:#0a0f1d;}
 </style>
 </head>
 
 <body>
 
-<div class="header">FSTL COMET OS</div>
-
 <!-- COVER -->
-<div id="p0" class="page active center">
-<div class="card">
-<h2>Property Verification System</h2>
-<p class="warning">FSTL SYSTEM CLEARANCE REQUIRED</p>
-</div>
-<button onclick="show(1)">Start Verification</button>
+<div id="cover" class="page active center">
+<h1>FSTL COMET OS</h1>
+<p><b>Clarity Before Commitment</b></p>
+<p class="small">
+Buyer Beware — Every Participant Verifies Every Participant.
+</p>
+<button onclick="nextPage('input')">Start Transaction Check</button>
 </div>
 
-<!-- 1 -->
-<div id="p1" class="page">
-<div class="card">
-<h3>Transaction Roles</h3>
+<!-- INPUT -->
+<div id="input" class="page">
+<h2>Transaction Participants</h2>
 
-<input id="owner" placeholder="Legal Owner">
-<input id="seller" placeholder="Seller (Executor)">
+<div class="card">
+<input id="owner" placeholder="Owner">
+<input id="seller" placeholder="Seller">
+<input id="agent" placeholder="Agent">
 <input id="buyer" placeholder="Buyer">
 <input id="tenant" placeholder="Tenant (optional)">
-
-<select id="role">
-<option value="">Role</option>
-<option value="Agent">Agent</option>
-<option value="OwnerRep">Owner Rep</option>
-<option value="Buyer">Buyer</option>
-<option value="Tenant">Tenant</option>
-</select>
-
-<select id="legal">
-<option value="">Legal Status</option>
-<option value="normal">Normal</option>
-<option value="probate">Probate / Estate</option>
-</select>
-
-</div>
-<button onclick="show(2)">Continue</button>
 </div>
 
-<!-- 2 -->
-<div id="p2" class="page">
+<button onclick="runScan()">Proceed to Scan</button>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="page">
+<h2>Transaction Result</h2>
+
 <div class="card">
-<h3>Identity</h3>
-<input id="nin" placeholder="NIN">
-<input id="bvn" placeholder="BVN">
-</div>
-<button onclick="show(3)">Continue</button>
+<p id="riskOut"></p>
+<p id="behaviorOut" class="small"></p>
 </div>
 
-<!-- 3 -->
-<div id="p3" class="page">
 <div class="card">
-<h3>Property</h3>
-<textarea id="desc" placeholder="Description"></textarea>
-<input id="location" placeholder="Location">
-</div>
-<button onclick="show(4)">Continue</button>
+<h3>Fraud Control (3 Strike Rule)</h3>
+<p id="strikeOut"></p>
+<button onclick="addStrike()">Add Strike</button>
+<button onclick="resetStrike()">Reset</button>
 </div>
 
-<!-- 4 -->
-<div id="p4" class="page">
 <div class="card">
-<h3>Payment</h3>
-
-<p><b>₦25,000 Verification Fee</b></p>
-
-<div class="card" style="background:#0f2233;">
-<p>First Bank Nigeria</p>
-<p>FIRST STANDARD TITLE LIMITED</p>
-<p>2025222557</p>
-</div>
-
-<input id="receipt" placeholder="Reference">
-<label><input type="checkbox" id="paid"> Paid</label><br>
-<label><input type="checkbox" id="confirm"> Confirm Accuracy</label>
-
-</div>
-<button onclick="show(5)">Continue</button>
-</div>
-
-<!-- 5 -->
-<div id="p5" class="page center">
-<div class="card">
-<h3>Final Gate</h3>
-<p class="warning">System validates ownership + authority + structure</p>
-</div>
-<button onclick="generate()">Generate</button>
-</div>
-
-<!-- OUTPUT -->
-<div id="p6" class="page center">
-<div class="card">
-<h3>Verified Transaction</h3>
+<h3>Snapshot + QR</h3>
 <div id="qr"></div>
-<p id="tx"></p>
-<p id="state"></p>
+<p id="snapOut" class="small"></p>
 </div>
 
-<button onclick="downloadPDF()">Download PDF</button>
-<button class="secondary" onclick="resetAll()">Reset</button>
+<div class="card">
+<h3>Actions</h3>
+<button onclick="generatePDF()">Download PDF Report</button>
+<button onclick="generateReferral()">Generate Referral</button>
+<button onclick="shareWhatsApp()">Share via WhatsApp</button>
 </div>
+
+<div class="card">
+<p><b>Contact FSTL:</b> +234 (INSERT OFFICIAL NUMBER)</p>
+</div>
+
+</div>
+
+<footer>
+FSTL COMET OS — Transaction Clarity Infrastructure
+</footer>
 
 <script>
 
-/* ================= CORE STATE ================= */
-let LOCK = false;
-let SEALED = false;
-let FORCE_STOP = false;
-let STATE = 0;
-let DATA = null;
-let TX_HASH = "";
+/* ======================
+STATE
+====================== */
+let strikes = parseInt(localStorage.getItem("strikes") || "0");
+let lastScan = null;
 
-/* ================= NAV CONTROL ================= */
-function show(n){
+/* ======================
+NAVIGATION
+====================== */
+function nextPage(page){
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+document.getElementById(page).classList.add("active");
+}
 
-if(FORCE_STOP || SEALED){
-alert("SYSTEM LOCKED");
+/* ======================
+SCAN ENGINE
+====================== */
+function runScan(){
+
+let o=document.getElementById("owner").value.trim();
+let s=document.getElementById("seller").value.trim();
+let a=document.getElementById("agent").value.trim();
+let b=document.getElementById("buyer").value.trim();
+let t=document.getElementById("tenant").value.trim();
+
+let issues=[];
+let behavior=[];
+
+/* STRUCTURAL CHECKS */
+if(!o) issues.push("Owner missing");
+if(!s) issues.push("Seller missing");
+if(o && s && o!==s) issues.push("Owner ≠ Seller (verify authority)");
+if(!a) issues.push("Agent missing");
+if(!b) issues.push("Buyer missing");
+
+/* BEHAVIOR FLAGS */
+behavior.push("Urgency pressure risk");
+behavior.push("Information imbalance risk");
+
+/* SAVE STATE */
+lastScan={o,s,a,b,t,issues,behavior,time:new Date().toLocaleString()};
+localStorage.setItem("lastScan",JSON.stringify(lastScan));
+
+/* OUTPUT */
+document.getElementById("riskOut").innerHTML =
+issues.length
+? "<span class='warning'>"+issues.join(" | ")+"</span>"
+: "<span class='success'>No immediate structural conflict</span>";
+
+document.getElementById("behaviorOut").innerText =
+behavior.join(" | ");
+
+document.getElementById("strikeOut").innerText = "Strikes: "+strikes;
+
+/* GENERATE QR */
+generateQR();
+
+/* MOVE TO RESULT */
+nextPage("result");
+}
+
+/* ======================
+STRIKE SYSTEM
+====================== */
+function addStrike(){
+strikes++;
+localStorage.setItem("strikes",strikes);
+
+if(strikes>=3){
+document.getElementById("strikeOut").innerHTML =
+"<span class='danger'>LOCKED OUT — Restart Required</span>";
+}else{
+document.getElementById("strikeOut").innerText = "Strikes: "+strikes;
+}
+}
+
+function resetStrike(){
+strikes=0;
+localStorage.setItem("strikes",0);
+document.getElementById("strikeOut").innerText="Strikes: 0";
+}
+
+/* ======================
+QR SNAPSHOT
+====================== */
+function generateQR(){
+document.getElementById("qr").innerHTML="";
+if(lastScan){
+new QRCode(document.getElementById("qr"), JSON.stringify(lastScan));
+document.getElementById("snapOut").innerText="Snapshot Created";
+}
+}
+
+/* ======================
+PDF GENERATION
+====================== */
+async function generatePDF(){
+
+if(!lastScan){
+alert("Run scan first");
 return;
 }
-
-if(n > STATE + 1){
-alert("INVALID STATE JUMP");
-return;
-}
-
-STATE = n;
-
-document.querySelectorAll(".page")
-.forEach(p=>p.classList.remove("active"));
-
-document.getElementById("p"+n).classList.add("active");
-}
-
-/* ================= INPUT ================= */
-function val(id){
-return document.getElementById(id)?.value?.trim() || "";
-}
-
-/* ================= VALIDATION ================= */
-function validate(){
-
-if(FORCE_STOP || SEALED) return false;
-
-const f = ["owner","seller","buyer","nin","bvn","desc","location"];
-
-for(let x of f){
-if(!val(x) || val(x).length < 2) return false;
-}
-
-return true;
-}
-
-/* ================= HASH ENGINE ================= */
-async function hashData(obj){
-const msg = JSON.stringify(obj);
-const enc = new TextEncoder().encode(msg);
-const hashBuffer = await crypto.subtle.digest("SHA-256", enc);
-return [...new Uint8Array(hashBuffer)]
-.map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-/* ================= GENERATE ================= */
-async function generate(){
-
-if(LOCK || SEALED){
-alert("GENERATION BLOCKED");
-return;
-}
-
-if(!validate()){
-alert("Incomplete data");
-return;
-}
-
-LOCK = true;
-
-DATA = {
-owner:val("owner"),
-seller:val("seller"),
-buyer:val("buyer"),
-tenant:val("tenant"),
-role:val("role"),
-legal:val("legal"),
-nin:val("nin"),
-bvn:val("bvn"),
-desc:val("desc"),
-location:val("location"),
-time:new Date().toISOString(),
-tx:"TX-"+Date.now()
-};
-
-TX_HASH = await hashData(DATA);
-DATA.hash = TX_HASH;
-
-/* QR */
-qr.innerHTML="";
-new QRCode(qr,{
-text:JSON.stringify(DATA),
-width:180,
-height:180
-});
-
-tx.innerText = DATA.tx;
-
-/* STATE LOCK */
-SEALED = true;
-STATE = 6;
-
-document.getElementById("state").innerText =
-"SYSTEM STATE: SEALED | NO MODIFICATION ALLOWED";
-
-show(6);
-}
-
-/* ================= PDF ================= */
-function downloadPDF(){
 
 const { jsPDF } = window.jspdf;
 let doc = new jsPDF();
 
-doc.text("FSTL COMET OS REPORT",10,10);
+doc.setFontSize(16);
+doc.text("FSTL COMET OS REPORT",10,15);
 
-doc.text("TX: "+DATA.tx,10,20);
-doc.text("HASH: "+DATA.hash,10,30);
+doc.setFontSize(10);
+doc.text("Owner: "+lastScan.o,10,30);
+doc.text("Seller: "+lastScan.s,10,40);
+doc.text("Agent: "+lastScan.a,10,50);
+doc.text("Buyer: "+lastScan.b,10,60);
+doc.text("Tenant: "+lastScan.t,10,70);
 
-doc.text("OWNER: "+DATA.owner,10,40);
-doc.text("SELLER: "+DATA.seller,10,50);
-doc.text("BUYER: "+DATA.buyer,10,60);
-doc.text("TENANT: "+DATA.tenant,10,70);
+doc.text("Issues:",10,85);
+doc.text(lastScan.issues.join(", "),10,95);
 
-doc.text("LEGAL: "+DATA.legal,10,80);
+doc.text("Behavior Signals:",10,110);
+doc.text(lastScan.behavior.join(", "),10,120);
 
-doc.text("NIN: "+DATA.nin,10,90);
-doc.text("BVN: "+DATA.bvn,10,100);
+doc.text("Time: "+lastScan.time,10,135);
 
-doc.text("PROPERTY: "+DATA.desc,10,110);
-doc.text("LOCATION: "+DATA.location,10,120);
-
-doc.text("FSTL SYSTEM SEALED RECORD",10,140);
-
-doc.save("FSTL_COMET_OS.pdf");
+doc.save("FSTL_COMET_OS_Report.pdf");
 }
 
-/* RESET */
-function resetAll(){
-location.reload();
+/* ======================
+REFERRAL
+====================== */
+function generateReferral(){
+let code="FSTL-"+Math.random().toString(36).substring(2,8).toUpperCase();
+localStorage.setItem("ref",code);
+alert("Referral Code: "+code);
 }
 
-/* FORCE STOP */
-function forceStop(){
-FORCE_STOP = true;
-SEALED = true;
-LOCK = true;
-alert("SYSTEM FORCE STOPPED");
+/* ======================
+WHATSAPP SHARE
+====================== */
+function shareWhatsApp(){
+
+if(!lastScan){
+alert("Run scan first");
+return;
 }
+
+let ref=localStorage.getItem("ref")||"NO-REF";
+
+let msg=
+"FSTL COMET OS REPORT\n"+
+"Owner: "+lastScan.o+"\n"+
+"Seller: "+lastScan.s+"\n"+
+"Agent: "+lastScan.a+"\n"+
+"Buyer: "+lastScan.b+"\n\n"+
+"Issues: "+lastScan.issues.join(", ")+"\n"+
+"Behavior: "+lastScan.behavior.join(", ")+"\n"+
+"Referral: "+ref;
+
+window.open("https://wa.me/?text="+encodeURIComponent(msg));
+}
+
+/* INIT */
+document.getElementById("strikeOut").innerText="Strikes: "+strikes;
 
 </script>
 
