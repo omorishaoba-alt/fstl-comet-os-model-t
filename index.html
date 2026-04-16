@@ -5,257 +5,276 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
 
-<!-- QR + PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1020;color:#fff;}
-.page{display:none;padding:20px;}
+body{margin:0;font-family:Arial;background:#0a0f1f;color:#fff;}
+.screen{display:none;padding:18px;}
 .active{display:block;}
-.center{text-align:center;}
-.card{background:#151f3d;padding:15px;margin:12px 0;border-radius:10px;}
-input{width:100%;padding:10px;margin:6px 0;border-radius:6px;border:none;}
-button{width:100%;padding:12px;background:#2f6bff;border:none;color:#fff;border-radius:6px;margin-top:10px;}
-.small{font-size:12px;opacity:.85;white-space:pre-line;}
-.warning{color:#ffcc00;}
-.danger{color:#ff4d4d;}
-.success{color:#4dff88;}
-footer{text-align:center;padding:15px;background:#0a0f1d;}
+.block{background:#141c3a;padding:14px;margin-bottom:12px;border-radius:10px;}
+input{width:100%;padding:10px;margin-top:6px;border:none;border-radius:6px;background:#0e1430;color:#fff;}
+button{width:100%;padding:12px;margin-top:10px;border:none;border-radius:6px;background:#2f6bff;color:#fff;}
+.good{color:#4dff88;} .warn{color:#ffcc00;} .bad{color:#ff4d4d;}
+.small{font-size:12px;opacity:0.85;}
+h2{margin-top:0}
+#qrcode{text-align:center;margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<!-- COVER -->
-<div id="cover" class="page active center">
-<h1>FSTL COMET OS</h1>
-<p><b>Clarity Before Commitment</b></p>
-<p class="small">
-Buyer Beware — Every Participant Verifies Every Participant.
-</p>
-<button onclick="nextPage('input')">Start Transaction Check</button>
+<!-- ENTRY -->
+<div id="entry" class="screen active">
+<h2>FSTL COMET OS</h2>
+
+<div class="block">
+Property Transaction Verification System
+</div>
+
+<div class="block small">
+A structured environment for assessing the safety and coherence of property transactions before commitment.
+</div>
+
+<div class="block small">
+This system provides structured insight only. It does not enforce or approve transactions.
+</div>
+
+<button onclick="go('boundary')">ENTER SYSTEM</button>
+</div>
+
+<!-- BOUNDARY -->
+<div id="boundary" class="screen">
+<h2>System Boundary</h2>
+
+<div class="block">
+COMET OS evaluates structural coherence across participants in a property transaction.
+</div>
+
+<div class="block small">
+Ownership authority • Sales legitimacy • Agent representation • Buyer participation • Tenant occupancy continuity
+</div>
+
+<div class="block small">
+No legal authority. No enforcement. No financial execution.
+</div>
+
+<button onclick="go('input')">PROCEED TO INPUT</button>
 </div>
 
 <!-- INPUT -->
-<div id="input" class="page">
-<h2>Transaction Participants</h2>
+<div id="input" class="screen">
+<h2>Transaction Input</h2>
 
-<div class="card">
-<input id="owner" placeholder="Owner">
-<input id="seller" placeholder="Seller">
-<input id="agent" placeholder="Agent">
-<input id="buyer" placeholder="Buyer">
-<input id="tenant" placeholder="Tenant (optional)">
+<div class="block">
+<h3>Property</h3>
+<input id="propertyAddress" placeholder="Property Address">
+<input id="propertyType" placeholder="Property Type">
 </div>
 
-<button onclick="runScan()">Proceed to Scan</button>
+<div class="block">
+<h3>Owner</h3>
+<input id="ownerName" placeholder="Name">
+<input id="ownerPhone" placeholder="Phone">
+</div>
+
+<div class="block">
+<h3>Seller</h3>
+<input id="sellerName" placeholder="Name">
+<input id="sellerPhone" placeholder="Phone">
+</div>
+
+<div class="block">
+<h3>Agent</h3>
+<input id="agentName" placeholder="Name">
+<input id="agentPhone" placeholder="Phone">
+</div>
+
+<div class="block">
+<h3>Buyer</h3>
+<input id="buyerName" placeholder="Name">
+<input id="buyerPhone" placeholder="Phone">
+</div>
+
+<div class="block">
+<h3>Tenant (Occupancy / Income Continuity)</h3>
+<input id="tenantName" placeholder="Name">
+<input id="tenantPhone" placeholder="Phone">
+</div>
+
+<button onclick="startVerification()">RUN VERIFICATION</button>
+</div>
+
+<!-- VERIFY -->
+<div id="verify" class="screen">
+<h2>Verification in Progress</h2>
+
+<div class="block">
+Evaluating transaction structure...
+</div>
+
+<div class="block small">
+Please wait. Do not exit process.
+</div>
 </div>
 
 <!-- RESULT -->
-<div id="result" class="page">
-<h2>Transaction Result</h2>
+<div id="result" class="screen">
+<h2>Verification Position</h2>
 
-<div class="card">
-<p id="riskOut"></p>
-<p id="behaviorOut" class="small"></p>
+<div class="block">
+<p id="state"></p>
+<p id="score"></p>
 </div>
 
-<div class="card">
-<h3>Fraud Control (3 Strike Rule)</h3>
-<p id="strikeOut"></p>
-<button onclick="addStrike()">Add Strike</button>
-<button onclick="resetStrike()">Reset</button>
+<div class="block">
+<p id="issues"></p>
 </div>
 
-<div class="card">
-<h3>Snapshot + QR</h3>
-<div id="qr"></div>
-<p id="snapOut" class="small"></p>
+<div class="block">
+<p id="insight"></p>
 </div>
 
-<div class="card">
-<h3>Actions</h3>
-<button onclick="generatePDF()">Download PDF Report</button>
-<button onclick="generateReferral()">Generate Referral</button>
-<button onclick="shareWhatsApp()">Share via WhatsApp</button>
+<div class="block small">
+TX-ID: <span id="txid"></span>
 </div>
 
-<div class="card">
-<p><b>Contact FSTL:</b> +234 (INSERT OFFICIAL NUMBER)</p>
-</div>
+<div id="qrcode"></div>
 
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+<button onclick="shareWhatsApp()">SHARE</button>
+<button onclick="reset()">NEW</button>
 </div>
-
-<footer>
-FSTL COMET OS — Transaction Clarity Infrastructure
-</footer>
 
 <script>
 
-/* ======================
-STATE
-====================== */
-let strikes = parseInt(localStorage.getItem("strikes") || "0");
-let lastScan = null;
+let CURRENT=null;
 
-/* ======================
-NAVIGATION
-====================== */
-function nextPage(page){
-document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-document.getElementById(page).classList.add("active");
+function ENGINE(tx){
+let r={score:100,issues:[],state:""};
+
+if(!tx.ownerName){r.score-=15;r.issues.push("Owner missing");}
+if(!tx.sellerName){r.score-=15;r.issues.push("Seller missing");}
+if(!tx.agentName){r.score-=15;r.issues.push("Agent missing");}
+if(!tx.buyerName){r.score-=15;r.issues.push("Buyer missing");}
+if(!tx.tenantName){r.score-=10;r.issues.push("Tenant missing");}
+
+if(tx.ownerName && tx.sellerName && tx.ownerName===tx.sellerName){
+r.score-=20;r.issues.push("Owner equals Seller");
 }
 
-/* ======================
-SCAN ENGINE
-====================== */
-function runScan(){
+if(r.score>=85) r.state="STRUCTURE COHERENT";
+else if(r.score>=60) r.state="STRUCTURE AT RISK";
+else r.state="STRUCTURE COMPROMISED";
 
-let o=document.getElementById("owner").value.trim();
-let s=document.getElementById("seller").value.trim();
-let a=document.getElementById("agent").value.trim();
-let b=document.getElementById("buyer").value.trim();
-let t=document.getElementById("tenant").value.trim();
-
-let issues=[];
-let behavior=[];
-
-/* STRUCTURAL CHECKS */
-if(!o) issues.push("Owner missing");
-if(!s) issues.push("Seller missing");
-if(o && s && o!==s) issues.push("Owner ≠ Seller (verify authority)");
-if(!a) issues.push("Agent missing");
-if(!b) issues.push("Buyer missing");
-
-/* BEHAVIOR FLAGS */
-behavior.push("Urgency pressure risk");
-behavior.push("Information imbalance risk");
-
-/* SAVE STATE */
-lastScan={o,s,a,b,t,issues,behavior,time:new Date().toLocaleString()};
-localStorage.setItem("lastScan",JSON.stringify(lastScan));
-
-/* OUTPUT */
-document.getElementById("riskOut").innerHTML =
-issues.length
-? "<span class='warning'>"+issues.join(" | ")+"</span>"
-: "<span class='success'>No immediate structural conflict</span>";
-
-document.getElementById("behaviorOut").innerText =
-behavior.join(" | ");
-
-document.getElementById("strikeOut").innerText = "Strikes: "+strikes;
-
-/* GENERATE QR */
-generateQR();
-
-/* MOVE TO RESULT */
-nextPage("result");
+return r;
 }
 
-/* ======================
-STRIKE SYSTEM
-====================== */
-function addStrike(){
-strikes++;
-localStorage.setItem("strikes",strikes);
-
-if(strikes>=3){
-document.getElementById("strikeOut").innerHTML =
-"<span class='danger'>LOCKED OUT — Restart Required</span>";
-}else{
-document.getElementById("strikeOut").innerText = "Strikes: "+strikes;
-}
+function INSIGHT(r){
+if(r.state==="STRUCTURE COHERENT") return "Transaction structure is aligned.";
+if(r.state==="STRUCTURE AT RISK") return "Structural inconsistencies detected.";
+return "High structural instability present.";
 }
 
-function resetStrike(){
-strikes=0;
-localStorage.setItem("strikes",0);
-document.getElementById("strikeOut").innerText="Strikes: 0";
+function startVerification(){
+go('verify');
+
+setTimeout(()=>{
+run();
+},2000);
 }
 
-/* ======================
-QR SNAPSHOT
-====================== */
-function generateQR(){
-document.getElementById("qr").innerHTML="";
-if(lastScan){
-new QRCode(document.getElementById("qr"), JSON.stringify(lastScan));
-document.getElementById("snapOut").innerText="Snapshot Created";
-}
+function run(){
+let tx={
+propertyAddress:propertyAddress.value,
+propertyType:propertyType.value,
+ownerName:ownerName.value,
+ownerPhone:ownerPhone.value,
+sellerName:sellerName.value,
+sellerPhone:sellerPhone.value,
+agentName:agentName.value,
+agentPhone:agentName.value,
+buyerName:buyerName.value,
+buyerPhone:buyerPhone.value,
+tenantName:tenantName.value,
+tenantPhone:tenantPhone.value
+};
+
+let r=ENGINE(tx);
+let i=INSIGHT(r);
+let id=btoa(JSON.stringify(tx)).substring(0,30);
+
+CURRENT={tx,r,i,id};
+
+render();
+go('result');
 }
 
-/* ======================
-PDF GENERATION
-====================== */
-async function generatePDF(){
+function render(){
+state.innerHTML=
+CURRENT.r.state==="STRUCTURE COHERENT"
+?"<span class='good'>STRUCTURE COHERENT</span>"
+:CURRENT.r.state==="STRUCTURE AT RISK"
+?"<span class='warn'>STRUCTURE AT RISK</span>"
+:"<span class='bad'>STRUCTURE COMPROMISED</span>";
 
-if(!lastScan){
-alert("Run scan first");
-return;
+score.innerText="Score: "+CURRENT.r.score;
+issues.innerText="Issues: "+CURRENT.r.issues.join(", ");
+insight.innerText=CURRENT.i;
+txid.innerText=CURRENT.id;
+
+document.getElementById("qrcode").innerHTML="";
+QRCode.toCanvas(document.createElement('canvas'), CURRENT.id, function (err, canvas) {
+if(!err){ document.getElementById("qrcode").appendChild(canvas); }
+});
 }
 
+function downloadPDF(){
 const { jsPDF } = window.jspdf;
-let doc = new jsPDF();
+let doc=new jsPDF();
 
-doc.setFontSize(16);
-doc.text("FSTL COMET OS REPORT",10,15);
+doc.setFontSize(14);
+doc.text("FSTL COMET OS — Verification Snapshot",10,10);
 
 doc.setFontSize(10);
-doc.text("Owner: "+lastScan.o,10,30);
-doc.text("Seller: "+lastScan.s,10,40);
-doc.text("Agent: "+lastScan.a,10,50);
-doc.text("Buyer: "+lastScan.b,10,60);
-doc.text("Tenant: "+lastScan.t,10,70);
+let y=20;
 
-doc.text("Issues:",10,85);
-doc.text(lastScan.issues.join(", "),10,95);
+doc.text("Property Address: "+CURRENT.tx.propertyAddress,10,y); y+=6;
+doc.text("Property Type: "+CURRENT.tx.propertyType,10,y); y+=8;
 
-doc.text("Behavior Signals:",10,110);
-doc.text(lastScan.behavior.join(", "),10,120);
+doc.text("Owner: "+CURRENT.tx.ownerName+" "+CURRENT.tx.ownerPhone,10,y); y+=6;
+doc.text("Seller: "+CURRENT.tx.sellerName+" "+CURRENT.tx.sellerPhone,10,y); y+=6;
+doc.text("Agent: "+CURRENT.tx.agentName+" "+CURRENT.tx.agentPhone,10,y); y+=6;
+doc.text("Buyer: "+CURRENT.tx.buyerName+" "+CURRENT.tx.buyerPhone,10,y); y+=6;
+doc.text("Tenant: "+CURRENT.tx.tenantName+" "+CURRENT.tx.tenantPhone,10,y); y+=8;
 
-doc.text("Time: "+lastScan.time,10,135);
+doc.text("Score: "+CURRENT.r.score,10,y); y+=6;
+doc.text("State: "+CURRENT.r.state,10,y); y+=8;
 
-doc.save("FSTL_COMET_OS_Report.pdf");
+doc.text("Issues:",10,y); y+=6;
+CURRENT.r.issues.forEach(i=>{
+doc.text("- "+i,10,y); y+=5;
+});
+
+y+=5;
+doc.text("Insight: "+CURRENT.i,10,y); y+=8;
+doc.text("TX-ID: "+CURRENT.id,10,y);
+
+doc.save("FSTL_COMET_OS_Verification.pdf");
 }
 
-/* ======================
-REFERRAL
-====================== */
-function generateReferral(){
-let code="FSTL-"+Math.random().toString(36).substring(2,8).toUpperCase();
-localStorage.setItem("ref",code);
-alert("Referral Code: "+code);
-}
-
-/* ======================
-WHATSAPP SHARE
-====================== */
 function shareWhatsApp(){
-
-if(!lastScan){
-alert("Run scan first");
-return;
-}
-
-let ref=localStorage.getItem("ref")||"NO-REF";
-
-let msg=
-"FSTL COMET OS REPORT\n"+
-"Owner: "+lastScan.o+"\n"+
-"Seller: "+lastScan.s+"\n"+
-"Agent: "+lastScan.a+"\n"+
-"Buyer: "+lastScan.b+"\n\n"+
-"Issues: "+lastScan.issues.join(", ")+"\n"+
-"Behavior: "+lastScan.behavior.join(", ")+"\n"+
-"Referral: "+ref;
-
+let msg="FSTL COMET OS Verification\nTX-ID:"+CURRENT.id+"\nScore:"+CURRENT.r.score+"\nState:"+CURRENT.r.state;
 window.open("https://wa.me/?text="+encodeURIComponent(msg));
 }
 
-/* INIT */
-document.getElementById("strikeOut").innerText="Strikes: "+strikes;
+function go(p){
+document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+document.getElementById(p).classList.add("active");
+}
+
+function reset(){location.reload();}
 
 </script>
 
