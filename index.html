@@ -1,272 +1,213 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>FSTL COMET OS v3.3 — FINAL BUILD</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSTL COMET OS</title>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#050814;
-color:#fff;
-}
-
-.screen{display:none;padding:18px}
+body{margin:0;font-family:Arial;background:#050814;color:#fff}
+#topbar{position:sticky;top:0;background:#0b1025;padding:10px;border-bottom:1px solid #222;font-weight:bold}
+.screen{display:none}
 .active{display:block}
-
-input{
-width:100%;
-padding:12px;
-margin-top:8px;
-border:none;
-border-radius:6px;
-outline:none;
-}
-
-button{
-width:100%;
-padding:14px;
-margin-top:10px;
-border:none;
-border-radius:8px;
-font-weight:bold;
-cursor:pointer;
-}
-
-.primary{background:#2f6bff;color:#fff}
-.block{background:#111a33;padding:12px;border-radius:10px;margin-top:10px}
-pre{white-space:pre-wrap;font-size:12px}
-hr{opacity:0.2}
-small{opacity:0.85}
+.block{background:#111a33;padding:12px;margin:10px;border-radius:10px}
+button{width:100%;padding:14px;margin-top:10px;border:none;border-radius:8px;background:#2f6bff;color:#fff;font-weight:bold}
+input{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:none}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 </head>
 
 <body>
 
-<!-- CONSENT GATE -->
+<div id="topbar">
+COMET OS — <span id="stateText">SG-0</span> |
+PROGRESS: <span id="progressText">0%</span>
+</div>
+
+<!-- SG0 -->
 <div id="sg0" class="screen active">
-<h2>FSTL COMET OS v3.3</h2>
-
 <div class="block">
-REAL ESTATE TRANSACTION INTELLIGENCE SYSTEM<br><br>
-
-CORE PRINCIPLE:<br>
-• Structural risk is exposed before commitment<br>
-• Participants must validate coherence under pressure<br>
-• System stands aside and reveals inconsistencies<br><br>
-
-AGENT-FIRST RULE: ACTIVE
+<h3>ENTRY</h3>
+<p>Structured real estate transaction verification</p>
+<button onclick="start()">ACCEPT</button>
+</div>
 </div>
 
-<button class="primary" onclick="start()">ACCEPT & ENTER SYSTEM</button>
-</div>
-
-<!-- INPUT -->
-<div id="app" class="screen">
-
-<h2>TRANSACTION NODE INPUT</h2>
-
+<!-- HUMAN -->
+<div id="human" class="screen">
 <div class="block">
-<small>
-FSTL COMET OS — ANALYTICAL ENGINE<br>
-No enforcement. No execution. Observation only.
-</small>
+<h3>HUMAN VERIFICATION</h3>
+<button onclick="confirmHuman()">I AM NOT A BOT</button>
+</div>
 </div>
 
+<!-- SG1 -->
+<div id="sg1" class="screen">
+<div class="block">
+<h3>SG-1 STRUCTURE</h3>
 <input id="owner" placeholder="Owner">
-<input id="seller" placeholder="Seller">
-<input id="agent" placeholder="Agent (CRITICAL NODE)">
 <input id="buyer" placeholder="Buyer">
+<input id="agent" placeholder="Agent">
+<button onclick="goSG2()">CONTINUE</button>
+</div>
+</div>
 
+<!-- SG2 -->
+<div id="sg2" class="screen">
+<div class="block">
+<h3>SG-2 IDENTITY</h3>
 <input id="nin" placeholder="NIN">
 <input id="bvn" placeholder="BVN">
-<input id="commission" placeholder="Commission structure">
+<button onclick="goSG3()">VERIFY</button>
+</div>
+</div>
 
-<button class="primary" onclick="run()">RUN ANALYSIS</button>
+<!-- SG3 -->
+<div id="sg3" class="screen">
+<div class="block">
+<h3>SG-3 COMMITMENT LOCK</h3>
+<p>Transaction locked</p>
+<button onclick="unlockPayment()">LOCK & CONTINUE</button>
+</div>
+</div>
 
-<hr>
+<!-- PAYMENT -->
+<div id="paymentBlock" class="block" style="display:none">
+<h3>FSTL PAYMENT</h3>
+<p>Bank: First Bank Nigeria</p>
+<p>Account: 2025222557</p>
+<p>Name: First Standard Title Limited</p>
+<p>Amount: ₦25,000</p>
+<p>Code: <span id="paycode"></span></p>
 
-<h3>TEST SCENARIOS</h3>
-
-<button onclick="t1()">CLEAN</button>
-<button onclick="t2()">AGENT MISSING</button>
-<button onclick="t3()">FULL FRACTURE</button>
-
+<button onclick="confirmPayment()">CONFIRM PAYMENT</button>
 </div>
 
 <!-- OUTPUT -->
-<div id="out" class="screen">
-<h2>OUTPUT</h2>
-<pre id="report"></pre>
-<button class="primary" onclick="back()">BACK</button>
+<div id="output" class="screen">
+<div class="block">
+<h3>FINAL OUTPUT</h3>
+<div id="qr"></div>
+<button onclick="generatePDF()">DOWNLOAD PDF</button>
+</div>
+</div>
+
+<!-- CONTACT -->
+<div class="block">
+<h3>FSTL AUTHORITY</h3>
+<p>First Standard Title Limited</p>
+<p>Benin City, Edo State</p>
+<p>Phone: +2348035888622</p>
+<p>Email: fstlsite@gmail.com</p>
+<p>RULE: NO TX_ID → NO RESPONSE</p>
 </div>
 
 <script>
 
-/* NAV */
-function start(){show("app")}
-function back(){show("app")}
+let STATE="SG0";
+let TX_ID=null;
+let HUMAN=false;
+let ATTEMPTS=0;
+
+function setState(s,p){
+STATE=s;
+document.getElementById("stateText").innerText=s;
+document.getElementById("progressText").innerText=p+"%";
+localStorage.setItem("STATE",s);
+localStorage.setItem("TX_ID",TX_ID);
+}
+
 function show(id){
 document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
 document.getElementById(id).classList.add("active");
 }
 
-/* IDENTITY ENGINE */
-function identity(){
-if(nin.value && bvn.value) return {status:"STRONG",score:80};
-if(nin.value || bvn.value) return {status:"PARTIAL",score:30};
-return {status:"NONE",score:-40};
+function start(){
+TX_ID="TX-"+Date.now();
+show("human");
 }
 
-/* CVG ENGINE (TIERED STRUCTURE) */
-function cvg(){
-
-let missing =
-(!owner.value?2:0) +
-(!seller.value?2:0) +
-(!agent.value?3:0) +
-(!buyer.value?1:0);
-
-let tier =
-missing <= 2 ? 1 :
-missing <= 4 ? 2 :
-missing <= 6 ? 3 :
-missing <= 8 ? 4 : 5;
-
-return {missing,tier};
+function confirmHuman(){
+HUMAN=true;
+setState("SG1",20);
+show("sg1");
 }
 
-/* AGENT-FIRST RULE */
-function agentRule(){
-if(!agent.value){
-return {violation:true,impact:40};
-}
-return {violation:false,impact:0};
+function goSG2(){
+if(!HUMAN)return alert("Human verification required");
+setState("SG2",40);
+show("sg2");
 }
 
-/* FRAUD ENGINE */
-function fraud(){
-let f=[];
-if(!owner.value) f.push("OWNER MISSING");
-if(!seller.value) f.push("SELLER VOID");
-if(!agent.value) f.push("AGENT BREAK (FIRST NODE FAILURE)");
-if(!buyer.value) f.push("BUYER WEAK");
-if(!nin.value && !bvn.value) f.push("NO IDENTITY TRACEABILITY");
-if(!commission.value) f.push("COMMISSION ASYMMETRY RISK");
-return f;
+function goSG3(){
+if(!document.getElementById("nin").value)return fail();
+setState("SG3",80);
+show("sg3");
 }
 
-/* KYC ENGINE */
-function kyc(){
-let level=0;
-if(nin.value) level++;
-if(bvn.value) level++;
-
-return {
-state: level===0?"NONE":level===1?"PARTIAL":"FULL",
-impact: level===0?30:level===1?10:0
-};
+function unlockPayment(){
+document.getElementById("paymentBlock").style.display="block";
+document.getElementById("paycode").innerText="FSTL-"+Date.now();
+setState("PAYMENT",90);
 }
 
-/* DRDE ENGINE (FULL COUPLED LOGIC) */
-function drde(cvg,id,agent,kycObj,fraudList,commission){
-
-let risk = cvg.missing * 10;
-
-if(id.score < 0) risk += 30;
-if(agent.violation) risk += 40;
-if(kycObj.impact) risk += kycObj.impact;
-if(!commission) risk += 20;
-if(fraudList.length >= 3) risk += 20;
-
-let tier =
-risk <= 30 ? "LOW" :
-risk <= 60 ? "MEDIUM" :
-risk <= 80 ? "HIGH" : "CRITICAL";
-
-return {risk,tier};
+function confirmPayment(){
+setState("FINALIZING",95);
+finalize();
 }
 
-/* TESTS */
-function t1(){
-owner.value="A";
-seller.value="B";
-agent.value="C";
-buyer.value="D";
-nin.value="111";
-bvn.value="222";
-commission.value="50/50";
+function finalize(){
+generateQR();
+setState("COMPLETE",100);
+show("output");
 }
 
-function t2(){
-owner.value="A";
-seller.value="B";
-agent.value="";
-buyer.value="D";
-nin.value="";
-bvn.value="";
-commission.value="";
+function generateQR(){
+let data=JSON.stringify({
+tx:TX_ID,
+state:STATE,
+time:Date.now()
+});
+
+document.getElementById("qr").innerHTML="";
+new QRCode(document.getElementById("qr"),{
+text:data,width:180,height:180
+});
 }
 
-function t3(){
-owner.value="";
-seller.value="";
-agent.value="";
-buyer.value="";
-nin.value="";
-bvn.value="";
-commission.value="";
+function generatePDF(){
+const { jsPDF } = window.jspdf;
+let doc=new jsPDF();
+doc.text("FSTL COMET OS CERTIFICATE",10,10);
+doc.text("TX:"+TX_ID,10,20);
+doc.text("STATE:"+STATE,10,30);
+doc.save(TX_ID+".pdf");
 }
 
-/* RUN */
-function run(){
-
-let id = identity();
-let c = cvg();
-let a = agentRule();
-let f = fraud();
-let k = kyc();
-let d = drde(c,id,a,k,f,commission.value);
-
-let out=[];
-
-out.push("FSTL COMET OS v3.3 FINAL");
-out.push("========================");
-
-out.push("\nIDENTITY:");
-out.push(JSON.stringify(id,null,2));
-
-out.push("\nCVG:");
-out.push(JSON.stringify(c,null,2));
-
-out.push("\nAGENT RULE:");
-out.push(JSON.stringify(a,null,2));
-
-out.push("\nKYC:");
-out.push(JSON.stringify(k,null,2));
-
-out.push("\nFRAUD:");
-f.length?f.forEach(x=>out.push("- "+x)) : out.push("- NONE");
-
-out.push("\nDRDE:");
-out.push(JSON.stringify(d,null,2));
-
-out.push("\nPRINCIPLE:");
-out.push("SYSTEM STANDS ASIDE AND REVEALS STRUCTURAL RISK");
-
-out.push("\nSTATUS:");
-out.push(d.tier==="CRITICAL"
-?"HIGH RISK STRUCTURE — DO NOT PROCEED BLINDLY"
-:"STRUCTURALLY CONSISTENT — PROCEED WITH AWARENESS");
-
-document.getElementById("report").innerText=out.join("\n");
-
-show("out");
+function fail(){
+ATTEMPTS++;
+if(ATTEMPTS>=3){
+document.body.innerHTML="<h2>SYSTEM LOCKED</h2>";
+}else{
+alert("Invalid input");
 }
+}
+
+function restore(){
+let s=localStorage.getItem("STATE");
+let t=localStorage.getItem("TX_ID");
+if(s&&t){
+STATE=s;
+TX_ID=t;
+setState(s,50);
+}
+}
+
+restore();
 
 </script>
 
 </body>
-</html> 
+</html>
