@@ -12,6 +12,7 @@ body{margin:0;font-family:Arial;background:#050814;color:#fff}
 .block{background:#111a33;padding:12px;margin:10px;border-radius:10px}
 button{width:100%;padding:14px;margin-top:10px;border:none;border-radius:8px;background:#2f6bff;color:#fff;font-weight:bold}
 input{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:none}
+.rule{color:#aaa;font-size:12px;margin-top:6px}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
@@ -29,9 +30,11 @@ PROGRESS: <span id="progressText">0%</span>
 <!-- SG0 -->
 <div id="sg0" class="screen active">
 <div class="block">
-<h3>ENTRY</h3>
-<p>Structured real estate transaction verification</p>
-<button onclick="start()">ACCEPT</button>
+<h3>FSTL COMET OS</h3>
+<p>Structured transaction verification system for real estate.</p>
+<p class="rule">You are here to establish trust BEFORE money.</p>
+<button onclick="enterSystem()">ACCEPT</button>
+<button onclick="decline()">DECLINE</button>
 </div>
 </div>
 
@@ -50,7 +53,7 @@ PROGRESS: <span id="progressText">0%</span>
 <input id="owner" placeholder="Owner">
 <input id="buyer" placeholder="Buyer">
 <input id="agent" placeholder="Agent">
-<button onclick="goSG2()">CONTINUE</button>
+<button onclick="validateStructure()">CONTINUE</button>
 </div>
 </div>
 
@@ -60,7 +63,17 @@ PROGRESS: <span id="progressText">0%</span>
 <h3>SG-2 IDENTITY</h3>
 <input id="nin" placeholder="NIN">
 <input id="bvn" placeholder="BVN">
-<button onclick="goSG3()">VERIFY</button>
+<button onclick="validateIdentity()">VERIFY</button>
+</div>
+</div>
+
+<!-- PARTIAL -->
+<div id="partial" class="screen">
+<div class="block">
+<h3>PARTIAL VERIFICATION</h3>
+<p id="risk"></p>
+<p class="rule">70% verification complete</p>
+<button onclick="proceedSG3()">PROCEED</button>
 </div>
 </div>
 
@@ -68,21 +81,22 @@ PROGRESS: <span id="progressText">0%</span>
 <div id="sg3" class="screen">
 <div class="block">
 <h3>SG-3 COMMITMENT LOCK</h3>
-<p>Transaction locked</p>
-<button onclick="unlockPayment()">LOCK & CONTINUE</button>
+<p class="rule">No rollback beyond this point</p>
+<button onclick="lockTransaction()">LOCK & CONTINUE</button>
 </div>
 </div>
 
 <!-- PAYMENT -->
-<div id="paymentBlock" class="block" style="display:none">
-<h3>FSTL PAYMENT</h3>
+<div id="payment" class="screen">
+<div class="block">
+<h3>FSTL VERIFICATION PAYMENT</h3>
 <p>Bank: First Bank Nigeria</p>
 <p>Account: 2025222557</p>
 <p>Name: First Standard Title Limited</p>
 <p>Amount: ₦25,000</p>
 <p>Code: <span id="paycode"></span></p>
-
 <button onclick="confirmPayment()">CONFIRM PAYMENT</button>
+</div>
 </div>
 
 <!-- OUTPUT -->
@@ -96,12 +110,11 @@ PROGRESS: <span id="progressText">0%</span>
 
 <!-- CONTACT -->
 <div class="block">
-<h3>FSTL AUTHORITY</h3>
+<h3>FSTL SERVICE LAYER</h3>
 <p>First Standard Title Limited</p>
-<p>Benin City, Edo State</p>
 <p>Phone: +2348035888622</p>
 <p>Email: fstlsite@gmail.com</p>
-<p>RULE: NO TX_ID → NO RESPONSE</p>
+<p class="rule">NO TX_ID → NO RESPONSE</p>
 </div>
 
 <script>
@@ -116,7 +129,13 @@ STATE=s;
 document.getElementById("stateText").innerText=s;
 document.getElementById("progressText").innerText=p+"%";
 localStorage.setItem("STATE",s);
-localStorage.setItem("TX_ID",TX_ID);
+localStorage.setItem("TX",TX_ID);
+}
+
+function enforceForward(newState){
+const order=["SG0","SG1","SG2","PARTIAL","SG3","PAYMENT","COMPLETE"];
+if(order.indexOf(newState)<order.indexOf(STATE)) return false;
+return true;
 }
 
 function show(id){
@@ -124,9 +143,13 @@ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
 document.getElementById(id).classList.add("active");
 }
 
-function start(){
+function enterSystem(){
 TX_ID="TX-"+Date.now();
 show("human");
+}
+
+function decline(){
+document.body.innerHTML="<h2>SESSION TERMINATED</h2>";
 }
 
 function confirmHuman(){
@@ -135,22 +158,35 @@ setState("SG1",20);
 show("sg1");
 }
 
-function goSG2(){
+function validateStructure(){
 if(!HUMAN)return alert("Human verification required");
+if(!owner.value||!buyer.value)return fail();
 setState("SG2",40);
 show("sg2");
 }
 
-function goSG3(){
-if(!document.getElementById("nin").value)return fail();
-setState("SG3",80);
+function validateIdentity(){
+if(!nin.value)return fail();
+
+let risk="LOW RISK";
+if(agent.value==="") risk="MEDIUM RISK";
+
+document.getElementById("risk").innerText=risk;
+
+setState("PARTIAL",70);
+show("partial");
+}
+
+function proceedSG3(){
+setState("SG3",85);
 show("sg3");
 }
 
-function unlockPayment(){
-document.getElementById("paymentBlock").style.display="block";
+function lockTransaction(){
+document.querySelectorAll("input").forEach(i=>i.disabled=true);
 document.getElementById("paycode").innerText="FSTL-"+Date.now();
 setState("PAYMENT",90);
+show("payment");
 }
 
 function confirmPayment(){
@@ -165,25 +201,30 @@ show("output");
 }
 
 function generateQR(){
-let data=JSON.stringify({
-tx:TX_ID,
-state:STATE,
-time:Date.now()
-});
-
+let data=JSON.stringify(buildAudit());
 document.getElementById("qr").innerHTML="";
-new QRCode(document.getElementById("qr"),{
-text:data,width:180,height:180
-});
+new QRCode(document.getElementById("qr"),{text:data,width:180,height:180});
 }
 
 function generatePDF(){
 const { jsPDF } = window.jspdf;
 let doc=new jsPDF();
+let a=buildAudit();
 doc.text("FSTL COMET OS CERTIFICATE",10,10);
-doc.text("TX:"+TX_ID,10,20);
-doc.text("STATE:"+STATE,10,30);
-doc.save(TX_ID+".pdf");
+doc.text("TX:"+a.tx,10,20);
+doc.text("STATE:"+a.state,10,30);
+doc.save(a.tx+".pdf");
+}
+
+function buildAudit(){
+return {
+tx:TX_ID,
+state:STATE,
+owner:owner.value,
+buyer:buyer.value,
+agent:agent.value,
+time:Date.now()
+};
 }
 
 function fail(){
@@ -191,13 +232,13 @@ ATTEMPTS++;
 if(ATTEMPTS>=3){
 document.body.innerHTML="<h2>SYSTEM LOCKED</h2>";
 }else{
-alert("Invalid input");
+alert("INVALID INPUT");
 }
 }
 
 function restore(){
 let s=localStorage.getItem("STATE");
-let t=localStorage.getItem("TX_ID");
+let t=localStorage.getItem("TX");
 if(s&&t){
 STATE=s;
 TX_ID=t;
