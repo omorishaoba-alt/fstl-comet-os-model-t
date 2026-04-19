@@ -5,259 +5,215 @@
 <title>FSTL COMET OS</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { font-family: Arial; background:#0b0b0b; color:#fff; padding:20px; }
+body {
+  font-family: Arial;
+  background:#0b0b0b;
+  color:#fff;
+  padding:20px;
+}
+
 h1 { color:#00ffd0; }
 
 .card {
-    background:#1c1c1c;
-    padding:15px;
-    margin-bottom:15px;
-    border-radius:10px;
+  background:#1c1c1c;
+  padding:15px;
+  margin-bottom:15px;
+  border-radius:10px;
 }
 
-input, select, textarea {
-    width:100%;
-    padding:10px;
-    margin:6px 0;
-    border:none;
-    border-radius:6px;
+input, select {
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border:none;
+  border-radius:6px;
 }
 
 button {
-    width:100%;
-    padding:12px;
-    background:#00ffd0;
-    border:none;
-    font-weight:bold;
-    margin-top:5px;
+  width:100%;
+  padding:12px;
+  background:#00ffd0;
+  border:none;
+  font-weight:bold;
+  margin-top:5px;
+  cursor:pointer;
 }
 
 pre {
-    background:#111;
-    padding:10px;
-    border-radius:8px;
-    overflow:auto;
-}
-
-#report {
-    display:none;
-    background:#fff;
-    color:#000;
-    padding:20px;
-    margin-top:10px;
+  background:#111;
+  padding:10px;
+  border-radius:8px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>FSTL COMET OS — UNIFIED CORE</h1>
+<h1>FSTL COMET OS</h1>
 
-<div class="card">
-<h3>IDENTITY INPUT</h3>
-<input id="name" placeholder="Full Name (REQUIRED)">
-<input id="phone" placeholder="Phone (REQUIRED)">
-<input id="address" placeholder="Address (REQUIRED)">
-<input id="nin" placeholder="NIN">
-<input id="bvn" placeholder="BVN">
+<!-- ================= FRONT GATE ================= -->
+<div class="card" id="frontGate">
+
+<h3>Decision Support System</h3>
+
+<p>
+COMET OS structures your property decision before you commit money,
+reducing the risk of costly mistakes.
+</p>
+
+<button onclick="enterSimulation()">START SIMULATION</button>
+
 </div>
 
-<div class="card">
-<h3>ASSET INPUT</h3>
+<!-- ================= PAYMENT GATE ================= -->
+<div class="card" id="paymentGate" style="display:none;">
+
+<h3>Verification Unlock (Payment Required)</h3>
+
+<p><b>Bank:</b> First Bank Nigeria</p>
+<p><b>Account:</b> 2025222557</p>
+<p><b>Name:</b> First Standard Title Limited</p>
+
+<input id="ref" placeholder="Enter Payment Reference">
+
+<button onclick="confirmPayment()">UNLOCK VERIFICATION MODE</button>
+
+</div>
+
+<!-- ================= MAIN SYSTEM ================= -->
+<div class="card" id="system" style="display:none;">
+
+<h3 id="modeLabel">SIMULATION MODE</h3>
+
+<input id="name" placeholder="Full Name">
+<input id="phone" placeholder="Phone Number">
+<input id="location" placeholder="Property Location">
+
 <select id="type">
-<option>Land</option>
-<option>Building</option>
-<option>Other</option>
+  <option>Land</option>
+  <option>Building</option>
 </select>
-<input id="location" placeholder="Asset Location (REQUIRED)">
-<input id="desc" placeholder="Description">
+
+<button onclick="runSimulation()">RUN ANALYSIS</button>
+<button onclick="generatePDF()" id="pdfBtn" style="display:none;">GENERATE PDF (PAID)</button>
+
 </div>
 
-<div class="card">
-<button onclick="execute()">EXECUTE</button>
-<button onclick="verify()">VERIFY</button>
-<button onclick="report()">REPORT</button>
-</div>
+<pre id="out">SYSTEM READY</pre>
 
-<div class="card">
-<h3>OUTPUT</h3>
-<pre id="out">READY</pre>
 <canvas id="qr"></canvas>
-</div>
-
-<div id="report"></div>
 
 <script>
 
-const VERSION = "COMET_OS_FINAL";
+let MODE = "SIMULATION";
+let PAYMENT = { status:false };
+let SESSION = Date.now();
+let CURRENT = null;
 
-/* VALIDATION */
-function validate(i,a){
-    return !!(i.name && i.phone && i.address && a.location);
+/* ENTRY */
+function enterSimulation(){
+  frontGate.style.display="none";
+  system.style.display="block";
+  MODE = "SIMULATION";
+  modeLabel.innerText = "SIMULATION MODE";
 }
 
-/* RISK ENGINE */
-function risk(i,a){
-    let score=0, flags=[];
+/* SIMULATION ENGINE */
+function runSimulation(){
 
-    if(!i.name){score+=20;flags.push("NAME_MISSING");}
-    if(!i.phone){score+=20;flags.push("PHONE_MISSING");}
-    if(!i.address){score+=10;flags.push("ADDRESS_MISSING");}
-    if(!a.location){score+=20;flags.push("LOCATION_MISSING");}
+  let data = {
+    name:name.value,
+    phone:phone.value,
+    location:location.value,
+    type:type.value
+  };
 
-    if(i.nin && i.bvn && i.nin===i.bvn){
-        score+=40;
-        flags.push("IDENTITY_COLLISION");
-    }
+  let score = 0;
 
-    return {
-        score,
-        level: score>=60?"HIGH":score>=30?"MEDIUM":"LOW",
-        flags
-    };
+  if(!data.name) score += 20;
+  if(!data.phone) score += 20;
+  if(!data.location) score += 20;
+
+  let level = score >= 50 ? "HIGH" : score >= 25 ? "MEDIUM" : "LOW";
+  let state = level === "HIGH" ? "FLAGGED"
+             : level === "MEDIUM" ? "REVIEW"
+             : "APPROVED";
+
+  CURRENT = { data, score, level, state };
+
+  out.innerText =
+  "SIMULATION RESULT\n\n" +
+  "Risk Score: " + score + "\n" +
+  "Level: " + level + "\n" +
+  "State: " + state;
 }
 
-/* STATE MACHINE */
-function state(valid, level){
-    if(!valid) return "REJECTED";
-    if(level==="HIGH") return "FLAGGED";
-    if(level==="MEDIUM") return "REVIEW";
-    return "APPROVED";
+/* PAYMENT GATE */
+function confirmPayment(){
+
+  let r = ref.value;
+  if(!r || r.length < 8){
+    out.innerText="INVALID PAYMENT REFERENCE";
+    return;
+  }
+
+  PAYMENT.status = true;
+  PAYMENT.ref = r;
+
+  paymentGate.style.display="none";
+  system.style.display="block";
+
+  MODE = "VERIFICATION";
+  modeLabel.innerText = "VERIFICATION MODE";
+
+  pdfBtn.style.display="block";
+
+  out.innerText="VERIFICATION MODE UNLOCKED";
 }
 
 /* HASH */
 async function hash(data){
-    const enc = new TextEncoder().encode(data);
-    const buf = await crypto.subtle.digest("SHA-256", enc);
-    return [...new Uint8Array(buf)]
-        .map(x => x.toString(16).padStart(2,'0'))
-        .join('');
+  let enc = new TextEncoder().encode(data);
+  let buf = await crypto.subtle.digest("SHA-256", enc);
+  return [...new Uint8Array(buf)]
+    .map(x => x.toString(16).padStart(2,'0'))
+    .join('');
 }
 
-/* STORAGE */
-function store(record){
-    localStorage.setItem(record.id, JSON.stringify(record));
-}
+/* PDF GENERATION (PAID ONLY) */
+async function generatePDF(){
 
-/* QR PAYLOAD (MINIMAL TRUST OBJECT) */
-function qrPayload(r){
-    return {
-        v: VERSION,
-        id: r.id,
-        h: r.hash,
-        s: r.state
-    };
-}
+  if(MODE !== "VERIFICATION" || !PAYMENT.status){
+    out.innerText="ACCESS DENIED - PAYMENT REQUIRED";
+    return;
+  }
 
-/* EXECUTE */
-async function execute(){
+  let h = await hash(JSON.stringify(CURRENT));
 
-    const identity={
-        name:name.value,
-        phone:phone.value,
-        address:address.value,
-        nin:nin.value,
-        bvn:bvn.value
-    };
+  const { jsPDF } = window.jspdf;
+  let doc = new jsPDF();
 
-    const asset={
-        type:type.value,
-        location:location.value,
-        desc:desc.value
-    };
+  doc.text("FSTL COMET OS VERIFICATION REPORT",20,20);
 
-    if(!validate(identity,asset)){
-        out.innerText="INVALID INPUT";
-        return;
-    }
+  doc.text("STATE: " + CURRENT.state,20,40);
+  doc.text("RISK SCORE: " + CURRENT.score,20,50);
+  doc.text("LEVEL: " + CURRENT.level,20,60);
 
-    const r=risk(identity,asset);
-    const st=state(true,r.level);
+  doc.text("SESSION: " + SESSION,20,80);
+  doc.text("HASH: " + h.substring(0,25),20,90);
 
-    const payload={
-        version:VERSION,
-        identity,
-        asset,
-        risk:r,
-        state:st
-    };
+  doc.save("COMET_VERIFICATION.pdf");
 
-    const canon=JSON.stringify(payload);
-    const h=await hash(canon);
+  QRCode.toCanvas(qr, JSON.stringify({
+    session:SESSION,
+    hash:h,
+    state:CURRENT.state
+  }));
 
-    const record={
-        id:Date.now(),
-        ...payload,
-        hash:h,
-        timestamp:new Date().toISOString()
-    };
-
-    store(record);
-    window.current=record;
-
-    QRCode.toCanvas(document.getElementById("qr"), JSON.stringify(qrPayload(record)));
-
-    out.innerText =
-`STATE: ${st}
-RISK: ${r.level}
-SCORE: ${r.score}
-HASH: ${h}`;
-}
-
-/* VERIFY */
-async function verify(){
-
-    const rec = JSON.parse(prompt("Paste full record JSON"));
-
-    const canon = JSON.stringify({
-        version:rec.version,
-        identity:rec.identity,
-        asset:rec.asset,
-        risk:rec.risk,
-        state:rec.state
-    });
-
-    const h = await hash(canon);
-
-    out.innerText =
-`VALID: ${h === rec.hash}`;
-}
-
-/* REPORT */
-function report(){
-
-    const r = window.current;
-    if(!r){ out.innerText="NO RECORD"; return; }
-
-    document.getElementById("report").style.display="block";
-
-    document.getElementById("report").innerHTML=`
-<h2>COMET OS REPORT</h2>
-
-<p><b>ID:</b> ${r.id}</p>
-<p><b>TIME:</b> ${r.timestamp}</p>
-
-<h3>IDENTITY</h3>
-<p>${r.identity.name} | ${r.identity.phone}</p>
-<p>${r.identity.address}</p>
-
-<h3>ASSET</h3>
-<p>${r.asset.type} | ${r.asset.location}</p>
-
-<h3>RISK</h3>
-<p>${r.risk.level} (${r.risk.score})</p>
-
-<h3>STATE</h3>
-<p>${r.state}</p>
-
-<h3>HASH</h3>
-<p>${r.hash}</p>
-
-<h3>RULE</h3>
-<p>Valid only if SHA-256 recomputation matches stored hash exactly.</p>
-`;
+  out.innerText="VERIFICATION PDF GENERATED";
 }
 
 </script>
