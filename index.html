@@ -1,229 +1,264 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
 <title>FSTL COMET OS</title>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
 <style>
-body{margin:0;font-family:Arial;background:#050814;color:#fff}
-#topbar{position:sticky;top:0;background:#0b1025;padding:10px;border-bottom:1px solid #222;font-weight:bold}
-.screen{display:none}
-.active{display:block}
-.block{background:#111a33;padding:12px;margin:10px;border-radius:10px}
-button{width:100%;padding:14px;margin-top:10px;border:none;border-radius:8px;background:#2f6bff;color:#fff;font-weight:bold}
-input{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:none}
+body { font-family: Arial; background:#0b0b0b; color:#fff; padding:20px; }
+h1 { color:#00ffd0; }
+
+.card {
+    background:#1c1c1c;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:10px;
+}
+
+input, select, textarea {
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+    border:none;
+    border-radius:6px;
+}
+
+button {
+    width:100%;
+    padding:12px;
+    background:#00ffd0;
+    border:none;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+pre {
+    background:#111;
+    padding:10px;
+    border-radius:8px;
+    overflow:auto;
+}
+
+#report {
+    display:none;
+    background:#fff;
+    color:#000;
+    padding:20px;
+    margin-top:10px;
+}
 </style>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 </head>
 
 <body>
 
-<div id="topbar">
-FSTL COMET OS — <span id="stateText">SG-0</span> |
-PROGRESS: <span id="progressText">0%</span>
-</div>
+<h1>FSTL COMET OS — UNIFIED CORE</h1>
 
-<!-- SG-0 -->
-<div id="sg0" class="screen active">
-<div class="block">
-<h3>ENTRY</h3>
-<p>Structured real estate transaction verification system</p>
-<button onclick="start()">ACCEPT</button>
-</div>
-</div>
-
-<!-- HUMAN -->
-<div id="human" class="screen">
-<div class="block">
-<h3>HUMAN VERIFICATION</h3>
-<button onclick="confirmHuman()">I AM NOT A BOT</button>
-</div>
-</div>
-
-<!-- SG-1 -->
-<div id="sg1" class="screen">
-<div class="block">
-<h3>SG-1 STRUCTURE</h3>
-<input id="owner" placeholder="Owner Name">
-<input id="buyer" placeholder="Buyer Name">
-<input id="agent" placeholder="Agent Name">
-<button onclick="goSG2()">CONTINUE</button>
-</div>
-</div>
-
-<!-- SG-2 -->
-<div id="sg2" class="screen">
-<div class="block">
-<h3>SG-2 IDENTITY</h3>
+<div class="card">
+<h3>IDENTITY INPUT</h3>
+<input id="name" placeholder="Full Name (REQUIRED)">
+<input id="phone" placeholder="Phone (REQUIRED)">
+<input id="address" placeholder="Address (REQUIRED)">
 <input id="nin" placeholder="NIN">
 <input id="bvn" placeholder="BVN">
-<button onclick="goSG3()">VERIFY IDENTITY</button>
-</div>
 </div>
 
-<!-- SG-3 -->
-<div id="sg3" class="screen">
-<div class="block">
-<h3>SG-3 COMMITMENT LOCK</h3>
-<p>Transaction locked. Proceed to payment.</p>
-<button onclick="unlockPayment()">LOCK & CONTINUE</button>
-</div>
-</div>
-
-<!-- PAYMENT -->
-<div id="paymentBlock" class="block" style="display:none">
-<h3>FSTL VERIFICATION PAYMENT</h3>
-
-<p><b>Bank:</b> First Bank Nigeria</p>
-<p><b>Account Number:</b> 2025222557</p>
-<p><b>Account Name:</b> First Standard Title Limited</p>
-
-<hr>
-
-<p><b>Amount:</b> ₦25,000</p>
-<p><b>Purpose:</b> COMET OS VERIFICATION</p>
-
-<p><b>Payment Code:</b> <span id="paycode"></span></p>
-
-<button onclick="confirmPayment()">CONFIRM PAYMENT</button>
+<div class="card">
+<h3>ASSET INPUT</h3>
+<select id="type">
+<option>Land</option>
+<option>Building</option>
+<option>Other</option>
+</select>
+<input id="location" placeholder="Asset Location (REQUIRED)">
+<input id="desc" placeholder="Description">
 </div>
 
-<!-- OUTPUT -->
-<div id="output" class="screen">
-<div class="block">
-<h3>FINAL OUTPUT</h3>
-<div id="qr"></div>
-<button onclick="generatePDF()">DOWNLOAD PDF CERTIFICATE</button>
-</div>
+<div class="card">
+<button onclick="execute()">EXECUTE</button>
+<button onclick="verify()">VERIFY</button>
+<button onclick="report()">REPORT</button>
 </div>
 
-<!-- FSTL AUTHORITY -->
-<div class="block">
-<h3>FSTL TRANSACTION AUTHORITY</h3>
-
-<p><b>First Standard Title Limited</b></p>
-<p>No. 19 Egbor Avenue, Benin City, Edo State</p>
-
-<hr>
-
-<p><b>Phone / WhatsApp:</b> +2348035888622</p>
-<p><b>Email:</b> fstlsite@gmail.com</p>
-
-<hr>
-
-<p><b>RULE:</b> NO TX_ID → NO RESPONSE</p>
-<p>All enquiries must include TX_ID</p>
+<div class="card">
+<h3>OUTPUT</h3>
+<pre id="out">READY</pre>
+<canvas id="qr"></canvas>
 </div>
+
+<div id="report"></div>
 
 <script>
 
-let STATE="SG0";
-let TX_ID=null;
-let HUMAN=false;
-let ATTEMPTS=0;
+const VERSION = "COMET_OS_FINAL";
 
-function setState(s,p){
-STATE=s;
-document.getElementById("stateText").innerText=s;
-document.getElementById("progressText").innerText=p+"%";
-localStorage.setItem("STATE",s);
-localStorage.setItem("TX_ID",TX_ID);
+/* VALIDATION */
+function validate(i,a){
+    return !!(i.name && i.phone && i.address && a.location);
 }
 
-function show(id){
-document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-document.getElementById(id).classList.add("active");
+/* RISK ENGINE */
+function risk(i,a){
+    let score=0, flags=[];
+
+    if(!i.name){score+=20;flags.push("NAME_MISSING");}
+    if(!i.phone){score+=20;flags.push("PHONE_MISSING");}
+    if(!i.address){score+=10;flags.push("ADDRESS_MISSING");}
+    if(!a.location){score+=20;flags.push("LOCATION_MISSING");}
+
+    if(i.nin && i.bvn && i.nin===i.bvn){
+        score+=40;
+        flags.push("IDENTITY_COLLISION");
+    }
+
+    return {
+        score,
+        level: score>=60?"HIGH":score>=30?"MEDIUM":"LOW",
+        flags
+    };
 }
 
-function start(){
-TX_ID="TX-"+Date.now();
-show("human");
+/* STATE MACHINE */
+function state(valid, level){
+    if(!valid) return "REJECTED";
+    if(level==="HIGH") return "FLAGGED";
+    if(level==="MEDIUM") return "REVIEW";
+    return "APPROVED";
 }
 
-function confirmHuman(){
-HUMAN=true;
-setState("SG1",20);
-show("sg1");
+/* HASH */
+async function hash(data){
+    const enc = new TextEncoder().encode(data);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return [...new Uint8Array(buf)]
+        .map(x => x.toString(16).padStart(2,'0'))
+        .join('');
 }
 
-function goSG2(){
-if(!HUMAN)return alert("Human verification required");
-setState("SG2",40);
-show("sg2");
+/* STORAGE */
+function store(record){
+    localStorage.setItem(record.id, JSON.stringify(record));
 }
 
-function goSG3(){
-if(!document.getElementById("nin").value)return fail();
-setState("SG3",80);
-show("sg3");
+/* QR PAYLOAD (MINIMAL TRUST OBJECT) */
+function qrPayload(r){
+    return {
+        v: VERSION,
+        id: r.id,
+        h: r.hash,
+        s: r.state
+    };
 }
 
-function unlockPayment(){
-document.getElementById("paymentBlock").style.display="block";
-document.getElementById("paycode").innerText="FSTL-"+Date.now();
-setState("PAYMENT",90);
+/* EXECUTE */
+async function execute(){
+
+    const identity={
+        name:name.value,
+        phone:phone.value,
+        address:address.value,
+        nin:nin.value,
+        bvn:bvn.value
+    };
+
+    const asset={
+        type:type.value,
+        location:location.value,
+        desc:desc.value
+    };
+
+    if(!validate(identity,asset)){
+        out.innerText="INVALID INPUT";
+        return;
+    }
+
+    const r=risk(identity,asset);
+    const st=state(true,r.level);
+
+    const payload={
+        version:VERSION,
+        identity,
+        asset,
+        risk:r,
+        state:st
+    };
+
+    const canon=JSON.stringify(payload);
+    const h=await hash(canon);
+
+    const record={
+        id:Date.now(),
+        ...payload,
+        hash:h,
+        timestamp:new Date().toISOString()
+    };
+
+    store(record);
+    window.current=record;
+
+    QRCode.toCanvas(document.getElementById("qr"), JSON.stringify(qrPayload(record)));
+
+    out.innerText =
+`STATE: ${st}
+RISK: ${r.level}
+SCORE: ${r.score}
+HASH: ${h}`;
 }
 
-function confirmPayment(){
-setState("FINALIZING",95);
-finalize();
+/* VERIFY */
+async function verify(){
+
+    const rec = JSON.parse(prompt("Paste full record JSON"));
+
+    const canon = JSON.stringify({
+        version:rec.version,
+        identity:rec.identity,
+        asset:rec.asset,
+        risk:rec.risk,
+        state:rec.state
+    });
+
+    const h = await hash(canon);
+
+    out.innerText =
+`VALID: ${h === rec.hash}`;
 }
 
-function finalize(){
-generateQR();
-setState("COMPLETE",100);
-show("output");
+/* REPORT */
+function report(){
+
+    const r = window.current;
+    if(!r){ out.innerText="NO RECORD"; return; }
+
+    document.getElementById("report").style.display="block";
+
+    document.getElementById("report").innerHTML=`
+<h2>COMET OS REPORT</h2>
+
+<p><b>ID:</b> ${r.id}</p>
+<p><b>TIME:</b> ${r.timestamp}</p>
+
+<h3>IDENTITY</h3>
+<p>${r.identity.name} | ${r.identity.phone}</p>
+<p>${r.identity.address}</p>
+
+<h3>ASSET</h3>
+<p>${r.asset.type} | ${r.asset.location}</p>
+
+<h3>RISK</h3>
+<p>${r.risk.level} (${r.risk.score})</p>
+
+<h3>STATE</h3>
+<p>${r.state}</p>
+
+<h3>HASH</h3>
+<p>${r.hash}</p>
+
+<h3>RULE</h3>
+<p>Valid only if SHA-256 recomputation matches stored hash exactly.</p>
+`;
 }
-
-function generateQR(){
-let data=JSON.stringify({
-tx:TX_ID,
-state:STATE,
-time:Date.now()
-});
-
-document.getElementById("qr").innerHTML="";
-new QRCode(document.getElementById("qr"),{
-text:data,
-width:180,
-height:180
-});
-}
-
-function generatePDF(){
-const { jsPDF } = window.jspdf;
-let doc=new jsPDF();
-
-doc.text("FSTL COMET OS VERIFICATION CERTIFICATE",10,10);
-doc.text("TX_ID: "+TX_ID,10,20);
-doc.text("STATE: "+STATE,10,30);
-
-doc.save(TX_ID+".pdf");
-}
-
-function fail(){
-ATTEMPTS++;
-if(ATTEMPTS>=3){
-document.body.innerHTML="<h2>SYSTEM LOCKED: TOO MANY ATTEMPTS</h2>";
-}else{
-alert("Invalid input");
-}
-}
-
-function restore(){
-let s=localStorage.getItem("STATE");
-let t=localStorage.getItem("TX_ID");
-if(s && t){
-STATE=s;
-TX_ID=t;
-setState(s,50);
-}
-}
-
-restore();
 
 </script>
 
