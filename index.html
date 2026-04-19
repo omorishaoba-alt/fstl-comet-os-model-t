@@ -2,218 +2,423 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {
-  font-family: Arial;
-  background:#0b0b0b;
-  color:#fff;
-  padding:20px;
+body{
+margin:0;
+font-family:Arial;
+background:#0a1424;
+color:#eaf2ff;
 }
 
-h1 { color:#00ffd0; }
-
-.card {
-  background:#1c1c1c;
-  padding:15px;
-  margin-bottom:15px;
-  border-radius:10px;
+.app{
+max-width:430px;
+margin:auto;
+padding:16px;
 }
 
-input, select {
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border:none;
-  border-radius:6px;
+/* FRONT COVER */
+.cover{
+padding:20px;
+border:1px solid #1f3b63;
+border-radius:14px;
+background:#111c2f;
+text-align:center;
 }
 
-button {
-  width:100%;
-  padding:12px;
-  background:#00ffd0;
-  border:none;
-  font-weight:bold;
-  margin-top:5px;
-  cursor:pointer;
+h1{color:#1e88e5;font-size:22px}
+
+button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#1565c0;
+color:#fff;
+font-weight:bold;
 }
 
-pre {
-  background:#111;
-  padding:10px;
-  border-radius:8px;
+.card{
+background:#111c2f;
+padding:14px;
+border-radius:12px;
+margin-top:12px;
+border:1px solid #1f3b63;
 }
+
+input,select{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:8px;
+border:none;
+background:#0e1a30;
+color:#fff;
+}
+
+pre{
+background:#0e1a30;
+padding:10px;
+border-radius:8px;
+border:1px solid #1f3b63;
+font-size:12px;
+}
+
+.hidden{display:none}
+
+.nav{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+.nav button{flex:1}
 </style>
 </head>
 
 <body>
 
+<div class="app">
+
+<!-- 🟦 FRONT COVER -->
+<div id="cover" class="cover">
 <h1>FSTL COMET OS</h1>
 
-<!-- ================= FRONT GATE ================= -->
-<div class="card" id="frontGate">
+<p><b>Property Verification & Transaction Structuring System</b></p>
 
-<h3>Decision Support System</h3>
-
-<p>
-COMET OS structures your property decision before you commit money,
-reducing the risk of costly mistakes.
+<p style="font-size:13px;opacity:0.9">
+• Identity Validation (NIN/BVN Structured Capture<br>
+• Fraud Risk Detection for Land Transactions<br>
+• Certified Audit Output (PDF + QR + Hash)
 </p>
 
-<button onclick="enterSimulation()">START SIMULATION</button>
+<p style="font-size:12px;opacity:0.8">
+Every transaction is structured, logged, and traceable.
+</p>
 
+<button onclick="start()">START SECURE VERIFICATION</button>
 </div>
 
-<!-- ================= PAYMENT GATE ================= -->
-<div class="card" id="paymentGate" style="display:none;">
+<!-- SYSTEM -->
+<div id="system" class="hidden">
 
-<h3>Verification Unlock (Payment Required)</h3>
+<h1>FSTL COMET OS</h1>
+<pre id="out">SYSTEM READY</pre>
+<canvas id="qr"></canvas>
 
-<p><b>Bank:</b> First Bank Nigeria</p>
-<p><b>Account:</b> 2025222557</p>
-<p><b>Name:</b> First Standard Title Limited</p>
-
-<input id="ref" placeholder="Enter Payment Reference">
-
-<button onclick="confirmPayment()">UNLOCK VERIFICATION MODE</button>
-
+<div class="nav">
+<button onclick="step(-1)">BACK</button>
+<button onclick="step(1)">NEXT</button>
 </div>
 
-<!-- ================= MAIN SYSTEM ================= -->
-<div class="card" id="system" style="display:none;">
+<!-- STEP 1 -->
+<div class="card" id="s1">
+<h3>STEP 1: TRANSACTION CONTROL</h3>
 
-<h3 id="modeLabel">SIMULATION MODE</h3>
-
-<input id="name" placeholder="Full Name">
-<input id="phone" placeholder="Phone Number">
-<input id="location" placeholder="Property Location">
-
-<select id="type">
-  <option>Land</option>
-  <option>Building</option>
+<select id="txType">
+<option>Purchase</option>
+<option>Rental</option>
+<option>Verification Only</option>
 </select>
 
-<button onclick="runSimulation()">RUN ANALYSIS</button>
-<button onclick="generatePDF()" id="pdfBtn" style="display:none;">GENERATE PDF (PAID)</button>
+<select id="sellerRole" onchange="toggleFlow()">
+<option>Owner</option>
+<option>Agent</option>
+<option>Third Party</option>
+</select>
 
+<select id="agentInvolved" onchange="toggleFlow()">
+<option>No</option>
+<option>Yes</option>
+</select>
 </div>
 
-<pre id="out">SYSTEM READY</pre>
+<!-- STEP 2 -->
+<div class="card hidden" id="s2">
+<h3>STEP 2: SELLER</h3>
+<input id="sellerName" placeholder="Name">
+<input id="sellerPhone" placeholder="Phone">
+<input id="sellerNIN" placeholder="NIN">
+<input id="sellerBVN" placeholder="BVN">
+</div>
 
-<canvas id="qr"></canvas>
+<!-- OWNER -->
+<div class="card hidden" id="ownerBlock">
+<h3>OWNER (IF DIFFERENT)</h3>
+<input id="ownerName">
+<input id="ownerPhone">
+<input id="ownerNIN">
+<input id="ownerBVN">
+</div>
+
+<!-- STEP 3 -->
+<div class="card hidden" id="s3">
+<h3>STEP 3: AGENT</h3>
+<input id="agentName">
+<input id="agentPhone">
+<input id="agentNIN">
+<input id="agentBVN">
+</div>
+
+<!-- STEP 4 -->
+<div class="card hidden" id="s4">
+<h3>STEP 4: COUNTERPARTY</h3>
+
+<div id="buyerBlock">
+<input id="buyerName">
+<input id="buyerPhone">
+<input id="buyerNIN">
+<input id="buyerBVN">
+</div>
+
+<div id="tenantBlock" class="hidden">
+<input id="tenantName">
+<input id="tenantPhone">
+<input id="tenantNIN">
+<input id="tenantBVN">
+</div>
+</div>
+
+<!-- STEP 5 -->
+<div class="card hidden" id="s5">
+<h3>STEP 5: ASSET</h3>
+
+<select id="assetType">
+<option>Land</option>
+<option>Residential Building</option>
+<option>Commercial Property</option>
+<option>Mixed Use</option>
+</select>
+
+<input id="location" placeholder="Location">
+
+<select id="ownership">
+<option>Sole Ownership</option>
+<option>Family Property</option>
+<option>Corporate Ownership</option>
+<option>Unknown</option>
+</select>
+
+<select id="docStatus">
+<option>Title Available</option>
+<option>Receipt Only</option>
+<option>Survey Only</option>
+<option>No Documents</option>
+</select>
+
+<select id="occupancy">
+<option>Vacant</option>
+<option>Occupied</option>
+<option>Disputed</option>
+</select>
+
+<button onclick="run()">RUN VERIFICATION</button>
+</div>
+
+<!-- PAYMENT -->
+<div class="card hidden" id="pay">
+<h3>PAYMENT GATE</h3>
+<input id="ref" placeholder="Transaction Reference">
+<button onclick="unlock()">UNLOCK</button>
+</div>
+
+<!-- OUTPUT -->
+<div class="card hidden" id="outbox">
+<h3>OUTPUT</h3>
+<button onclick="generate()">GENERATE CERTIFICATE</button>
+</div>
+
+</div>
+</div>
 
 <script>
 
-let MODE = "SIMULATION";
-let PAYMENT = { status:false };
-let SESSION = Date.now();
-let CURRENT = null;
+let stepIndex=1;
+let unlocked=false;
+let TX={};
 
-/* ENTRY */
-function enterSimulation(){
-  frontGate.style.display="none";
-  system.style.display="block";
-  MODE = "SIMULATION";
-  modeLabel.innerText = "SIMULATION MODE";
+/* START */
+function start(){
+cover.classList.add("hidden");
+system.classList.remove("hidden");
 }
 
-/* SIMULATION ENGINE */
-function runSimulation(){
+/* STEP NAV */
+function step(dir){
+stepIndex+=dir;
+if(stepIndex<1)stepIndex=1;
+if(stepIndex>5)stepIndex=5;
 
-  let data = {
-    name:name.value,
-    phone:phone.value,
-    location:location.value,
-    type:type.value
-  };
-
-  let score = 0;
-
-  if(!data.name) score += 20;
-  if(!data.phone) score += 20;
-  if(!data.location) score += 20;
-
-  let level = score >= 50 ? "HIGH" : score >= 25 ? "MEDIUM" : "LOW";
-  let state = level === "HIGH" ? "FLAGGED"
-             : level === "MEDIUM" ? "REVIEW"
-             : "APPROVED";
-
-  CURRENT = { data, score, level, state };
-
-  out.innerText =
-  "SIMULATION RESULT\n\n" +
-  "Risk Score: " + score + "\n" +
-  "Level: " + level + "\n" +
-  "State: " + state;
+for(let i=1;i<=5;i++){
+document.getElementById("s"+i).classList.add("hidden");
 }
 
-/* PAYMENT GATE */
-function confirmPayment(){
+document.getElementById("s"+stepIndex).classList.remove("hidden");
+}
 
-  let r = ref.value;
-  if(!r || r.length < 8){
-    out.innerText="INVALID PAYMENT REFERENCE";
-    return;
-  }
+/* FLOW */
+function toggleFlow(){
 
-  PAYMENT.status = true;
-  PAYMENT.ref = r;
+ownerBlock.classList.toggle("hidden",sellerRole.value==="Owner");
 
-  paymentGate.style.display="none";
-  system.style.display="block";
+let agentOn=(agentInvolved.value==="Yes"||sellerRole.value==="Agent");
+s3.classList.toggle("hidden",!agentOn);
 
-  MODE = "VERIFICATION";
-  modeLabel.innerText = "VERIFICATION MODE";
+let rental=(txType.value==="Rental");
+buyerBlock.classList.toggle("hidden",rental);
+tenantBlock.classList.toggle("hidden",!rental);
+}
 
-  pdfBtn.style.display="block";
+/* VALIDATION */
+const ok=v=>v&&v.length===11;
+const check=p=>p.name&&ok(p.nin)&&ok(p.bvn);
 
-  out.innerText="VERIFICATION MODE UNLOCKED";
+/* KYC */
+function kyc(d){
+
+if(!check(d.seller))return false;
+
+if(d.sellerRole!=="Owner"&&!check(d.owner))return false;
+
+if(d.agentInvolved&&!check(d.agent))return false;
+
+if(d.txType==="Purchase"&&!check(d.buyer))return false;
+
+if(d.txType==="Rental"&&!check(d.tenant))return false;
+
+return true;
+}
+
+/* RISK */
+function risk(d){
+let r=0;
+if(d.sellerRole!=="Owner")r+=25;
+if(d.agentInvolved)r+=20;
+if(d.ownership==="Family Property")r+=15;
+if(d.docStatus==="No Documents")r+=25;
+if(d.occupancy==="Disputed")r+=30;
+
+return{
+score:r,
+level:r>=70?"HIGH":r>=40?"MEDIUM":"LOW"
+};
+}
+
+/* RUN */
+function run(){
+
+TX={
+txType:txType.value,
+sellerRole:sellerRole.value,
+agentInvolved:(agentInvolved.value==="Yes"),
+
+seller:{
+name:sellerName.value,
+nin:sellerNIN.value,
+bvn:sellerBVN.value
+},
+
+owner:{
+name:ownerName.value,
+nin:ownerNIN.value,
+bvn:ownerBVN.value
+},
+
+agent:{
+name:agentName.value,
+nin:agentNIN.value,
+bvn:agentBVN.value
+},
+
+buyer:{
+name:buyerName.value,
+nin:buyerNIN.value,
+bvn:buyerBVN.value
+},
+
+tenant:{
+name:tenantName.value,
+nin:tenantNIN.value,
+bvn:tenantBVN.value
+},
+
+asset:{
+type:assetType.value,
+location:location.value,
+ownership:ownership.value,
+docStatus:docStatus.value,
+occupancy:occupancy.value
+}
+};
+
+if(!kyc(TX)){
+out.innerText="KYC INCOMPLETE — BLOCKED";
+return;
+}
+
+let r=risk(TX);
+TX.score=r.score;
+TX.level=r.level;
+TX.state="VALIDATED";
+
+pay.classList.remove("hidden");
+
+out.innerText="VALIDATED\nRISK:"+TX.level+" ("+TX.score+")";
+}
+
+/* PAYMENT */
+function unlock(){
+if(ref.value.length<6){
+out.innerText="INVALID REF";
+return;
+}
+unlocked=true;
+TX.state="VERIFIED";
+pay.classList.add("hidden");
+outbox.classList.remove("hidden");
+out.innerText="UNLOCKED";
 }
 
 /* HASH */
-async function hash(data){
-  let enc = new TextEncoder().encode(data);
-  let buf = await crypto.subtle.digest("SHA-256", enc);
-  return [...new Uint8Array(buf)]
-    .map(x => x.toString(16).padStart(2,'0'))
-    .join('');
+async function hash(d){
+let e=new TextEncoder().encode(d);
+let b=await crypto.subtle.digest("SHA-256",e);
+return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-/* PDF GENERATION (PAID ONLY) */
-async function generatePDF(){
+/* PDF */
+async function generate(){
 
-  if(MODE !== "VERIFICATION" || !PAYMENT.status){
-    out.innerText="ACCESS DENIED - PAYMENT REQUIRED";
-    return;
-  }
+if(!unlocked){
+out.innerText="PAYMENT REQUIRED";
+return;
+}
 
-  let h = await hash(JSON.stringify(CURRENT));
+const {jsPDF}=window.jspdf;
+let doc=new jsPDF();
+let h=await hash(JSON.stringify(TX));
 
-  const { jsPDF } = window.jspdf;
-  let doc = new jsPDF();
+doc.text("FSTL COMET OS CERTIFICATE",20,20);
+doc.text("STATE:"+TX.state,20,40);
+doc.text("RISK:"+TX.level+"("+TX.score+")",20,50);
+doc.text("ASSET:"+TX.asset.type,20,70);
+doc.text("LOCATION:"+TX.asset.location,20,80);
 
-  doc.text("FSTL COMET OS VERIFICATION REPORT",20,20);
+doc.text("FSTL CONTACT",20,110);
+doc.text("+2348035888622",20,120);
 
-  doc.text("STATE: " + CURRENT.state,20,40);
-  doc.text("RISK SCORE: " + CURRENT.score,20,50);
-  doc.text("LEVEL: " + CURRENT.level,20,60);
+doc.text("HASH:"+h.slice(0,25),20,140);
 
-  doc.text("SESSION: " + SESSION,20,80);
-  doc.text("HASH: " + h.substring(0,25),20,90);
+doc.save("COMET_OS.pdf");
 
-  doc.save("COMET_VERIFICATION.pdf");
+QRCode.toCanvas(qr,JSON.stringify({tid:Date.now(),hash:h}));
 
-  QRCode.toCanvas(qr, JSON.stringify({
-    session:SESSION,
-    hash:h,
-    state:CURRENT.state
-  }));
-
-  out.innerText="VERIFICATION PDF GENERATED";
+out.innerText="CERT GENERATED";
 }
 
 </script>
