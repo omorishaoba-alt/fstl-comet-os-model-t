@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -7,322 +7,188 @@
 
 <style>
 body{
-margin:0;
-font-family:Arial;
-background:#0b1424;
-color:#eaf2ff;
-overflow:hidden;
+  margin:0;
+  font-family:Arial;
+  background:#0b1220;
+  color:#fff;
 }
 
-.screen{
-display:none;
-height:100vh;
-padding:18px;
-box-sizing:border-box;
-}
-
+.screen{display:none;padding:16px;}
 .active{display:block;}
 
 .card{
-background:#121f36;
-padding:16px;
-border-radius:14px;
-margin-top:12px;
-border:1px solid #1e3a63;
-}
-
-input,select{
-width:100%;
-padding:14px;
-margin-top:10px;
-border-radius:10px;
-border:0;
-background:#0f1b30;
-color:#fff;
-font-size:16px;
+  background:#111c2e;
+  padding:14px;
+  border-radius:12px;
+  margin-top:10px;
 }
 
 button{
-width:100%;
-padding:14px;
-margin-top:12px;
-border-radius:12px;
-border:0;
-background:#1976d2;
-color:#fff;
-font-weight:700;
-font-size:16px;
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  background:#1e88e5;
+  color:#fff;
+  font-weight:bold;
 }
 
-.small{font-size:12px;color:#9fb3c8}
-
-.overlay{
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-background:#000000ee;
-display:none;
-align-items:center;
-justify-content:center;
-padding:20px;
-box-sizing:border-box;
+input,select{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:none;
+  background:#152238;
+  color:#fff;
 }
 
-.overlay .box{
-background:#121f36;
-padding:20px;
-border-radius:14px;
-width:100%;
+.badge{
+  padding:6px 10px;
+  border-radius:8px;
+  font-weight:bold;
+  display:inline-block;
 }
+
+.low{background:#2e7d32;}
+.mid{background:#f9a825;}
+.high{background:#c62828;}
+
+.small{font-size:12px;color:#9fb3c8;}
 </style>
 </head>
 
 <body>
 
-<!-- ABOUT -->
+<!-- 0 -->
 <div id="s0" class="screen active">
-<h2>COMET OS</h2>
-<p class="small">KYC-Gated Graph Decision System (Frontend Only)</p>
-<button onclick="UI.go(1)">Enter</button>
+  <div class="card">
+    <h2>COMET OS</h2>
+    <p class="small">Property Verification System</p>
+    <button onclick="next()">START</button>
+  </div>
 </div>
 
-<!-- FORM -->
+<!-- 1 -->
 <div id="s1" class="screen">
-<h3>Form 1 — Intent</h3>
-
-<input id="name" placeholder="Full Name"/>
-<input id="phone" placeholder="Phone"/>
-<input id="address" placeholder="Address"/>
-
-<select id="intent">
-<option>Sell Property</option>
-<option>Rent Property</option>
-<option>Verify Property</option>
-<option>Ownership Dispute</option>
-<option>Mortgage Review</option>
-</select>
-
-<button onclick="Engine.init()">Continue</button>
+  <div class="card">
+    <h3>Select Role</h3>
+    <button onclick="role('OWNER')">Owner</button>
+    <button onclick="role('BUYER')">Buyer</button>
+    <button onclick="role('SELLER')">Seller</button>
+    <button onclick="role('AGENT')">Agent</button>
+  </div>
 </div>
 
-<!-- STATE -->
+<!-- 2 -->
 <div id="s2" class="screen">
-<h3>Execution State</h3>
-
-<div class="card">
-<p id="state"></p>
-<p class="small" id="risk"></p>
+  <div class="card">
+    <h3>Asset</h3>
+    <input id="type" placeholder="Property Type">
+    <input id="location" placeholder="Location">
+    <select id="condition">
+      <option>GOOD</option>
+      <option>FAIR</option>
+      <option>UNCERTAIN</option>
+      <option>DISPUTED</option>
+    </select>
+    <button onclick="asset()">NEXT</button>
+  </div>
 </div>
 
-<button onclick="Engine.next()">Next Step</button>
-</div>
-
-<!-- REPORT -->
+<!-- 3 -->
 <div id="s3" class="screen">
-<h3>Report</h3>
-
-<div class="card" id="report"></div>
-
-<button onclick="Storage.reset()">New Session</button>
+  <div class="card">
+    <h3>Counterparty</h3>
+    <input id="cp" placeholder="Name">
+    <input id="cpRole" placeholder="Role">
+    <button onclick="run()">PROCESS</button>
+  </div>
 </div>
 
-<!-- KYC -->
-<div id="kyc" class="overlay">
-<div class="box">
-<h3>KYC REQUIRED</h3>
-
-<input id="nin" placeholder="NIN"/>
-<input id="bvn" placeholder="BVN"/>
-
-<button onclick="Engine.kycComplete()">Complete KYC</button>
-</div>
+<!-- 4 -->
+<div id="s4" class="screen">
+  <div class="card" id="out"></div>
+  <button onclick="location.reload()">NEW CASE</button>
 </div>
 
 <script>
 
-/* =========================
-STATE
-========================= */
-const State = {
-step:0,
-kyc:false,
-risk:0,
-flow:[],
-graph:{nodes:[]},
-sessionId:Date.now()
+let TIR = {
+  stage:0,
+  role:"",
+  asset:{},
+  counterparty:{},
+  risk:0,
+  decision:""
 };
 
-/* =========================
-STORAGE
-========================= */
-const Storage = {
-
-save(){
-localStorage.setItem("COMET_OS",JSON.stringify(State));
-},
-
-load(){
-let d=localStorage.getItem("COMET_OS");
-if(d){
-Object.assign(State,JSON.parse(d));
-}
-},
-
-reset(){
-localStorage.removeItem("COMET_OS");
-location.reload();
-}
-};
-
-/* =========================
-UI
-========================= */
-const UI = {
-go(i){
-document.querySelectorAll(".screen")
-.forEach(s=>s.classList.remove("active"));
-document.getElementById("s"+i).classList.add("active");
-}
-};
-
-/* =========================
-ENGINE
-========================= */
-const Engine = {
-
-/* INIT */
-init(){
-
-State.graph.nodes=[
-{name:name.value,type:"USER"},
-{phone:phone.value,type:"DIRECT"},
-{address:address.value,type:"DIRECT"},
-{intent:intent.value,type:"INTENT"}
-];
-
-/* INDIRECT INFERENCE */
-if(intent.value==="Sell Property"){
-State.graph.nodes.push({name:"Registry",type:"INDIRECT"});
-State.graph.nodes.push({name:"Title",type:"ASSET"});
+function show(i){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById("s"+i).classList.add("active");
 }
 
-if(intent.value==="Verify Property"){
-State.graph.nodes.push({name:"Authority",type:"INDIRECT"});
-State.graph.nodes.push({name:"Documents",type:"ASSET"});
+function next(){
+  TIR.stage++;
+  show(TIR.stage);
 }
 
-this.computeRisk();
-this.buildFlow();
-
-UI.go(2);
-this.render();
-Storage.save();
-},
-
-/* RISK ENGINE */
-computeRisk(){
-
-let r=0;
-
-State.graph.nodes.forEach(n=>{
-if(n.type==="USER")r+=1;
-if(n.type==="DIRECT")r+=2;
-if(n.type==="INDIRECT")r+=3;
-if(n.type==="ASSET")r+=2;
-});
-
-State.risk=r;
-},
-
-/* FLOW ENGINE */
-buildFlow(){
-
-State.flow=["INTENT"];
-
-if(State.risk>8){
-State.flow.push("KYC");
-State.flow.push("ASSET");
-State.flow.push("RISK");
-}else{
-State.flow.push("ASSET");
-State.flow.push("KYC");
-State.flow.push("RISK");
+function role(r){
+  TIR.role = r;
+  next();
 }
 
-State.flow.push("REPORT");
-State.step=0;
-},
-
-/* KYC */
-requireKYC(){
-kyc.style.display="flex";
-},
-
-kycComplete(){
-
-if(!nin.value || !bvn.value){
-alert("Incomplete KYC");
-return;
+function asset(){
+  TIR.asset = {
+    type: type.value,
+    location: location.value,
+    condition: condition.value
+  };
+  next();
 }
 
-State.kyc=true;
-kyc.style.display="none";
+function run(){
 
-Storage.save();
-this.render();
-},
+  TIR.counterparty = {
+    name: cp.value,
+    role: cpRole.value
+  };
 
-/* NEXT STEP */
-next(){
+  let r = 0;
 
-let stage=State.flow[State.step];
+  if(TIR.asset.condition === "DISPUTED") r += 5;
+  if(TIR.asset.condition === "UNCERTAIN") r += 3;
+  if(!TIR.asset.type) r += 2;
+  if(!TIR.counterparty.name) r += 2;
 
-if(stage==="KYC" && !State.kyc){
-this.requireKYC();
-return;
+  TIR.risk = r;
+
+  if(r >= 7){
+    TIR.decision = "BLOCKED";
+  } else if(r >= 3){
+    TIR.decision = "CONDITIONAL";
+  } else {
+    TIR.decision = "APPROVED";
+  }
+
+  let cls = r >= 7 ? "high" : r >= 3 ? "mid" : "low";
+
+  out.innerHTML = `
+    <span class="badge ${cls}">${TIR.decision}</span><br><br>
+
+    <b>Role:</b> ${TIR.role}<br>
+    <b>Asset:</b> ${TIR.asset.type}<br>
+    <b>Location:</b> ${TIR.asset.location}<br>
+    <b>Condition:</b> ${TIR.asset.condition}<br><br>
+
+    <b>Risk Score:</b> ${TIR.risk}<br><br>
+
+    <p class="small">Caveat Emptor: informational decision output only.</p>
+  `;
+
+  show(4);
 }
-
-if(State.step<State.flow.length-1){
-State.step++;
-}
-
-this.render();
-
-if(State.flow[State.step]==="REPORT"){
-this.report();
-UI.go(3);
-}
-
-Storage.save();
-},
-
-/* RENDER */
-render(){
-
-document.getElementById("state").innerText=
-"STEP: "+State.flow[State.step];
-
-document.getElementById("risk").innerText=
-"RISK SCORE: "+State.risk;
-},
-
-/* REPORT */
-report(){
-
-document.getElementById("report").innerHTML=
-`
-Intent: ${intent.value}<br/>
-Risk: ${State.risk}<br/>
-KYC: ${State.kyc ? "Verified":"Pending"}<br/>
-Nodes: ${State.graph.nodes.length}
-`;
-}
-};
-
-/* =========================
-BOOT
-========================= */
-Storage.load();
 
 </script>
 
