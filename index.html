@@ -1,278 +1,328 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>COMET OS v17 - SEALED ARCHITECTURE</title>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<title>COMET OS</title>
 
 <style>
-body{margin:0;background:#0b1424;color:#eaf2ff;font-family:Arial}
-.app{max-width:640px;margin:auto;padding:16px}
-.card{background:#121f36;border:1px solid #1e3a63;padding:14px;border-radius:14px;margin-top:12px}
-input,select{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:0;background:#0f1b30;color:#fff}
-button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:0;background:#1976d2;color:#fff;font-weight:700}
-.hidden{display:none}
-.bar{height:6px;background:#1976d2;width:0%}
-.badge{padding:6px 10px;border-radius:8px}
-.low{background:#2e7d32}.mid{background:#f9a825}.high{background:#c62828}
+body{
+margin:0;
+font-family:Arial;
+background:#0b1424;
+color:#eaf2ff;
+overflow:hidden;
+}
+
+.screen{
+display:none;
+height:100vh;
+padding:18px;
+box-sizing:border-box;
+}
+
+.active{display:block;}
+
+.card{
+background:#121f36;
+padding:16px;
+border-radius:14px;
+margin-top:12px;
+border:1px solid #1e3a63;
+}
+
+input,select{
+width:100%;
+padding:14px;
+margin-top:10px;
+border-radius:10px;
+border:0;
+background:#0f1b30;
+color:#fff;
+font-size:16px;
+}
+
+button{
+width:100%;
+padding:14px;
+margin-top:12px;
+border-radius:12px;
+border:0;
+background:#1976d2;
+color:#fff;
+font-weight:700;
+font-size:16px;
+}
+
 .small{font-size:12px;color:#9fb3c8}
+
+.overlay{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:#000000ee;
+display:none;
+align-items:center;
+justify-content:center;
+padding:20px;
+box-sizing:border-box;
+}
+
+.overlay .box{
+background:#121f36;
+padding:20px;
+border-radius:14px;
+width:100%;
+}
 </style>
 </head>
 
 <body>
-<div class="app">
 
-<div id="cover" class="card">
-<h2>COMET OS v17</h2>
-<p class="small">Sealed Industrial Architecture • Layered Engine System</p>
-<button onclick="OS.boot()">Initialize System</button>
+<!-- ABOUT -->
+<div id="s0" class="screen active">
+<h2>COMET OS</h2>
+<p class="small">KYC-Gated Graph Decision System (Frontend Only)</p>
+<button onclick="UI.go(1)">Enter</button>
 </div>
 
-<div id="sys" class="hidden">
+<!-- FORM -->
+<div id="s1" class="screen">
+<h3>Form 1 — Intent</h3>
 
-<div class="card">
-<div id="stepLabel"></div>
-<div style="background:#1a2a44;border-radius:8px"><div id="bar" class="bar"></div></div>
-</div>
+<input id="name" placeholder="Full Name"/>
+<input id="phone" placeholder="Phone"/>
+<input id="address" placeholder="Address"/>
 
-<div class="card">
-<select id="policyA"></select>
-<select id="policyB"></select>
-</div>
-
-<div class="card" id="status"></div>
-
-<!-- FLOW LAYERS -->
-<div class="card page" data-state="INTENT">
 <select id="intent">
-<option>Buy</option><option>Rent</option><option>Verify</option>
+<option>Sell Property</option>
+<option>Rent Property</option>
+<option>Verify Property</option>
+<option>Ownership Dispute</option>
+<option>Mortgage Review</option>
 </select>
+
+<button onclick="Engine.init()">Continue</button>
 </div>
 
-<div class="card page hidden" data-state="KYC">
-<input id="nin" placeholder="NIN (11 digits)"/>
-<input id="bvn" placeholder="BVN (11 digits)"/>
-<p class="small">KYC strictly restricted to verification scope.</p>
-</div>
-
-<div class="card page hidden" data-state="ENTITIES">
-<input id="buyer" placeholder="Buyer"/>
-<input id="seller" placeholder="Seller"/>
-</div>
-
-<div class="card page hidden" data-state="ASSET">
-<select id="doc">
-<option>Title</option><option>Survey</option><option>No Documents</option>
-</select>
-</div>
-
-<div class="card page hidden" data-state="EXEC">
-<button onclick="OS.run()">Execute Decision Engine</button>
-</div>
-
-<div class="card hidden" id="payment">
-<p>Unlock Full Industrial Report — ₦25,000</p>
-<input id="ref" placeholder="Payment Reference"/>
-<button onclick="OS.unlock()">Confirm Payment</button>
-</div>
-
-<div class="card hidden" id="report">
-<button onclick="OS.report()">Generate Report</button>
-<canvas id="qr"></canvas>
-</div>
+<!-- STATE -->
+<div id="s2" class="screen">
+<h3>Execution State</h3>
 
 <div class="card">
-<button onclick="OS.back()">Back</button>
-<button onclick="OS.next()">Next</button>
+<p id="state"></p>
+<p class="small" id="risk"></p>
 </div>
 
+<button onclick="Engine.next()">Next Step</button>
+</div>
+
+<!-- REPORT -->
+<div id="s3" class="screen">
+<h3>Report</h3>
+
+<div class="card" id="report"></div>
+
+<button onclick="Storage.reset()">New Session</button>
+</div>
+
+<!-- KYC -->
+<div id="kyc" class="overlay">
+<div class="box">
+<h3>KYC REQUIRED</h3>
+
+<input id="nin" placeholder="NIN"/>
+<input id="bvn" placeholder="BVN"/>
+
+<button onclick="Engine.kycComplete()">Complete KYC</button>
 </div>
 </div>
 
 <script>
 
 /* =========================
-STATE MACHINE ENGINE
+STATE
 ========================= */
-const StateMachine = {
-states:["INTENT","KYC","ENTITIES","ASSET","EXEC"],
-
-index:0,
-
-current(){return this.states[this.index];},
-
-next(){if(this.index<this.states.length-1)this.index++;},
-back(){if(this.index>0)this.index--;},
-
-jump(i){this.index=i;}
-};
-
-/* =========================
-VALIDATION ENGINE
-========================= */
-const Validator = {
-
-check(){
-let e=[];
-if(nin.value.length!==11)e.push("NIN_INVALID");
-if(bvn.value.length!==11)e.push("BVN_INVALID");
-if(!buyer.value)e.push("BUYER_MISSING");
-if(!seller.value)e.push("SELLER_MISSING");
-return e;
-}
-};
-
-/* =========================
-POLICY ENGINE
-========================= */
-const PolicyEngine = {
-rules:{
-Strict:{nin:30,bvn:30,doc:30,self:20},
-Balanced:{nin:20,bvn:20,doc:25,self:15},
-Fast:{nin:10,bvn:10,doc:15,self:10}
-},
-
-init(){
-policyA.innerHTML=policyB.innerHTML=
-Object.keys(this.rules).map(r=>`<option>${r}</option>`).join("");
-policyB.value="Balanced";
-},
-
-score(p){
-let r=this.rules[p],s=0;
-if(nin.value.length!==11)s+=r.nin;
-if(bvn.value.length!==11)s+=r.bvn;
-if(doc.value==="No Documents")s+=r.doc;
-if(buyer.value===seller.value)s+=r.self;
-return s;
-}
-};
-
-/* =========================
-EVENT ENGINE (AUDIT CORE)
-========================= */
-const EventEngine = {
-log:[],
-
-push(type,data){
-this.log.push({type,data,time:Date.now()});
-}
-};
-
-/* =========================
-DECISION ENGINE
-========================= */
-const DecisionEngine = {
-
+const State = {
+step:0,
+kyc:false,
 risk:0,
+flow:[],
+graph:{nodes:[]},
+sessionId:Date.now()
+};
 
-compute(){
-let a=PolicyEngine.score(policyA.value);
-let b=PolicyEngine.score(policyB.value);
+/* =========================
+STORAGE
+========================= */
+const Storage = {
 
-this.risk=Math.min((a+b)/2,100);
+save(){
+localStorage.setItem("COMET_OS",JSON.stringify(State));
+},
 
-EventEngine.push("RISK_COMPUTED",{a,b,risk:this.risk});
+load(){
+let d=localStorage.getItem("COMET_OS");
+if(d){
+Object.assign(State,JSON.parse(d));
+}
+},
+
+reset(){
+localStorage.removeItem("COMET_OS");
+location.reload();
 }
 };
 
 /* =========================
-REPORT ENGINE
+UI
 ========================= */
-const ReportEngine = {
-
-generate(){
-
-const {jsPDF}=window.jspdf;
-let d=new jsPDF();
-
-d.text("COMET OS v17 SEALED REPORT",20,20);
-d.text("Risk: "+DecisionEngine.risk,20,40);
-d.text("Intent: "+intent.value,20,50);
-
-let trace=EventEngine.log.map(e=>`${e.type}:${JSON.stringify(e.data)}`).join("\n");
-
-d.text(trace.substring(0,1800),20,70);
-
-QRCode.toCanvas(qr,JSON.stringify({
-state:StateMachine.current(),
-risk:DecisionEngine.risk,
-events:EventEngine.log
-}));
-
-d.save("COMET_OS_V17.pdf");
+const UI = {
+go(i){
+document.querySelectorAll(".screen")
+.forEach(s=>s.classList.remove("active"));
+document.getElementById("s"+i).classList.add("active");
 }
 };
 
 /* =========================
-UI ENGINE
+ENGINE
 ========================= */
-const UIEngine = {
+const Engine = {
 
+/* INIT */
+init(){
+
+State.graph.nodes=[
+{name:name.value,type:"USER"},
+{phone:phone.value,type:"DIRECT"},
+{address:address.value,type:"DIRECT"},
+{intent:intent.value,type:"INTENT"}
+];
+
+/* INDIRECT INFERENCE */
+if(intent.value==="Sell Property"){
+State.graph.nodes.push({name:"Registry",type:"INDIRECT"});
+State.graph.nodes.push({name:"Title",type:"ASSET"});
+}
+
+if(intent.value==="Verify Property"){
+State.graph.nodes.push({name:"Authority",type:"INDIRECT"});
+State.graph.nodes.push({name:"Documents",type:"ASSET"});
+}
+
+this.computeRisk();
+this.buildFlow();
+
+UI.go(2);
+this.render();
+Storage.save();
+},
+
+/* RISK ENGINE */
+computeRisk(){
+
+let r=0;
+
+State.graph.nodes.forEach(n=>{
+if(n.type==="USER")r+=1;
+if(n.type==="DIRECT")r+=2;
+if(n.type==="INDIRECT")r+=3;
+if(n.type==="ASSET")r+=2;
+});
+
+State.risk=r;
+},
+
+/* FLOW ENGINE */
+buildFlow(){
+
+State.flow=["INTENT"];
+
+if(State.risk>8){
+State.flow.push("KYC");
+State.flow.push("ASSET");
+State.flow.push("RISK");
+}else{
+State.flow.push("ASSET");
+State.flow.push("KYC");
+State.flow.push("RISK");
+}
+
+State.flow.push("REPORT");
+State.step=0;
+},
+
+/* KYC */
+requireKYC(){
+kyc.style.display="flex";
+},
+
+kycComplete(){
+
+if(!nin.value || !bvn.value){
+alert("Incomplete KYC");
+return;
+}
+
+State.kyc=true;
+kyc.style.display="none";
+
+Storage.save();
+this.render();
+},
+
+/* NEXT STEP */
+next(){
+
+let stage=State.flow[State.step];
+
+if(stage==="KYC" && !State.kyc){
+this.requireKYC();
+return;
+}
+
+if(State.step<State.flow.length-1){
+State.step++;
+}
+
+this.render();
+
+if(State.flow[State.step]==="REPORT"){
+this.report();
+UI.go(3);
+}
+
+Storage.save();
+},
+
+/* RENDER */
 render(){
 
-let s=StateMachine.current();
+document.getElementById("state").innerText=
+"STEP: "+State.flow[State.step];
 
-stepLabel.innerText="STATE: "+s;
-bar.style.width=((StateMachine.index+1)/StateMachine.states.length)*100+"%";
+document.getElementById("risk").innerText=
+"RISK SCORE: "+State.risk;
+},
 
-document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
-document.querySelector(`[data-state='${s}']`).classList.remove("hidden");
+/* REPORT */
+report(){
 
-status.innerHTML="Validation: "+Validator.check().join(", ")||"OK";
+document.getElementById("report").innerHTML=
+`
+Intent: ${intent.value}<br/>
+Risk: ${State.risk}<br/>
+KYC: ${State.kyc ? "Verified":"Pending"}<br/>
+Nodes: ${State.graph.nodes.length}
+`;
 }
 };
 
 /* =========================
-ORCHESTRATOR (ONLY COORDINATOR)
+BOOT
 ========================= */
-const OS = {
-
-boot(){
-cover.classList.add("hidden");
-sys.classList.remove("hidden");
-
-PolicyEngine.init();
-UIEngine.render();
-EventEngine.push("BOOT",{});
-},
-
-next(){
-StateMachine.next();
-UIEngine.render();
-EventEngine.push("NEXT",{state:StateMachine.current()});
-},
-
-back(){
-StateMachine.back();
-UIEngine.render();
-EventEngine.push("BACK",{state:StateMachine.current()});
-},
-
-run(){
-DecisionEngine.compute();
-
-status.innerHTML=
-`<span class="badge ${DecisionEngine.risk>70?'high':DecisionEngine.risk>40?'mid':'low'}">
-RISK ${DecisionEngine.risk}</span>`;
-
-payment.classList.remove("hidden");
-},
-
-unlock(){
-if(!ref.value)return;
-EventEngine.push("PAYMENT",ref.value);
-payment.classList.add("hidden");
-report.classList.remove("hidden");
-},
-
-report(){
-ReportEngine.generate();
-}
-};
+Storage.load();
 
 </script>
 
