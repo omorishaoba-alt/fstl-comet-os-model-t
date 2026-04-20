@@ -1,236 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>COMET OS v17 - SEALED ARCHITECTURE</title>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0a1424;
-color:#eaf2ff;
-}
-
-.app{
-max-width:430px;
-margin:auto;
-padding:16px;
-}
-
-/* FRONT COVER */
-.cover{
-padding:20px;
-border:1px solid #1f3b63;
-border-radius:14px;
-background:#111c2f;
-text-align:center;
-}
-
-h1{color:#1e88e5;font-size:22px}
-
-button{
-width:100%;
-padding:12px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#1565c0;
-color:#fff;
-font-weight:bold;
-}
-
-.card{
-background:#111c2f;
-padding:14px;
-border-radius:12px;
-margin-top:12px;
-border:1px solid #1f3b63;
-}
-
-input,select{
-width:100%;
-padding:10px;
-margin:6px 0;
-border-radius:8px;
-border:none;
-background:#0e1a30;
-color:#fff;
-}
-
-pre{
-background:#0e1a30;
-padding:10px;
-border-radius:8px;
-border:1px solid #1f3b63;
-font-size:12px;
-}
-
+body{margin:0;background:#0b1424;color:#eaf2ff;font-family:Arial}
+.app{max-width:640px;margin:auto;padding:16px}
+.card{background:#121f36;border:1px solid #1e3a63;padding:14px;border-radius:14px;margin-top:12px}
+input,select{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:0;background:#0f1b30;color:#fff}
+button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:0;background:#1976d2;color:#fff;font-weight:700}
 .hidden{display:none}
-
-.nav{
-display:flex;
-gap:10px;
-margin-top:10px;
-}
-.nav button{flex:1}
+.bar{height:6px;background:#1976d2;width:0%}
+.badge{padding:6px 10px;border-radius:8px}
+.low{background:#2e7d32}.mid{background:#f9a825}.high{background:#c62828}
+.small{font-size:12px;color:#9fb3c8}
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
-<!-- 🟦 FRONT COVER -->
-<div id="cover" class="cover">
-<h1>FSTL COMET OS</h1>
-
-<p><b>Property Verification & Transaction Structuring System</b></p>
-
-<p style="font-size:13px;opacity:0.9">
-• Identity Validation (NIN/BVN Structured Capture<br>
-• Fraud Risk Detection for Land Transactions<br>
-• Certified Audit Output (PDF + QR + Hash)
-</p>
-
-<p style="font-size:12px;opacity:0.8">
-Every transaction is structured, logged, and traceable.
-</p>
-
-<button onclick="start()">START SECURE VERIFICATION</button>
+<div id="cover" class="card">
+<h2>COMET OS v17</h2>
+<p class="small">Sealed Industrial Architecture • Layered Engine System</p>
+<button onclick="OS.boot()">Initialize System</button>
 </div>
 
-<!-- SYSTEM -->
-<div id="system" class="hidden">
+<div id="sys" class="hidden">
 
-<h1>FSTL COMET OS</h1>
-<pre id="out">SYSTEM READY</pre>
+<div class="card">
+<div id="stepLabel"></div>
+<div style="background:#1a2a44;border-radius:8px"><div id="bar" class="bar"></div></div>
+</div>
+
+<div class="card">
+<select id="policyA"></select>
+<select id="policyB"></select>
+</div>
+
+<div class="card" id="status"></div>
+
+<!-- FLOW LAYERS -->
+<div class="card page" data-state="INTENT">
+<select id="intent">
+<option>Buy</option><option>Rent</option><option>Verify</option>
+</select>
+</div>
+
+<div class="card page hidden" data-state="KYC">
+<input id="nin" placeholder="NIN (11 digits)"/>
+<input id="bvn" placeholder="BVN (11 digits)"/>
+<p class="small">KYC strictly restricted to verification scope.</p>
+</div>
+
+<div class="card page hidden" data-state="ENTITIES">
+<input id="buyer" placeholder="Buyer"/>
+<input id="seller" placeholder="Seller"/>
+</div>
+
+<div class="card page hidden" data-state="ASSET">
+<select id="doc">
+<option>Title</option><option>Survey</option><option>No Documents</option>
+</select>
+</div>
+
+<div class="card page hidden" data-state="EXEC">
+<button onclick="OS.run()">Execute Decision Engine</button>
+</div>
+
+<div class="card hidden" id="payment">
+<p>Unlock Full Industrial Report — ₦25,000</p>
+<input id="ref" placeholder="Payment Reference"/>
+<button onclick="OS.unlock()">Confirm Payment</button>
+</div>
+
+<div class="card hidden" id="report">
+<button onclick="OS.report()">Generate Report</button>
 <canvas id="qr"></canvas>
-
-<div class="nav">
-<button onclick="step(-1)">BACK</button>
-<button onclick="step(1)">NEXT</button>
 </div>
 
-<!-- STEP 1 -->
-<div class="card" id="s1">
-<h3>STEP 1: TRANSACTION CONTROL</h3>
-
-<select id="txType">
-<option>Purchase</option>
-<option>Rental</option>
-<option>Verification Only</option>
-</select>
-
-<select id="sellerRole" onchange="toggleFlow()">
-<option>Owner</option>
-<option>Agent</option>
-<option>Third Party</option>
-</select>
-
-<select id="agentInvolved" onchange="toggleFlow()">
-<option>No</option>
-<option>Yes</option>
-</select>
-</div>
-
-<!-- STEP 2 -->
-<div class="card hidden" id="s2">
-<h3>STEP 2: SELLER</h3>
-<input id="sellerName" placeholder="Name">
-<input id="sellerPhone" placeholder="Phone">
-<input id="sellerNIN" placeholder="NIN">
-<input id="sellerBVN" placeholder="BVN">
-</div>
-
-<!-- OWNER -->
-<div class="card hidden" id="ownerBlock">
-<h3>OWNER (IF DIFFERENT)</h3>
-<input id="ownerName">
-<input id="ownerPhone">
-<input id="ownerNIN">
-<input id="ownerBVN">
-</div>
-
-<!-- STEP 3 -->
-<div class="card hidden" id="s3">
-<h3>STEP 3: AGENT</h3>
-<input id="agentName">
-<input id="agentPhone">
-<input id="agentNIN">
-<input id="agentBVN">
-</div>
-
-<!-- STEP 4 -->
-<div class="card hidden" id="s4">
-<h3>STEP 4: COUNTERPARTY</h3>
-
-<div id="buyerBlock">
-<input id="buyerName">
-<input id="buyerPhone">
-<input id="buyerNIN">
-<input id="buyerBVN">
-</div>
-
-<div id="tenantBlock" class="hidden">
-<input id="tenantName">
-<input id="tenantPhone">
-<input id="tenantNIN">
-<input id="tenantBVN">
-</div>
-</div>
-
-<!-- STEP 5 -->
-<div class="card hidden" id="s5">
-<h3>STEP 5: ASSET</h3>
-
-<select id="assetType">
-<option>Land</option>
-<option>Residential Building</option>
-<option>Commercial Property</option>
-<option>Mixed Use</option>
-</select>
-
-<input id="location" placeholder="Location">
-
-<select id="ownership">
-<option>Sole Ownership</option>
-<option>Family Property</option>
-<option>Corporate Ownership</option>
-<option>Unknown</option>
-</select>
-
-<select id="docStatus">
-<option>Title Available</option>
-<option>Receipt Only</option>
-<option>Survey Only</option>
-<option>No Documents</option>
-</select>
-
-<select id="occupancy">
-<option>Vacant</option>
-<option>Occupied</option>
-<option>Disputed</option>
-</select>
-
-<button onclick="run()">RUN VERIFICATION</button>
-</div>
-
-<!-- PAYMENT -->
-<div class="card hidden" id="pay">
-<h3>PAYMENT GATE</h3>
-<input id="ref" placeholder="Transaction Reference">
-<button onclick="unlock()">UNLOCK</button>
-</div>
-
-<!-- OUTPUT -->
-<div class="card hidden" id="outbox">
-<h3>OUTPUT</h3>
-<button onclick="generate()">GENERATE CERTIFICATE</button>
+<div class="card">
+<button onclick="OS.back()">Back</button>
+<button onclick="OS.next()">Next</button>
 </div>
 
 </div>
@@ -238,188 +94,185 @@ Every transaction is structured, logged, and traceable.
 
 <script>
 
-let stepIndex=1;
-let unlocked=false;
-let TX={};
+/* =========================
+STATE MACHINE ENGINE
+========================= */
+const StateMachine = {
+states:["INTENT","KYC","ENTITIES","ASSET","EXEC"],
 
-/* START */
-function start(){
-cover.classList.add("hidden");
-system.classList.remove("hidden");
-}
+index:0,
 
-/* STEP NAV */
-function step(dir){
-stepIndex+=dir;
-if(stepIndex<1)stepIndex=1;
-if(stepIndex>5)stepIndex=5;
+current(){return this.states[this.index];},
 
-for(let i=1;i<=5;i++){
-document.getElementById("s"+i).classList.add("hidden");
-}
+next(){if(this.index<this.states.length-1)this.index++;},
+back(){if(this.index>0)this.index--;},
 
-document.getElementById("s"+stepIndex).classList.remove("hidden");
-}
-
-/* FLOW */
-function toggleFlow(){
-
-ownerBlock.classList.toggle("hidden",sellerRole.value==="Owner");
-
-let agentOn=(agentInvolved.value==="Yes"||sellerRole.value==="Agent");
-s3.classList.toggle("hidden",!agentOn);
-
-let rental=(txType.value==="Rental");
-buyerBlock.classList.toggle("hidden",rental);
-tenantBlock.classList.toggle("hidden",!rental);
-}
-
-/* VALIDATION */
-const ok=v=>v&&v.length===11;
-const check=p=>p.name&&ok(p.nin)&&ok(p.bvn);
-
-/* KYC */
-function kyc(d){
-
-if(!check(d.seller))return false;
-
-if(d.sellerRole!=="Owner"&&!check(d.owner))return false;
-
-if(d.agentInvolved&&!check(d.agent))return false;
-
-if(d.txType==="Purchase"&&!check(d.buyer))return false;
-
-if(d.txType==="Rental"&&!check(d.tenant))return false;
-
-return true;
-}
-
-/* RISK */
-function risk(d){
-let r=0;
-if(d.sellerRole!=="Owner")r+=25;
-if(d.agentInvolved)r+=20;
-if(d.ownership==="Family Property")r+=15;
-if(d.docStatus==="No Documents")r+=25;
-if(d.occupancy==="Disputed")r+=30;
-
-return{
-score:r,
-level:r>=70?"HIGH":r>=40?"MEDIUM":"LOW"
+jump(i){this.index=i;}
 };
-}
 
-/* RUN */
-function run(){
+/* =========================
+VALIDATION ENGINE
+========================= */
+const Validator = {
 
-TX={
-txType:txType.value,
-sellerRole:sellerRole.value,
-agentInvolved:(agentInvolved.value==="Yes"),
-
-seller:{
-name:sellerName.value,
-nin:sellerNIN.value,
-bvn:sellerBVN.value
-},
-
-owner:{
-name:ownerName.value,
-nin:ownerNIN.value,
-bvn:ownerBVN.value
-},
-
-agent:{
-name:agentName.value,
-nin:agentNIN.value,
-bvn:agentBVN.value
-},
-
-buyer:{
-name:buyerName.value,
-nin:buyerNIN.value,
-bvn:buyerBVN.value
-},
-
-tenant:{
-name:tenantName.value,
-nin:tenantNIN.value,
-bvn:tenantBVN.value
-},
-
-asset:{
-type:assetType.value,
-location:location.value,
-ownership:ownership.value,
-docStatus:docStatus.value,
-occupancy:occupancy.value
+check(){
+let e=[];
+if(nin.value.length!==11)e.push("NIN_INVALID");
+if(bvn.value.length!==11)e.push("BVN_INVALID");
+if(!buyer.value)e.push("BUYER_MISSING");
+if(!seller.value)e.push("SELLER_MISSING");
+return e;
 }
 };
 
-if(!kyc(TX)){
-out.innerText="KYC INCOMPLETE — BLOCKED";
-return;
+/* =========================
+POLICY ENGINE
+========================= */
+const PolicyEngine = {
+rules:{
+Strict:{nin:30,bvn:30,doc:30,self:20},
+Balanced:{nin:20,bvn:20,doc:25,self:15},
+Fast:{nin:10,bvn:10,doc:15,self:10}
+},
+
+init(){
+policyA.innerHTML=policyB.innerHTML=
+Object.keys(this.rules).map(r=>`<option>${r}</option>`).join("");
+policyB.value="Balanced";
+},
+
+score(p){
+let r=this.rules[p],s=0;
+if(nin.value.length!==11)s+=r.nin;
+if(bvn.value.length!==11)s+=r.bvn;
+if(doc.value==="No Documents")s+=r.doc;
+if(buyer.value===seller.value)s+=r.self;
+return s;
 }
+};
 
-let r=risk(TX);
-TX.score=r.score;
-TX.level=r.level;
-TX.state="VALIDATED";
+/* =========================
+EVENT ENGINE (AUDIT CORE)
+========================= */
+const EventEngine = {
+log:[],
 
-pay.classList.remove("hidden");
-
-out.innerText="VALIDATED\nRISK:"+TX.level+" ("+TX.score+")";
+push(type,data){
+this.log.push({type,data,time:Date.now()});
 }
+};
 
-/* PAYMENT */
-function unlock(){
-if(ref.value.length<6){
-out.innerText="INVALID REF";
-return;
-}
-unlocked=true;
-TX.state="VERIFIED";
-pay.classList.add("hidden");
-outbox.classList.remove("hidden");
-out.innerText="UNLOCKED";
-}
+/* =========================
+DECISION ENGINE
+========================= */
+const DecisionEngine = {
 
-/* HASH */
-async function hash(d){
-let e=new TextEncoder().encode(d);
-let b=await crypto.subtle.digest("SHA-256",e);
-return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
-}
+risk:0,
 
-/* PDF */
-async function generate(){
+compute(){
+let a=PolicyEngine.score(policyA.value);
+let b=PolicyEngine.score(policyB.value);
 
-if(!unlocked){
-out.innerText="PAYMENT REQUIRED";
-return;
+this.risk=Math.min((a+b)/2,100);
+
+EventEngine.push("RISK_COMPUTED",{a,b,risk:this.risk});
 }
+};
+
+/* =========================
+REPORT ENGINE
+========================= */
+const ReportEngine = {
+
+generate(){
 
 const {jsPDF}=window.jspdf;
-let doc=new jsPDF();
-let h=await hash(JSON.stringify(TX));
+let d=new jsPDF();
 
-doc.text("FSTL COMET OS CERTIFICATE",20,20);
-doc.text("STATE:"+TX.state,20,40);
-doc.text("RISK:"+TX.level+"("+TX.score+")",20,50);
-doc.text("ASSET:"+TX.asset.type,20,70);
-doc.text("LOCATION:"+TX.asset.location,20,80);
+d.text("COMET OS v17 SEALED REPORT",20,20);
+d.text("Risk: "+DecisionEngine.risk,20,40);
+d.text("Intent: "+intent.value,20,50);
 
-doc.text("FSTL CONTACT",20,110);
-doc.text("+2348035888622",20,120);
+let trace=EventEngine.log.map(e=>`${e.type}:${JSON.stringify(e.data)}`).join("\n");
 
-doc.text("HASH:"+h.slice(0,25),20,140);
+d.text(trace.substring(0,1800),20,70);
 
-doc.save("COMET_OS.pdf");
+QRCode.toCanvas(qr,JSON.stringify({
+state:StateMachine.current(),
+risk:DecisionEngine.risk,
+events:EventEngine.log
+}));
 
-QRCode.toCanvas(qr,JSON.stringify({tid:Date.now(),hash:h}));
-
-out.innerText="CERT GENERATED";
+d.save("COMET_OS_V17.pdf");
 }
+};
+
+/* =========================
+UI ENGINE
+========================= */
+const UIEngine = {
+
+render(){
+
+let s=StateMachine.current();
+
+stepLabel.innerText="STATE: "+s;
+bar.style.width=((StateMachine.index+1)/StateMachine.states.length)*100+"%";
+
+document.querySelectorAll(".page").forEach(p=>p.classList.add("hidden"));
+document.querySelector(`[data-state='${s}']`).classList.remove("hidden");
+
+status.innerHTML="Validation: "+Validator.check().join(", ")||"OK";
+}
+};
+
+/* =========================
+ORCHESTRATOR (ONLY COORDINATOR)
+========================= */
+const OS = {
+
+boot(){
+cover.classList.add("hidden");
+sys.classList.remove("hidden");
+
+PolicyEngine.init();
+UIEngine.render();
+EventEngine.push("BOOT",{});
+},
+
+next(){
+StateMachine.next();
+UIEngine.render();
+EventEngine.push("NEXT",{state:StateMachine.current()});
+},
+
+back(){
+StateMachine.back();
+UIEngine.render();
+EventEngine.push("BACK",{state:StateMachine.current()});
+},
+
+run(){
+DecisionEngine.compute();
+
+status.innerHTML=
+`<span class="badge ${DecisionEngine.risk>70?'high':DecisionEngine.risk>40?'mid':'low'}">
+RISK ${DecisionEngine.risk}</span>`;
+
+payment.classList.remove("hidden");
+},
+
+unlock(){
+if(!ref.value)return;
+EventEngine.push("PAYMENT",ref.value);
+payment.classList.add("hidden");
+report.classList.remove("hidden");
+},
+
+report(){
+ReportEngine.generate();
+}
+};
 
 </script>
 
