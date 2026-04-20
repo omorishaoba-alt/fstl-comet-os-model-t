@@ -61,98 +61,133 @@ input,select{
 
 <body>
 
-<!-- 0 -->
+<!-- 0 FRONT COVER -->
 <div id="s0" class="screen active">
   <div class="card">
     <h2>COMET OS</h2>
-    <p class="small">Property Verification System</p>
-    <button onclick="next()">START</button>
+    <p class="small">Landed Property Verification System</p>
+    <button onclick="startOS()">START</button>
   </div>
 </div>
 
-<!-- 1 -->
+<!-- 1 ROLE -->
 <div id="s1" class="screen">
   <div class="card">
     <h3>Select Role</h3>
-    <button onclick="role('OWNER')">Owner</button>
-    <button onclick="role('BUYER')">Buyer</button>
-    <button onclick="role('SELLER')">Seller</button>
-    <button onclick="role('AGENT')">Agent</button>
+
+    <button onclick="setRole('OWNER')">Owner</button>
+    <button onclick="setRole('BUYER')">Buyer</button>
+    <button onclick="setRole('SELLER')">Seller</button>
+    <button onclick="setRole('AGENT')">Agent</button>
   </div>
 </div>
 
-<!-- 2 -->
+<!-- 2 ASSET -->
 <div id="s2" class="screen">
   <div class="card">
-    <h3>Asset</h3>
-    <input id="type" placeholder="Property Type">
-    <input id="location" placeholder="Location">
+    <h3>Asset Details</h3>
+
+    <input id="type" placeholder="Property Type"/>
+    <input id="location" placeholder="Location"/>
+
     <select id="condition">
       <option>GOOD</option>
       <option>FAIR</option>
       <option>UNCERTAIN</option>
       <option>DISPUTED</option>
     </select>
-    <button onclick="asset()">NEXT</button>
+
+    <button onclick="saveAsset()">CONTINUE</button>
   </div>
 </div>
 
-<!-- 3 -->
+<!-- 3 COUNTERPARTY -->
 <div id="s3" class="screen">
   <div class="card">
     <h3>Counterparty</h3>
-    <input id="cp" placeholder="Name">
-    <input id="cpRole" placeholder="Role">
-    <button onclick="run()">PROCESS</button>
+
+    <input id="cp" placeholder="Name"/>
+    <input id="cpRole" placeholder="Role"/>
+
+    <button onclick="runEngine()">RUN VERIFICATION</button>
   </div>
 </div>
 
-<!-- 4 -->
+<!-- 4 RESULT -->
 <div id="s4" class="screen">
   <div class="card" id="out"></div>
+
   <button onclick="location.reload()">NEW CASE</button>
 </div>
 
 <script>
 
+/* =========================
+   CORE STATE (TIR)
+========================= */
+
 let TIR = {
-  stage:0,
-  role:"",
-  asset:{},
-  counterparty:{},
-  risk:0,
-  decision:""
+  stage: 0,
+  role: "",
+  asset: {},
+  counterparty: {},
+  risk: 0,
+  decision: ""
 };
+
+/* =========================
+   SCREEN CONTROL
+========================= */
 
 function show(i){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById("s"+i).classList.add("active");
 }
 
-function next(){
-  TIR.stage++;
-  show(TIR.stage);
+/* =========================
+   FRONT COVER CONTROL
+========================= */
+
+function startOS(){
+  TIR.stage = 1;
+  show(1);
 }
 
-function role(r){
+/* =========================
+   ROLE FIX (GLOBAL BIND)
+========================= */
+
+window.setRole = function(r){
   TIR.role = r;
-  next();
-}
+  TIR.stage = 2;
+  show(2);
+};
 
-function asset(){
+/* =========================
+   ASSET SAVE
+========================= */
+
+window.saveAsset = function(){
+
   TIR.asset = {
-    type: type.value,
-    location: location.value,
-    condition: condition.value
+    type: document.getElementById("type").value,
+    location: document.getElementById("location").value,
+    condition: document.getElementById("condition").value
   };
-  next();
-}
 
-function run(){
+  TIR.stage = 3;
+  show(3);
+};
+
+/* =========================
+   CORE ENGINE
+========================= */
+
+window.runEngine = function(){
 
   TIR.counterparty = {
-    name: cp.value,
-    role: cpRole.value
+    name: document.getElementById("cp").value,
+    role: document.getElementById("cpRole").value
   };
 
   let r = 0;
@@ -174,21 +209,20 @@ function run(){
 
   let cls = r >= 7 ? "high" : r >= 3 ? "mid" : "low";
 
-  out.innerHTML = `
+  document.getElementById("out").innerHTML = `
     <span class="badge ${cls}">${TIR.decision}</span><br><br>
 
     <b>Role:</b> ${TIR.role}<br>
-    <b>Asset:</b> ${TIR.asset.type}<br>
+    <b>Property:</b> ${TIR.asset.type}<br>
     <b>Location:</b> ${TIR.asset.location}<br>
     <b>Condition:</b> ${TIR.asset.condition}<br><br>
 
-    <b>Risk Score:</b> ${TIR.risk}<br><br>
-
-    <p class="small">Caveat Emptor: informational decision output only.</p>
+    <b>Risk Score:</b> ${TIR.risk}
   `;
 
+  TIR.stage = 4;
   show(4);
-}
+};
 
 </script>
 
