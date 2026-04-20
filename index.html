@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>COMET OS</title>
+<title>COMET OS - Persistent Kernel</title>
 
 <style>
 body{
@@ -56,17 +56,19 @@ input,select{
 .high{background:#c62828;}
 
 .small{font-size:12px;color:#9fb3c8;}
+hr{border:0;border-top:1px solid #223;}
 </style>
 </head>
 
 <body>
 
-<!-- 0 FRONT COVER -->
+<!-- 0 FRONT -->
 <div id="s0" class="screen active">
   <div class="card">
     <h2>COMET OS</h2>
-    <p class="small">Landed Property Verification System</p>
-    <button onclick="startOS()">START</button>
+    <p class="small">Persistent Property Verification Kernel</p>
+    <button onclick="start()">START SYSTEM</button>
+    <button onclick="showHistory()">VIEW HISTORY</button>
   </div>
 </div>
 
@@ -74,7 +76,6 @@ input,select{
 <div id="s1" class="screen">
   <div class="card">
     <h3>Select Role</h3>
-
     <button onclick="setRole('OWNER')">Owner</button>
     <button onclick="setRole('BUYER')">Buyer</button>
     <button onclick="setRole('SELLER')">Seller</button>
@@ -85,19 +86,16 @@ input,select{
 <!-- 2 ASSET -->
 <div id="s2" class="screen">
   <div class="card">
-    <h3>Asset Details</h3>
-
+    <h3>Asset</h3>
     <input id="type" placeholder="Property Type"/>
     <input id="location" placeholder="Location"/>
-
     <select id="condition">
       <option>GOOD</option>
       <option>FAIR</option>
       <option>UNCERTAIN</option>
       <option>DISPUTED</option>
     </select>
-
-    <button onclick="saveAsset()">CONTINUE</button>
+    <button onclick="nextAsset()">CONTINUE</button>
   </div>
 </div>
 
@@ -105,19 +103,25 @@ input,select{
 <div id="s3" class="screen">
   <div class="card">
     <h3>Counterparty</h3>
-
     <input id="cp" placeholder="Name"/>
     <input id="cpRole" placeholder="Role"/>
-
-    <button onclick="runEngine()">RUN VERIFICATION</button>
+    <button onclick="process()">RUN VERIFICATION</button>
   </div>
 </div>
 
 <!-- 4 RESULT -->
 <div id="s4" class="screen">
   <div class="card" id="out"></div>
+  <button onclick="reset()">NEW CASE</button>
+</div>
 
-  <button onclick="location.reload()">NEW CASE</button>
+<!-- 5 HISTORY -->
+<div id="s5" class="screen">
+  <div class="card">
+    <h3>Transaction History</h3>
+    <div id="history"></div>
+    <button onclick="back()">BACK</button>
+  </div>
 </div>
 
 <script>
@@ -127,16 +131,22 @@ input,select{
 ========================= */
 
 let TIR = {
-  stage: 0,
-  role: "",
-  asset: {},
-  counterparty: {},
-  risk: 0,
-  decision: ""
+  role:"",
+  asset:{},
+  counterparty:{},
+  risk:0,
+  decision:"",
+  id:null
 };
 
 /* =========================
-   SCREEN CONTROL
+   LOCAL LEDGER (OS MEMORY)
+========================= */
+
+let LEDGER = JSON.parse(localStorage.getItem("COMET_LEDGER") || "[]");
+
+/* =========================
+   NAVIGATION
 ========================= */
 
 function show(i){
@@ -144,50 +154,31 @@ function show(i){
   document.getElementById("s"+i).classList.add("active");
 }
 
-/* =========================
-   FRONT COVER CONTROL
-========================= */
+function start(){ show(1); }
 
-function startOS(){
-  TIR.stage = 1;
-  show(1);
+function setRole(r){
+  TIR.role = r;
+  show(2);
+}
+
+function nextAsset(){
+  TIR.asset = {
+    type: type.value,
+    location: location.value,
+    condition: condition.value
+  };
+  show(3);
 }
 
 /* =========================
-   ROLE FIX (GLOBAL BIND)
+   ENGINE
 ========================= */
 
-window.setRole = function(r){
-  TIR.role = r;
-  TIR.stage = 2;
-  show(2);
-};
-
-/* =========================
-   ASSET SAVE
-========================= */
-
-window.saveAsset = function(){
-
-  TIR.asset = {
-    type: document.getElementById("type").value,
-    location: document.getElementById("location").value,
-    condition: document.getElementById("condition").value
-  };
-
-  TIR.stage = 3;
-  show(3);
-};
-
-/* =========================
-   CORE ENGINE
-========================= */
-
-window.runEngine = function(){
+function process(){
 
   TIR.counterparty = {
-    name: document.getElementById("cp").value,
-    role: document.getElementById("cpRole").value
+    name: cp.value,
+    role: cpRole.value
   };
 
   let r = 0;
@@ -199,30 +190,58 @@ window.runEngine = function(){
 
   TIR.risk = r;
 
-  if(r >= 7){
-    TIR.decision = "BLOCKED";
-  } else if(r >= 3){
-    TIR.decision = "CONDITIONAL";
-  } else {
-    TIR.decision = "APPROVED";
-  }
+  if(r >= 7) TIR.decision = "BLOCKED";
+  else if(r >= 3) TIR.decision = "CONDITIONAL";
+  else TIR.decision = "APPROVED";
+
+  TIR.id = "TX-" + Date.now();
+
+  /* SAVE TO LEDGER */
+  LEDGER.push(JSON.parse(JSON.stringify(TIR)));
+  localStorage.setItem("COMET_LEDGER", JSON.stringify(LEDGER));
 
   let cls = r >= 7 ? "high" : r >= 3 ? "mid" : "low";
 
-  document.getElementById("out").innerHTML = `
+  out.innerHTML = `
     <span class="badge ${cls}">${TIR.decision}</span><br><br>
 
+    <b>ID:</b> ${TIR.id}<br>
     <b>Role:</b> ${TIR.role}<br>
     <b>Property:</b> ${TIR.asset.type}<br>
     <b>Location:</b> ${TIR.asset.location}<br>
     <b>Condition:</b> ${TIR.asset.condition}<br><br>
 
-    <b>Risk Score:</b> ${TIR.risk}
+    <b>Risk:</b> ${TIR.risk}
   `;
 
-  TIR.stage = 4;
   show(4);
-};
+}
+
+/* =========================
+   HISTORY ENGINE
+========================= */
+
+function showHistory(){
+  let h = document.getElementById("history");
+
+  if(LEDGER.length === 0){
+    h.innerHTML = "<p class='small'>No transactions yet.</p>";
+  } else {
+    h.innerHTML = LEDGER.map(t=>`
+      <div class="card">
+        <b>${t.id}</b><br>
+        ${t.asset.type} - ${t.asset.condition}<br>
+        Risk: ${t.risk} | ${t.decision}
+      </div>
+    `).join("");
+  }
+
+  show(5);
+}
+
+function back(){ show(0); }
+
+function reset(){ location.reload(); }
 
 </script>
 
