@@ -1,162 +1,240 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FSTL COMET OS — Auto Report</title><style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Arial;background:#070d18;color:#fff}
-.header{padding:14px 16px;background:#0b1220;border-bottom:1px solid #1c2a44;font-weight:700}
-.container{padding:14px}
-.card{background:#111c2e;padding:14px;border-radius:12px;margin-top:12px}
-input,select,textarea{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none;background:#152238;color:#fff}
-button{width:100%;padding:14px;margin-top:12px;border:none;border-radius:12px;background:#1e88e5;color:#fff;font-weight:600}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
-.green{background:#2e7d32}.orange{background:#f9a825}.red{background:#c62828}
-.small{font-size:12px;color:#9fb3c8}
-pre{white-space:pre-wrap;background:#0b1220;padding:12px;border-radius:10px;border:1px solid #1c2a44}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.hidden{display:none}
-</style></head>
-<body><div class="header">FSTL COMET OS — Auto Report Generator</div><div class="container">  <!-- INPUT -->  <div class="card">
-    <h3>Identity Layer</h3>
-    <div class="row">
-      <input id="nin" placeholder="NIN (optional)"/>
-      <input id="bvn" placeholder="BVN (optional)"/>
-    </div>
+<title>FSTL COMET OS</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0b1220;
+color:#fff;
+}
+
+.card{
+background:#111c2e;
+padding:16px;
+margin:10px;
+border-radius:12px;
+}
+
+.screen{display:none;padding:10px;}
+.active{display:block;}
+
+button{
+width:100%;
+padding:14px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#1e88e5;
+color:#fff;
+font-weight:bold;
+}
+
+input{
+width:100%;
+padding:12px;
+margin-top:8px;
+border-radius:8px;
+border:none;
+background:#152238;
+color:#fff;
+}
+
+.badge{
+padding:6px 10px;
+border-radius:8px;
+font-weight:bold;
+display:inline-block;
+}
+
+.green{background:#2e7d32;}
+.orange{background:#f9a825;}
+.red{background:#c62828;}
+.blue{background:#1e88e5;}
+
+.small{font-size:12px;color:#9fb3c8;}
+.qrbox{background:#fff;padding:10px;border-radius:10px;margin-top:10px;text-align:center;}
+hr{border:0;border-top:1px solid #223;margin:10px 0;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <b>FSTL COMET OS (TEST MODE)</b>
+</div>
+
+<!-- START -->
+<div id="s0" class="screen active">
+  <div class="card">
+    <h2>COMET OS</h2>
+    <button onclick="go('1')">START</button>
+  </div>
+</div>
+
+<!-- ROLE -->
+<div id="s1" class="screen">
+  <div class="card">
+    <h3>Select Mode</h3>
+    <button onclick="setRole('USER')">FREE USER</button>
+    <button onclick="setRole('AGENT')">AGENT</button>
+    <button onclick="setRole('ADMIN')">ADMIN</button>
+    <div id="roleOut"></div>
+  </div>
+</div>
+
+<!-- CASE -->
+<div id="s2" class="screen">
+  <div class="card">
+    <h3>Create Case</h3>
+    <input id="type" placeholder="Property Type"/>
+    <input id="location" placeholder="Location"/>
     <input id="owner" placeholder="Owner"/>
-    <input id="seller" placeholder="Seller"/>
     <input id="buyer" placeholder="Buyer"/>
-    <input id="agent" placeholder="Agent (optional)"/>
-  </div>  <div class="card">
-    <h3>Property Layer</h3>
-    <div class="row">
-      <input id="type" placeholder="Property Type"/>
-      <input id="location" placeholder="Location"/>
-    </div>
-    <select id="condition">
-      <option value="GOOD">GOOD</option>
-      <option value="FAIR">FAIR</option>
-      <option value="UNCERTAIN">UNCERTAIN</option>
-      <option value="DISPUTED">DISPUTED</option>
-    </select>
-    <textarea id="note" rows="3" placeholder="FSTL Observations (optional)"></textarea>
-    <button onclick="runCOMET()">RUN COMET OS & GENERATE REPORT</button>
-  </div>  <!-- RESULT SUMMARY -->  <div id="summary" class="card hidden"></div>  <!-- REPORT -->  <div class="card hidden" id="reportCard">
-    <h3>FSTL Report (Auto-Generated)</h3>
-    <pre id="report"></pre>
-    <div class="actions">
-      <button onclick="copyReport()">COPY REPORT</button>
-      <button onclick="downloadReport()">DOWNLOAD .TXT</button>
-    </div>
-    <p class="small">Tip: Copy and paste into WhatsApp, or download and share as a file.</p>
-  </div></div><script>
+    <input id="seller" placeholder="Seller"/>
+    <button onclick="createCase()">CONTINUE</button>
+  </div>
+</div>
 
-/* ====== LEDGER (memory) ====== */
-let LEDGER = JSON.parse(localStorage.getItem("FSTL_LEDGER") || "[]");
+<!-- VERIFICATION -->
+<div id="s3" class="screen">
+  <div class="card">
+    <h3>Verification</h3>
 
-/* ====== HELPERS ====== */
-function pad(n){return n<10?"0"+n:n}
-function nowDate(){
-  const d=new Date();
-  return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();
-}
-function makeCaseId(){
-  const d=new Date();
-  const id = d.getFullYear()+""+pad(d.getMonth()+1)+""+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
-  return "FSTL-CASE-"+id;
-}
+    <label><input type="checkbox" id="v_title"/> Title Verified</label><br>
+    <label><input type="checkbox" id="v_id"/> Identity Verified</label><br>
+    <label><input type="checkbox" id="v_docs"/> Documents Complete</label><br>
 
-/* ====== ENGINE ====== */
-function runCOMET(){
-  // identity score
-  let iScore=0;
-  if(!nin.value) iScore+=1;
-  if(!bvn.value) iScore+=1;
-  if(owner.value && buyer.value && owner.value===buyer.value) iScore+=3;
-  if(owner.value && seller.value && owner.value===seller.value) iScore+=3;
+    <hr>
 
-  // property score
-  let pScore=0;
-  if(!type.value) pScore+=2;
-  if(!location.value) pScore+=2;
-  if(condition.value==="UNCERTAIN") pScore+=3;
-  if(condition.value==="DISPUTED") pScore+=5;
+    <label><input type="checkbox" id="r_duplicate"/> Duplicate Case</label><br>
+    <label><input type="checkbox" id="r_suspect"/> Suspicious Pattern</label><br>
 
-  // ledger pattern (lightweight)
-  let lScore=0;
-  LEDGER.forEach(old=>{
-    const names=[owner.value,buyer.value,seller.value].filter(Boolean);
-    names.forEach(n=>{
-      if(old.parties && Object.values(old.parties).includes(n)) lScore+=1;
-    });
-    if(old.asset && old.asset.location && location.value && old.asset.location===location.value) lScore+=1;
-  });
+    <button onclick="runDecision()">RUN DECISION</button>
+  </div>
+</div>
 
-  const risk = iScore + pScore + lScore;
+<!-- QR -->
+<div id="s4" class="screen">
+  <div class="card">
+    <h3>Case QR</h3>
+    <div id="qr" class="qrbox"></div>
+  </div>
+</div>
 
-  let decision = "APPROVED";
-  if(risk>=8) decision="BLOCKED"; else if(risk>=4) decision="CONDITIONAL";
+<!-- RESULT -->
+<div id="s5" class="screen">
+  <div class="card" id="result"></div>
+  <button onclick="resetAll()">NEW CASE</button>
+</div>
 
-  const color = (risk>=8)?"red":(risk>=4?"orange":"green");
+<script>
 
-  // build case
-  const CASE = {
-    id: makeCaseId(),
-    date: nowDate(),
-    asset: {type:type.value, location:location.value, condition:condition.value},
-    parties: {owner:owner.value, seller:seller.value, buyer:buyer.value, agent:agent.value},
-    identity: {nin: nin.value?"Provided":"Not Provided", bvn: bvn.value?"Provided":"Not Provided"},
-    scores: {identity:iScore, property:pScore, ledger:lScore, total:risk},
-    decision: decision,
-    note: note.value
-  };
+/* STATE */
+let STATE = {
+role:null,
+current:null,
+ledger:[],
+freeCount:0
+};
 
-  // save
-  LEDGER.push(CASE);
-  localStorage.setItem("FSTL_LEDGER", JSON.stringify(LEDGER));
-
-  // summary UI
-  summary.classList.remove('hidden');
-  summary.innerHTML = `\n    <span class="badge ${color}">${decision}</span><br><br>\n    <b>Risk Score:</b> ${risk}<br>\n    <b>Identity Score:</b> ${iScore} | <b>Property Score:</b> ${pScore} | <b>Ledger Score:</b> ${lScore}<br>\n    <span class="small">Case saved to local ledger.</span>\n  `;
-
-  // generate report text
-  const reportText = buildReport(CASE);
-  reportCard.classList.remove('hidden');
-  report.textContent = reportText;
+/* NAV */
+function go(i){
+document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+document.getElementById("s"+i).classList.add("active");
 }
 
-/* ====== REPORT BUILDER ====== */
-function buildReport(c){
-  const interp = c.decision==="APPROVED" ?
-    "APPROVED → Transaction structure is consistent with low risk indicators." :
-    (c.decision==="CONDITIONAL" ?
-      "CONDITIONAL → Some risk signals present; proceed with caution and further checks." :
-      "BLOCKED → High-risk indicators detected; transaction not advised.");
-
-  const obs = c.note && c.note.trim().length>0 ? c.note : "No additional observations provided.";
-
-  return (
-`FIRST STANDARD TITLE LIMITED\nTransforming Assets into Capital\n\n----------------------------------------\n\nFSTL PROPERTY VERIFICATION REPORT\n\nCase ID: ${c.id}\nDate: ${c.date}\n\n----------------------------------------\n\nPROPERTY DETAILS\nType: ${c.asset.type || '-'}\nLocation: ${c.asset.location || '-'}\nDeclared Condition: ${c.asset.condition}\n\n----------------------------------------\n\nPARTIES INVOLVED\nOwner: ${c.parties.owner || '-'}\nSeller: ${c.parties.seller || '-'}\nBuyer: ${c.parties.buyer || '-'}\nAgent (if any): ${c.parties.agent || 'N/A'}\n\nIdentity Inputs (where provided):\nNIN: ${c.identity.nin}\nBVN: ${c.identity.bvn}\n\n----------------------------------------\n\nASSESSMENT SUMMARY\n\n• Identity consistency reviewed\n• Transaction structure evaluated\n• Property condition assessed\n• Risk indicators analyzed using COMET OS\n\n----------------------------------------\n\nSYSTEM OUTPUT\n\nDecision: ${c.decision}\nRisk Score: ${c.scores.total}\n\n----------------------------------------\n\nINTERPRETATION\n\n${interp}\n\n----------------------------------------\n\nFSTL OBSERVATIONS\n\n${obs}\n\n----------------------------------------\n\nIMPORTANT NOTICE\n\nThis report is generated using structured inputs and internal verification processes.\nIt is provided strictly for decision support purposes.\n\nClients are strongly advised to independently confirm all critical details, including title status, ownership rights, and legal documentation, before concluding any transaction.\n\n----------------------------------------\n\nFIRST STANDARD TITLE LIMITED\n\nAddress:\nNo. 19 Egbor Avenue, GRA,\nBenin City, Nigeria\n\nTelephone / WhatsApp:\n+234 803 588 8622\n\nEmail:\nfstlsite@gmail.com\n\nBanking Details:\nBank: First Bank of Nigeria Plc (FBHN PLC)\nAccount Name: First Standard Limited\nAccount Number: 2025222557\n\n----------------------------------------`);
+/* ROLE */
+function setRole(r){
+STATE.role = r;
+roleOut.innerHTML = `<span class="badge blue">${r}</span>`;
+go('2');
 }
 
-/* ====== ACTIONS ====== */
-function copyReport(){
-  const text = report.textContent;
-  navigator.clipboard.writeText(text).then(()=>{
-    alert('Report copied. Paste into WhatsApp.');
-  }).catch(()=>{
-    alert('Copy failed. Long-press to select and copy manually.');
-  });
+/* CREATE CASE */
+function createCase(){
+
+if(!type.value || !location.value){
+alert("TYPE + LOCATION required");
+return;
 }
 
-function downloadReport(){
-  const blob = new Blob([report.textContent], {type: 'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'FSTL_Report_'+Date.now()+'.txt';
-  a.click();
-  URL.revokeObjectURL(a.href);
+STATE.current = {
+id:"CASE-"+Date.now(),
+type:type.value,
+location:location.value,
+owner:owner.value,
+buyer:buyer.value,
+seller:seller.value
+};
+
+go('3');
 }
 
-</script></body>
+/* DECISION ENGINE */
+function runDecision(){
+
+let score = 0;
+
+if(!STATE.current.owner) score += 2;
+if(!STATE.current.type) score += 2;
+if(!STATE.current.location) score += 2;
+
+let verified =
+(v_title.checked ? 2 : 0) +
+(v_id.checked ? 2 : 0) +
+(v_docs.checked ? 1 : 0);
+
+let risk =
+(r_duplicate.checked ? 3 : 0) +
+(r_suspect.checked ? 3 : 0);
+
+let finalScore = score + risk - verified;
+
+let decision =
+finalScore >= 5 ? "BLOCKED" :
+finalScore > 2 ? "CONDITIONAL" :
+"APPROVED";
+
+let color =
+decision === "APPROVED" ? "green" :
+decision === "CONDITIONAL" ? "orange" : "red";
+
+STATE.current.decision = decision;
+
+result.innerHTML = `
+<span class="badge ${color}">${decision}</span><br><br>
+Case ID: ${STATE.current.id}<br>
+Score: ${finalScore}
+`;
+
+generateQR();
+go('5');
+}
+
+/* QR */
+function generateQR(){
+qr.innerHTML="";
+new QRCode(qr,{
+text:JSON.stringify(STATE.current),
+width:140,
+height:140
+});
+}
+
+/* RESET */
+function resetAll(){
+STATE.current=null;
+go('0');
+}
+
+</script>
+
+</body>
 </html>
