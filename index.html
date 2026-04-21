@@ -1,249 +1,162 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>COMET OS - Persistent Kernel</title>
-
-<style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#0b1220;
-  color:#fff;
-}
-
-.screen{display:none;padding:16px;}
-.active{display:block;}
-
-.card{
-  background:#111c2e;
-  padding:14px;
-  border-radius:12px;
-  margin-top:10px;
-}
-
-button{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
-  background:#1e88e5;
-  color:#fff;
-  font-weight:bold;
-}
-
-input,select{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:none;
-  background:#152238;
-  color:#fff;
-}
-
-.badge{
-  padding:6px 10px;
-  border-radius:8px;
-  font-weight:bold;
-  display:inline-block;
-}
-
-.low{background:#2e7d32;}
-.mid{background:#f9a825;}
-.high{background:#c62828;}
-
-.small{font-size:12px;color:#9fb3c8;}
-hr{border:0;border-top:1px solid #223;}
-</style>
-</head>
-
-<body>
-
-<!-- 0 FRONT -->
-<div id="s0" class="screen active">
-  <div class="card">
-    <h2>COMET OS</h2>
-    <p class="small">Persistent Property Verification Kernel</p>
-    <button onclick="start()">START SYSTEM</button>
-    <button onclick="showHistory()">VIEW HISTORY</button>
-  </div>
-</div>
-
-<!-- 1 ROLE -->
-<div id="s1" class="screen">
-  <div class="card">
-    <h3>Select Role</h3>
-    <button onclick="setRole('OWNER')">Owner</button>
-    <button onclick="setRole('BUYER')">Buyer</button>
-    <button onclick="setRole('SELLER')">Seller</button>
-    <button onclick="setRole('AGENT')">Agent</button>
-  </div>
-</div>
-
-<!-- 2 ASSET -->
-<div id="s2" class="screen">
-  <div class="card">
-    <h3>Asset</h3>
-    <input id="type" placeholder="Property Type"/>
-    <input id="location" placeholder="Location"/>
+<title>FSTL COMET OS — Auto Report</title><style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Arial;background:#070d18;color:#fff}
+.header{padding:14px 16px;background:#0b1220;border-bottom:1px solid #1c2a44;font-weight:700}
+.container{padding:14px}
+.card{background:#111c2e;padding:14px;border-radius:12px;margin-top:12px}
+input,select,textarea{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none;background:#152238;color:#fff}
+button{width:100%;padding:14px;margin-top:12px;border:none;border-radius:12px;background:#1e88e5;color:#fff;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
+.green{background:#2e7d32}.orange{background:#f9a825}.red{background:#c62828}
+.small{font-size:12px;color:#9fb3c8}
+pre{white-space:pre-wrap;background:#0b1220;padding:12px;border-radius:10px;border:1px solid #1c2a44}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hidden{display:none}
+</style></head>
+<body><div class="header">FSTL COMET OS — Auto Report Generator</div><div class="container">  <!-- INPUT -->  <div class="card">
+    <h3>Identity Layer</h3>
+    <div class="row">
+      <input id="nin" placeholder="NIN (optional)"/>
+      <input id="bvn" placeholder="BVN (optional)"/>
+    </div>
+    <input id="owner" placeholder="Owner"/>
+    <input id="seller" placeholder="Seller"/>
+    <input id="buyer" placeholder="Buyer"/>
+    <input id="agent" placeholder="Agent (optional)"/>
+  </div>  <div class="card">
+    <h3>Property Layer</h3>
+    <div class="row">
+      <input id="type" placeholder="Property Type"/>
+      <input id="location" placeholder="Location"/>
+    </div>
     <select id="condition">
-      <option>GOOD</option>
-      <option>FAIR</option>
-      <option>UNCERTAIN</option>
-      <option>DISPUTED</option>
+      <option value="GOOD">GOOD</option>
+      <option value="FAIR">FAIR</option>
+      <option value="UNCERTAIN">UNCERTAIN</option>
+      <option value="DISPUTED">DISPUTED</option>
     </select>
-    <button onclick="nextAsset()">CONTINUE</button>
-  </div>
-</div>
+    <textarea id="note" rows="3" placeholder="FSTL Observations (optional)"></textarea>
+    <button onclick="runCOMET()">RUN COMET OS & GENERATE REPORT</button>
+  </div>  <!-- RESULT SUMMARY -->  <div id="summary" class="card hidden"></div>  <!-- REPORT -->  <div class="card hidden" id="reportCard">
+    <h3>FSTL Report (Auto-Generated)</h3>
+    <pre id="report"></pre>
+    <div class="actions">
+      <button onclick="copyReport()">COPY REPORT</button>
+      <button onclick="downloadReport()">DOWNLOAD .TXT</button>
+    </div>
+    <p class="small">Tip: Copy and paste into WhatsApp, or download and share as a file.</p>
+  </div></div><script>
 
-<!-- 3 COUNTERPARTY -->
-<div id="s3" class="screen">
-  <div class="card">
-    <h3>Counterparty</h3>
-    <input id="cp" placeholder="Name"/>
-    <input id="cpRole" placeholder="Role"/>
-    <button onclick="process()">RUN VERIFICATION</button>
-  </div>
-</div>
+/* ====== LEDGER (memory) ====== */
+let LEDGER = JSON.parse(localStorage.getItem("FSTL_LEDGER") || "[]");
 
-<!-- 4 RESULT -->
-<div id="s4" class="screen">
-  <div class="card" id="out"></div>
-  <button onclick="reset()">NEW CASE</button>
-</div>
-
-<!-- 5 HISTORY -->
-<div id="s5" class="screen">
-  <div class="card">
-    <h3>Transaction History</h3>
-    <div id="history"></div>
-    <button onclick="back()">BACK</button>
-  </div>
-</div>
-
-<script>
-
-/* =========================
-   CORE STATE (TIR)
-========================= */
-
-let TIR = {
-  role:"",
-  asset:{},
-  counterparty:{},
-  risk:0,
-  decision:"",
-  id:null
-};
-
-/* =========================
-   LOCAL LEDGER (OS MEMORY)
-========================= */
-
-let LEDGER = JSON.parse(localStorage.getItem("COMET_LEDGER") || "[]");
-
-/* =========================
-   NAVIGATION
-========================= */
-
-function show(i){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById("s"+i).classList.add("active");
+/* ====== HELPERS ====== */
+function pad(n){return n<10?"0"+n:n}
+function nowDate(){
+  const d=new Date();
+  return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();
+}
+function makeCaseId(){
+  const d=new Date();
+  const id = d.getFullYear()+""+pad(d.getMonth()+1)+""+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
+  return "FSTL-CASE-"+id;
 }
 
-function start(){ show(1); }
+/* ====== ENGINE ====== */
+function runCOMET(){
+  // identity score
+  let iScore=0;
+  if(!nin.value) iScore+=1;
+  if(!bvn.value) iScore+=1;
+  if(owner.value && buyer.value && owner.value===buyer.value) iScore+=3;
+  if(owner.value && seller.value && owner.value===seller.value) iScore+=3;
 
-function setRole(r){
-  TIR.role = r;
-  show(2);
-}
+  // property score
+  let pScore=0;
+  if(!type.value) pScore+=2;
+  if(!location.value) pScore+=2;
+  if(condition.value==="UNCERTAIN") pScore+=3;
+  if(condition.value==="DISPUTED") pScore+=5;
 
-function nextAsset(){
-  TIR.asset = {
-    type: type.value,
-    location: location.value,
-    condition: condition.value
-  };
-  show(3);
-}
+  // ledger pattern (lightweight)
+  let lScore=0;
+  LEDGER.forEach(old=>{
+    const names=[owner.value,buyer.value,seller.value].filter(Boolean);
+    names.forEach(n=>{
+      if(old.parties && Object.values(old.parties).includes(n)) lScore+=1;
+    });
+    if(old.asset && old.asset.location && location.value && old.asset.location===location.value) lScore+=1;
+  });
 
-/* =========================
-   ENGINE
-========================= */
+  const risk = iScore + pScore + lScore;
 
-function process(){
+  let decision = "APPROVED";
+  if(risk>=8) decision="BLOCKED"; else if(risk>=4) decision="CONDITIONAL";
 
-  TIR.counterparty = {
-    name: cp.value,
-    role: cpRole.value
+  const color = (risk>=8)?"red":(risk>=4?"orange":"green");
+
+  // build case
+  const CASE = {
+    id: makeCaseId(),
+    date: nowDate(),
+    asset: {type:type.value, location:location.value, condition:condition.value},
+    parties: {owner:owner.value, seller:seller.value, buyer:buyer.value, agent:agent.value},
+    identity: {nin: nin.value?"Provided":"Not Provided", bvn: bvn.value?"Provided":"Not Provided"},
+    scores: {identity:iScore, property:pScore, ledger:lScore, total:risk},
+    decision: decision,
+    note: note.value
   };
 
-  let r = 0;
+  // save
+  LEDGER.push(CASE);
+  localStorage.setItem("FSTL_LEDGER", JSON.stringify(LEDGER));
 
-  if(TIR.asset.condition === "DISPUTED") r += 5;
-  if(TIR.asset.condition === "UNCERTAIN") r += 3;
-  if(!TIR.asset.type) r += 2;
-  if(!TIR.counterparty.name) r += 2;
+  // summary UI
+  summary.classList.remove('hidden');
+  summary.innerHTML = `\n    <span class="badge ${color}">${decision}</span><br><br>\n    <b>Risk Score:</b> ${risk}<br>\n    <b>Identity Score:</b> ${iScore} | <b>Property Score:</b> ${pScore} | <b>Ledger Score:</b> ${lScore}<br>\n    <span class="small">Case saved to local ledger.</span>\n  `;
 
-  TIR.risk = r;
-
-  if(r >= 7) TIR.decision = "BLOCKED";
-  else if(r >= 3) TIR.decision = "CONDITIONAL";
-  else TIR.decision = "APPROVED";
-
-  TIR.id = "TX-" + Date.now();
-
-  /* SAVE TO LEDGER */
-  LEDGER.push(JSON.parse(JSON.stringify(TIR)));
-  localStorage.setItem("COMET_LEDGER", JSON.stringify(LEDGER));
-
-  let cls = r >= 7 ? "high" : r >= 3 ? "mid" : "low";
-
-  out.innerHTML = `
-    <span class="badge ${cls}">${TIR.decision}</span><br><br>
-
-    <b>ID:</b> ${TIR.id}<br>
-    <b>Role:</b> ${TIR.role}<br>
-    <b>Property:</b> ${TIR.asset.type}<br>
-    <b>Location:</b> ${TIR.asset.location}<br>
-    <b>Condition:</b> ${TIR.asset.condition}<br><br>
-
-    <b>Risk:</b> ${TIR.risk}
-  `;
-
-  show(4);
+  // generate report text
+  const reportText = buildReport(CASE);
+  reportCard.classList.remove('hidden');
+  report.textContent = reportText;
 }
 
-/* =========================
-   HISTORY ENGINE
-========================= */
+/* ====== REPORT BUILDER ====== */
+function buildReport(c){
+  const interp = c.decision==="APPROVED" ?
+    "APPROVED → Transaction structure is consistent with low risk indicators." :
+    (c.decision==="CONDITIONAL" ?
+      "CONDITIONAL → Some risk signals present; proceed with caution and further checks." :
+      "BLOCKED → High-risk indicators detected; transaction not advised.");
 
-function showHistory(){
-  let h = document.getElementById("history");
+  const obs = c.note && c.note.trim().length>0 ? c.note : "No additional observations provided.";
 
-  if(LEDGER.length === 0){
-    h.innerHTML = "<p class='small'>No transactions yet.</p>";
-  } else {
-    h.innerHTML = LEDGER.map(t=>`
-      <div class="card">
-        <b>${t.id}</b><br>
-        ${t.asset.type} - ${t.asset.condition}<br>
-        Risk: ${t.risk} | ${t.decision}
-      </div>
-    `).join("");
-  }
-
-  show(5);
+  return (
+`FIRST STANDARD TITLE LIMITED\nTransforming Assets into Capital\n\n----------------------------------------\n\nFSTL PROPERTY VERIFICATION REPORT\n\nCase ID: ${c.id}\nDate: ${c.date}\n\n----------------------------------------\n\nPROPERTY DETAILS\nType: ${c.asset.type || '-'}\nLocation: ${c.asset.location || '-'}\nDeclared Condition: ${c.asset.condition}\n\n----------------------------------------\n\nPARTIES INVOLVED\nOwner: ${c.parties.owner || '-'}\nSeller: ${c.parties.seller || '-'}\nBuyer: ${c.parties.buyer || '-'}\nAgent (if any): ${c.parties.agent || 'N/A'}\n\nIdentity Inputs (where provided):\nNIN: ${c.identity.nin}\nBVN: ${c.identity.bvn}\n\n----------------------------------------\n\nASSESSMENT SUMMARY\n\n• Identity consistency reviewed\n• Transaction structure evaluated\n• Property condition assessed\n• Risk indicators analyzed using COMET OS\n\n----------------------------------------\n\nSYSTEM OUTPUT\n\nDecision: ${c.decision}\nRisk Score: ${c.scores.total}\n\n----------------------------------------\n\nINTERPRETATION\n\n${interp}\n\n----------------------------------------\n\nFSTL OBSERVATIONS\n\n${obs}\n\n----------------------------------------\n\nIMPORTANT NOTICE\n\nThis report is generated using structured inputs and internal verification processes.\nIt is provided strictly for decision support purposes.\n\nClients are strongly advised to independently confirm all critical details, including title status, ownership rights, and legal documentation, before concluding any transaction.\n\n----------------------------------------\n\nFIRST STANDARD TITLE LIMITED\n\nAddress:\nNo. 19 Egbor Avenue, GRA,\nBenin City, Nigeria\n\nTelephone / WhatsApp:\n+234 803 588 8622\n\nEmail:\nfstlsite@gmail.com\n\nBanking Details:\nBank: First Bank of Nigeria Plc (FBHN PLC)\nAccount Name: First Standard Limited\nAccount Number: 2025222557\n\n----------------------------------------`);
 }
 
-function back(){ show(0); }
+/* ====== ACTIONS ====== */
+function copyReport(){
+  const text = report.textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    alert('Report copied. Paste into WhatsApp.');
+  }).catch(()=>{
+    alert('Copy failed. Long-press to select and copy manually.');
+  });
+}
 
-function reset(){ location.reload(); }
+function downloadReport(){
+  const blob = new Blob([report.textContent], {type: 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'FSTL_Report_'+Date.now()+'.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
-</script>
-
-</body>
+</script></body>
 </html>
