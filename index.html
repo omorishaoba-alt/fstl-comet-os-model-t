@@ -53,9 +53,7 @@ select,input{
 
 <div class="card">
 <b>COMET OS Assistant</b><br>
-<span class="small">
-Structured identity + transaction intelligence engine
-</span>
+<span class="small">Structured transaction + identity engine</span>
 </div>
 
 <div class="card">
@@ -112,7 +110,7 @@ key:"structure",
 q:"Is this Direct or Indirect transaction?",
 type:"select",
 options:["Direct","Indirect"],
-why:"Defines party linkage model"
+why:"Defines relationship structure"
 },
 
 {
@@ -136,11 +134,22 @@ type:"text",
 why:"Buyer identity"
 },
 
+/* ================= FIXED AGENT SYSTEM ================= */
+
 {
-key:"agent1",
-q:"Primary Agent (if any)",
-type:"text",
-why:"Optional intermediary"
+key:"agent_status",
+q:"Is an Agent involved in this transaction?",
+type:"select",
+options:["NO AGENT","AGENT INVOLVED"],
+why:"Determines if intermediary exists"
+},
+
+{
+key:"agent_name",
+q:"Select Agent Name (if applicable)",
+type:"select",
+options:["N/A","Agent A","Agent B","Agent C","Other"],
+why:"Agent identity (only valid if agent exists)"
 },
 
 {
@@ -167,20 +176,6 @@ why:"Legal capacity classification"
 }
 
 ];
-
-/* ================= NORMALIZER ================= */
-
-function clean(v){
-if(!v) return "";
-
-v = v.trim().toUpperCase();
-
-if(v === "NONE") return "";
-if(v === "N/A") return "";
-if(v === "NULL") return "";
-
-return v;
-}
 
 /* ================= RENDER ================= */
 
@@ -216,6 +211,15 @@ if(f.type === "select"){
 }
 }
 
+/* ================= INPUT STORAGE ================= */
+
+function clean(v){
+if(!v) return "";
+v = v.trim().toUpperCase();
+if(v === "NONE" || v === "N/A") return "";
+return v;
+}
+
 /* ================= NEXT ================= */
 
 function nextStep(){
@@ -226,12 +230,7 @@ let value = (f.type === "select")
   ? document.getElementById("dropdown").value
   : document.getElementById("textInput").value.trim();
 
-if(!value){
-  alert("Field required");
-  return;
-}
-
-/* APPLY NORMALIZATION */
+/* STORE */
 data[f.key] = clean(value);
 
 /* LIVE SUMMARY */
@@ -262,15 +261,20 @@ flags.push({msg,w});
 score += w;
 }
 
-/* SAFE AGENT CHECK */
-const hasAgent = data.agent1 && data.agent1.trim() !== "";
+/* ================= AGENT LOGIC (FIXED) ================= */
 
-/* IDENTITY CHECKS */
+const hasAgent =
+data.agent_status === "AGENT INVOLVED" &&
+data.agent_name &&
+data.agent_name !== "N/A";
+
+/* ================= VALIDATION ================= */
+
 if(!data.owner) add("Missing Owner",2);
 if(!data.seller) add("Missing Seller",2);
 if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
 
-/* CONFLICT CHECKS */
+/* identity conflicts */
 if(data.owner && data.buyer &&
 data.owner.toLowerCase() === data.buyer.toLowerCase()){
 add("Owner = Buyer identity overlap",3);
@@ -281,7 +285,7 @@ data.buyer.toLowerCase() === data.seller.toLowerCase()){
 add("Buyer = Seller identity overlap",3);
 }
 
-/* STRUCTURE LOGIC */
+/* structure + agent */
 if(data.structure === "Direct" && hasAgent){
 add("Agent present in Direct transaction",2);
 }
@@ -295,7 +299,7 @@ if(!data.kyc_name) add("Missing KYC Name",2);
 if(!data.kyc_idType) add("Missing ID Type",2);
 if(!data.kyc_capacity) add("Missing Capacity",2);
 
-/* CLASSIFICATION */
+/* classification */
 let level = "CLEAN";
 let color = "green";
 
