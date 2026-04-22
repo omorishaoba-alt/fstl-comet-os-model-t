@@ -2,199 +2,296 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FSTL COMET OS</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1220;color:#fff;font-size:16px}
-.card{background:#111c2e;padding:18px;margin:10px;border-radius:14px}
-.screen{display:none;padding:10px}
-.active{display:block}
-button{width:100%;padding:16px;margin-top:12px;border:none;border-radius:12px;background:#1e88e5;color:#fff;font-weight:bold}
-input{width:100%;padding:14px;margin-top:10px;border-radius:10px;border:none;background:#152238;color:#fff}
-label{display:block;margin:8px 0}
-.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
-.green{background:#2e7d32}.orange{background:#f9a825}.red{background:#c62828}.blue{background:#1e88e5}
-.qrbox{background:#fff;color:#000;padding:10px;border-radius:10px;margin-top:10px;font-size:11px;word-break:break-all}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0b1220;
+  color:#fff;
+}
+
+.card{
+  background:#111c2e;
+  padding:14px;
+  margin:10px;
+  border-radius:12px;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:10px;
+  background:#1e88e5;
+  color:#fff;
+  font-weight:bold;
+}
+
+select,input{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:none;
+  background:#152238;
+  color:#fff;
+}
+
 .small{font-size:12px;color:#9fb3c8}
-#log{font-size:11px;color:#9fb3c8;margin-top:6px}
+.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
+.green{background:#2e7d32}
+.orange{background:#f9a825}
+.red{background:#c62828}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-<b>FSTL COMET OS</b><br>
-<span class="small">Verification Engine (Stable Build)</span>
-<div id="log"></div>
+<b>COMET OS Assistant</b><br>
+<span class="small">
+We help structure transaction and identity information clearly and consistently.
+</span>
 </div>
 
-<!-- START -->
-<div id="s0" class="screen active">
 <div class="card">
-<h2>Start</h2>
-<button id="startBtn">START</button>
-</div>
+<b>Current Case Summary</b>
+<div id="summary">No data captured yet.</div>
 </div>
 
-<!-- ROLE -->
-<div id="s1" class="screen">
-<div class="card">
-<h3>Select Mode</h3>
-<button data-role="USER">USER</button>
-<button data-role="AGENT">AGENT</button>
-<button data-role="ADMIN">ADMIN</button>
-<div id="roleOut"></div>
-</div>
+<div class="card" id="questionCard">
+<div id="questionText"></div>
+
+<select id="dropdown"></select>
+<input id="textInput" style="display:none"/>
+
+<div class="small" id="whyText"></div>
+
+<button onclick="nextStep()">Continue</button>
 </div>
 
-<!-- INPUT -->
-<div id="s2" class="screen">
-<div class="card">
-<h3>Property Input</h3>
-<input id="type" placeholder="Property Type"/>
-<input id="location" placeholder="Location"/>
-<input id="owner" placeholder="Owner"/>
-<input id="buyer" placeholder="Buyer"/>
-<input id="seller" placeholder="Seller"/>
-<button id="continueBtn">CONTINUE</button>
-</div>
-</div>
-
-<!-- VERIFY -->
-<div id="s3" class="screen">
-<div class="card">
-<h3>Verification</h3>
-<label><input type="checkbox" id="v_title"/> Title Verified</label>
-<label><input type="checkbox" id="v_id"/> Identity Verified</label>
-<label><input type="checkbox" id="v_docs"/> Documents Complete</label>
-<hr>
-<label><input type="checkbox" id="r_duplicate"/> Duplicate Case</label>
-<label><input type="checkbox" id="r_suspect"/> Suspicious Pattern</label>
-<button id="runBtn">RUN DECISION</button>
-</div>
-</div>
-
-<!-- RESULT -->
-<div id="s4" class="screen">
-<div class="card">
-<h3>Result</h3>
+<div class="card" id="resultCard" style="display:none">
 <div id="result"></div>
-<div id="qr" class="qrbox"></div>
-<button id="resetBtn">NEW CASE</button>
-</div>
 </div>
 
 <script>
-(function(){
 
-/* ===== SAFE HELPERS ===== */
-function el(id){ return document.getElementById(id); }
-function val(id){ let e=el(id); return e ? (e.value||"").trim() : ""; }
-function chk(id){ let e=el(id); return e ? e.checked : false; }
-function log(msg){ let l=el("log"); if(l) l.textContent = msg; }
+/* ================= STATE ================= */
 
-/* ===== STATE ===== */
-var STATE = { role:null, current:null };
+let step = 0;
 
-/* ===== NAV ===== */
-function go(n){
-var screens = document.querySelectorAll(".screen");
-for(var i=0;i<screens.length;i++){ screens[i].classList.remove("active"); }
-var target = el("s"+n);
-if(target){ target.classList.add("active"); log("Screen: s"+n); }
+let data = {};
+
+const flow = [
+
+{
+key:"role",
+q:"Who are you in this transaction?",
+type:"select",
+options:["Owner","Buyer","Seller","Agent","Executor"],
+why:"Defines your role in the transaction structure"
+},
+
+{
+key:"transaction",
+q:"What type of transaction is this?",
+type:"select",
+options:["Sale","Probate","Transfer","Mortgage"],
+why:"Defines transaction context for consistency rules"
+},
+
+{
+key:"structure",
+q:"How is this transaction arranged?",
+type:"select",
+options:["Direct","Indirect (via agent)"],
+why:"Defines relationship between parties"
+},
+
+{
+key:"owner",
+q:"Enter Owner Name",
+type:"text",
+why:"Establishes ownership identity reference"
+},
+
+{
+key:"seller",
+q:"Enter Seller Name",
+type:"text",
+why:"Defines selling party identity"
+},
+
+{
+key:"buyer",
+q:"Enter Buyer Name",
+type:"text",
+why:"Defines receiving party identity"
+},
+
+{
+key:"kyc_name",
+q:"KYC Name (Person completing this)",
+type:"text",
+why:"Identity of user completing structured input"
+},
+
+{
+key:"kyc_idType",
+q:"Select ID Type",
+type:"select",
+options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"],
+why:"Standard identity classification"
+},
+
+{
+key:"kyc_capacity",
+q:"Select Capacity",
+type:"select",
+options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
+why:"Defines legal/transactional capacity context"
 }
 
-/* ===== ROLE ===== */
-function setRole(r){
-STATE.role = r;
-el("roleOut").innerHTML = '<span class="badge blue">'+r+'</span>';
-go(2);
+];
+
+/* ================= RENDER ================= */
+
+function renderStep(){
+
+let f = flow[step];
+
+document.getElementById("questionText").innerText = f.q;
+document.getElementById("whyText").innerText = f.why;
+
+let dd = document.getElementById("dropdown");
+let inp = document.getElementById("textInput");
+
+dd.innerHTML = "";
+
+if(f.type === "select"){
+  dd.style.display = "block";
+  inp.style.display = "none";
+
+  f.options.forEach(o=>{
+    let opt = document.createElement("option");
+    opt.text = o;
+    dd.add(opt);
+  });
+
+}else{
+  dd.style.display = "none";
+  inp.style.display = "block";
+  inp.value = "";
+}
 }
 
-/* ===== CREATE CASE ===== */
-function createCase(){
-var t = val("type");
-var l = val("location");
-var o = val("owner");
-var b = val("buyer");
-var s = val("seller");
+/* ================= NEXT ================= */
 
-if(!t || !l){
-alert("Type + Location required");
-log("Validation failed");
-return;
+function nextStep(){
+
+let f = flow[step];
+
+let value = (f.type === "select")
+  ? document.getElementById("dropdown").value
+  : document.getElementById("textInput").value.trim();
+
+if(!value){
+  alert("Please provide an answer");
+  return;
 }
 
-STATE.current = {
-id:"CASE-"+Date.now(),
-type:t, location:l,
-owner:o, buyer:b, seller:s
-};
+data[f.key] = value;
 
-log("Case created");
-go(3);
+/* LIVE SUMMARY */
+document.getElementById("summary").innerHTML =
+Object.entries(data)
+.map(([k,v])=>`- ${k}: ${v}`)
+.join("<br>");
+
+step++;
+
+if(step < flow.length){
+  renderStep();
+}else{
+  runEngine();
+}
 }
 
-/* ===== DECISION ===== */
-function runDecision(){
-if(!STATE.current){ alert("No case"); return; }
+/* ================= ENGINE ================= */
 
-var score = 0;
-if(!STATE.current.owner) score+=2;
-if(!STATE.current.type) score+=2;
-if(!STATE.current.location) score+=2;
-
-var verified = (chk("v_title")?2:0)+(chk("v_id")?2:0)+(chk("v_docs")?1:0);
-var risk = (chk("r_duplicate")?3:0)+(chk("r_suspect")?3:0);
-
-var finalScore = score + risk - verified;
-
-var decision = finalScore>=5?"BLOCKED":finalScore>2?"CONDITIONAL":"APPROVED";
-var color = decision==="APPROVED"?"green":decision==="CONDITIONAL"?"orange":"red";
-
-STATE.current.decision = decision;
-
-el("result").innerHTML =
-'<span class="badge '+color+'">'+decision+'</span><br><br>'+
-'Case ID: '+STATE.current.id+'<br>Score: '+finalScore;
-
-/* SAFE DATA DISPLAY */
-el("qr").textContent = JSON.stringify(STATE.current);
-
-log("Decision: "+decision);
-go(4);
+function norm(s){
+return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
 
-/* ===== RESET ===== */
-function resetAll(){
-STATE.current=null;
-["type","location","owner","buyer","seller"].forEach(function(id){ if(el(id)) el(id).value=""; });
-["v_title","v_id","v_docs","r_duplicate","r_suspect"].forEach(function(id){ if(el(id)) el(id).checked=false; });
-el("result").innerHTML="";
-el("qr").textContent="";
-log("Reset");
-go(0);
+function runEngine(){
+
+let flags = [];
+let score = 0;
+
+function add(msg, w){
+flags.push({msg,w});
+score += w;
 }
 
-/* ===== EVENTS (NO INLINE JS) ===== */
-document.addEventListener("DOMContentLoaded", function(){
+/* Identity checks */
+if(!data.owner) add("Missing Owner",2);
+if(!data.seller) add("Missing Seller",2);
+if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
 
-el("startBtn").addEventListener("click", function(){ go(1); });
-
-var roleBtns = document.querySelectorAll("[data-role]");
-for(var i=0;i<roleBtns.length;i++){
-roleBtns[i].addEventListener("click", function(){ setRole(this.getAttribute("data-role")); });
+/* Role conflicts */
+if(data.owner && data.buyer && norm(data.owner) === norm(data.buyer)){
+add("Owner = Buyer identity overlap",3);
 }
 
-el("continueBtn").addEventListener("click", createCase);
-el("runBtn").addEventListener("click", runDecision);
-el("resetBtn").addEventListener("click", resetAll);
+if(data.buyer && data.seller && norm(data.buyer) === norm(data.seller)){
+add("Buyer = Seller identity overlap",3);
+}
 
-log("System Ready");
-});
+/* Structure logic */
+if(data.structure === "DIRECT" && data.agent1){
+add("Agent present in DIRECT transaction",2);
+}
 
-})();
+if(data.structure === "INDIRECT" && !data.agent1){
+add("Missing agent in INDIRECT transaction",3);
+}
+
+/* KYC validation */
+if(!data.kyc_name) add("Missing KYC Name",2);
+if(!data.kyc_idType) add("Missing ID Type",2);
+if(!data.kyc_capacity) add("Missing Capacity",2);
+
+/* Classification */
+let level = "CLEAN";
+let color = "green";
+
+if(score >= 8){
+level = "RED FLAGS";
+color = "red";
+}else if(score >= 3){
+level = "WATCH";
+color = "orange";
+}
+
+/* Output */
+document.getElementById("resultCard").style.display = "block";
+
+document.getElementById("result").innerHTML =
+`<span class="badge ${color}">${level}</span><br><br>
+Score: ${score}<br><br>
+${flags.length ?
+flags.map(f=>`- ${f.msg}`).join("<br>")
+: "No inconsistencies detected"}`;
+}
+
+/* ================= INIT ================= */
+
+renderStep();
+
 </script>
 
 </body>
