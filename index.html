@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>FSTL COMET OS</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 body{
@@ -13,13 +11,14 @@ margin:0;
 font-family:Arial;
 background:#0b1220;
 color:#fff;
+font-size:16px;
 }
 
 .card{
 background:#111c2e;
-padding:16px;
+padding:18px;
 margin:10px;
-border-radius:12px;
+border-radius:14px;
 }
 
 .screen{display:none;padding:10px;}
@@ -27,23 +26,30 @@ border-radius:12px;
 
 button{
 width:100%;
-padding:14px;
-margin-top:10px;
+padding:16px;
+margin-top:12px;
 border:none;
-border-radius:10px;
+border-radius:12px;
 background:#1e88e5;
 color:#fff;
 font-weight:bold;
+font-size:16px;
 }
 
 input{
 width:100%;
-padding:12px;
-margin-top:8px;
-border-radius:8px;
+padding:14px;
+margin-top:10px;
+border-radius:10px;
 border:none;
 background:#152238;
 color:#fff;
+font-size:16px;
+}
+
+label{
+display:block;
+margin:8px 0;
 }
 
 .badge{
@@ -58,80 +64,83 @@ display:inline-block;
 .red{background:#c62828;}
 .blue{background:#1e88e5;}
 
+.qrbox{
+background:#fff;
+padding:12px;
+border-radius:10px;
+text-align:center;
+margin-top:10px;
+}
+
 .small{font-size:12px;color:#9fb3c8;}
-.qrbox{background:#fff;padding:10px;border-radius:10px;margin-top:10px;text-align:center;}
-hr{border:0;border-top:1px solid #223;margin:10px 0;}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <b>FSTL COMET OS (TEST MODE)</b>
+<b>FSTL COMET OS</b><br>
+<span class="small">Land & Property Verification Engine</span>
 </div>
 
-<!-- START -->
+<!-- STEP 0 -->
 <div id="s0" class="screen active">
-  <div class="card">
-    <h2>COMET OS</h2>
-    <button onclick="go('1')">START</button>
-  </div>
+<div class="card">
+<h2>Start</h2>
+<button onclick="go(1)">START</button>
+</div>
 </div>
 
-<!-- ROLE -->
+<!-- STEP 1 -->
 <div id="s1" class="screen">
-  <div class="card">
-    <h3>Select Mode</h3>
-    <button onclick="setRole('USER')">FREE USER</button>
-    <button onclick="setRole('AGENT')">AGENT</button>
-    <button onclick="setRole('ADMIN')">ADMIN</button>
-    <div id="roleOut"></div>
-  </div>
+<div class="card">
+<h3>Select Mode</h3>
+<button onclick="setRole('USER')">USER</button>
+<button onclick="setRole('AGENT')">AGENT</button>
+<button onclick="setRole('ADMIN')">ADMIN</button>
+<div id="roleOut"></div>
+</div>
 </div>
 
-<!-- CASE -->
+<!-- STEP 2 -->
 <div id="s2" class="screen">
-  <div class="card">
-    <h3>Create Case</h3>
-    <input id="type" placeholder="Property Type"/>
-    <input id="location" placeholder="Location"/>
-    <input id="owner" placeholder="Owner"/>
-    <input id="buyer" placeholder="Buyer"/>
-    <input id="seller" placeholder="Seller"/>
-    <button onclick="createCase()">CONTINUE</button>
-  </div>
+<div class="card">
+<h3>Property Input</h3>
+<input id="type" placeholder="Property Type"/>
+<input id="location" placeholder="Location"/>
+<input id="owner" placeholder="Owner"/>
+<input id="buyer" placeholder="Buyer"/>
+<input id="seller" placeholder="Seller"/>
+<button onclick="createCase()">CONTINUE</button>
+</div>
 </div>
 
-<!-- VERIFICATION -->
+<!-- STEP 3 -->
 <div id="s3" class="screen">
-  <div class="card">
-    <h3>Verification</h3>
+<div class="card">
+<h3>Verification</h3>
 
-    <label><input type="checkbox" id="v_title"/> Title Verified</label><br>
-    <label><input type="checkbox" id="v_id"/> Identity Verified</label><br>
-    <label><input type="checkbox" id="v_docs"/> Documents Complete</label><br>
+<label><input type="checkbox" id="v_title"/> Title Verified</label>
+<label><input type="checkbox" id="v_id"/> Identity Verified</label>
+<label><input type="checkbox" id="v_docs"/> Documents Complete</label>
 
-    <hr>
+<hr>
 
-    <label><input type="checkbox" id="r_duplicate"/> Duplicate Case</label><br>
-    <label><input type="checkbox" id="r_suspect"/> Suspicious Pattern</label><br>
+<label><input type="checkbox" id="r_duplicate"/> Duplicate Case</label>
+<label><input type="checkbox" id="r_suspect"/> Suspicious Pattern</label>
 
-    <button onclick="runDecision()">RUN DECISION</button>
-  </div>
+<button onclick="runDecision()">RUN DECISION</button>
+</div>
 </div>
 
-<!-- QR -->
+<!-- STEP 4 -->
 <div id="s4" class="screen">
-  <div class="card">
-    <h3>Case QR</h3>
-    <div id="qr" class="qrbox"></div>
-  </div>
+<div class="card">
+<h3>Result</h3>
+<div id="result"></div>
+<div id="qr" class="qrbox"></div>
+<button onclick="resetAll()">NEW CASE</button>
 </div>
-
-<!-- RESULT -->
-<div id="s5" class="screen">
-  <div class="card" id="result"></div>
-  <button onclick="resetAll()">NEW CASE</button>
 </div>
 
 <script>
@@ -139,9 +148,7 @@ hr{border:0;border-top:1px solid #223;margin:10px 0;}
 /* STATE */
 let STATE = {
 role:null,
-current:null,
-ledger:[],
-freeCount:0
+current:null
 };
 
 /* NAV */
@@ -153,28 +160,32 @@ document.getElementById("s"+i).classList.add("active");
 /* ROLE */
 function setRole(r){
 STATE.role = r;
-roleOut.innerHTML = `<span class="badge blue">${r}</span>`;
-go('2');
+document.getElementById("roleOut").innerHTML =
+`<span class="badge blue">${r}</span>`;
+go(2);
 }
 
 /* CREATE CASE */
 function createCase(){
 
-if(!type.value || !location.value){
-alert("TYPE + LOCATION required");
+let t = document.getElementById("type").value.trim();
+let l = document.getElementById("location").value.trim();
+
+if(!t || !l){
+alert("Type and Location required");
 return;
 }
 
 STATE.current = {
 id:"CASE-"+Date.now(),
-type:type.value,
-location:location.value,
+type:t,
+location:l,
 owner:owner.value,
 buyer:buyer.value,
 seller:seller.value
 };
 
-go('3');
+go(3);
 }
 
 /* DECISION ENGINE */
@@ -182,56 +193,50 @@ function runDecision(){
 
 let score = 0;
 
-if(!STATE.current.owner) score += 2;
-if(!STATE.current.type) score += 2;
-if(!STATE.current.location) score += 2;
+if(!STATE.current.owner) score+=2;
+if(!STATE.current.type) score+=2;
+if(!STATE.current.location) score+=2;
 
 let verified =
-(v_title.checked ? 2 : 0) +
-(v_id.checked ? 2 : 0) +
-(v_docs.checked ? 1 : 0);
+(v_title.checked?2:0)+
+(v_id.checked?2:0)+
+(v_docs.checked?1:0);
 
 let risk =
-(r_duplicate.checked ? 3 : 0) +
-(r_suspect.checked ? 3 : 0);
+(r_duplicate.checked?3:0)+
+(r_suspect.checked?3:0);
 
 let finalScore = score + risk - verified;
 
 let decision =
-finalScore >= 5 ? "BLOCKED" :
-finalScore > 2 ? "CONDITIONAL" :
+finalScore >=5 ? "BLOCKED" :
+finalScore >2 ? "CONDITIONAL" :
 "APPROVED";
 
 let color =
-decision === "APPROVED" ? "green" :
-decision === "CONDITIONAL" ? "orange" : "red";
+decision==="APPROVED"?"green":
+decision==="CONDITIONAL"?"orange":"red";
 
 STATE.current.decision = decision;
 
-result.innerHTML = `
-<span class="badge ${color}">${decision}</span><br><br>
+/* RESULT */
+result.innerHTML =
+`<span class="badge ${color}">${decision}</span><br><br>
 Case ID: ${STATE.current.id}<br>
-Score: ${finalScore}
-`;
+Score: ${finalScore}`;
 
-generateQR();
-go('5');
-}
+/* SIMPLE QR (NO LIBRARY NEEDED) */
+qr.innerHTML = `<div style="color:black;font-size:12px;word-break:break-all;">
+${btoa(JSON.stringify(STATE.current))}
+</div>`;
 
-/* QR */
-function generateQR(){
-qr.innerHTML="";
-new QRCode(qr,{
-text:JSON.stringify(STATE.current),
-width:140,
-height:140
-});
+go(4);
 }
 
 /* RESET */
 function resetAll(){
 STATE.current=null;
-go('0');
+go(0);
 }
 
 </script>
