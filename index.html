@@ -47,10 +47,7 @@ color:#fff;
 font-size:16px;
 }
 
-label{
-display:block;
-margin:8px 0;
-}
+label{display:block;margin:8px 0;}
 
 .badge{
 padding:6px 10px;
@@ -106,11 +103,13 @@ margin-top:10px;
 <div id="s2" class="screen">
 <div class="card">
 <h3>Property Input</h3>
+
 <input id="type" placeholder="Property Type"/>
 <input id="location" placeholder="Location"/>
 <input id="owner" placeholder="Owner"/>
 <input id="buyer" placeholder="Buyer"/>
 <input id="seller" placeholder="Seller"/>
+
 <button onclick="createCase()">CONTINUE</button>
 </div>
 </div>
@@ -165,24 +164,29 @@ document.getElementById("roleOut").innerHTML =
 go(2);
 }
 
-/* CREATE CASE */
+/* CREATE CASE (FIXED) */
 function createCase(){
 
 let t = document.getElementById("type").value.trim();
 let l = document.getElementById("location").value.trim();
+let o = document.getElementById("owner").value.trim();
+let b = document.getElementById("buyer").value.trim();
+let s = document.getElementById("seller").value.trim();
 
-if(!t || !l){
-alert("Type and Location required");
+/* STRICT VALIDATION */
+if(t === "" || l === ""){
+alert("Type + Location required");
 return;
 }
 
+/* BUILD STATE */
 STATE.current = {
 id:"CASE-"+Date.now(),
 type:t,
 location:l,
-owner:owner.value,
-buyer:buyer.value,
-seller:seller.value
+owner:o,
+buyer:b,
+seller:s
 };
 
 go(3);
@@ -198,13 +202,13 @@ if(!STATE.current.type) score+=2;
 if(!STATE.current.location) score+=2;
 
 let verified =
-(v_title.checked?2:0)+
-(v_id.checked?2:0)+
-(v_docs.checked?1:0);
+(document.getElementById("v_title").checked?2:0)+
+(document.getElementById("v_id").checked?2:0)+
+(document.getElementById("v_docs").checked?1:0);
 
 let risk =
-(r_duplicate.checked?3:0)+
-(r_suspect.checked?3:0);
+(document.getElementById("r_duplicate").checked?3:0)+
+(document.getElementById("r_suspect").checked?3:0);
 
 let finalScore = score + risk - verified;
 
@@ -219,14 +223,15 @@ decision==="CONDITIONAL"?"orange":"red";
 
 STATE.current.decision = decision;
 
-/* RESULT */
-result.innerHTML =
+/* OUTPUT */
+document.getElementById("result").innerHTML =
 `<span class="badge ${color}">${decision}</span><br><br>
 Case ID: ${STATE.current.id}<br>
 Score: ${finalScore}`;
 
-/* SIMPLE QR (NO LIBRARY NEEDED) */
-qr.innerHTML = `<div style="color:black;font-size:12px;word-break:break-all;">
+/* SIMPLE QR SAFE */
+document.getElementById("qr").innerHTML =
+`<div style="color:black;font-size:12px;word-break:break-all;">
 ${btoa(JSON.stringify(STATE.current))}
 </div>`;
 
@@ -236,10 +241,21 @@ go(4);
 /* RESET */
 function resetAll(){
 STATE.current=null;
+
+/* CLEAR INPUTS */
+["type","location","owner","buyer","seller"].forEach(id=>{
+document.getElementById(id).value="";
+});
+
+/* CLEAR CHECKBOXES */
+["v_title","v_id","v_docs","r_duplicate","r_suspect"].forEach(id=>{
+document.getElementById(id).checked=false;
+});
+
+document.getElementById("result").innerHTML="";
+document.getElementById("qr").innerHTML="";
+
 go(0);
 }
 
-</script>
-
-</body>
-</html>
+</script
