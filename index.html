@@ -54,7 +54,7 @@ select,input{
 <div class="card">
 <b>COMET OS Assistant</b><br>
 <span class="small">
-Structured identity + transaction clarity system
+Structured identity + transaction intelligence system
 </span>
 </div>
 
@@ -87,7 +87,7 @@ Structured identity + transaction clarity system
 let step = 0;
 let data = {};
 
-/* ================= FLOW ================= */
+/* ================= FLOW (FULL SCHEMA-CONSISTENT) ================= */
 
 const flow = [
 
@@ -96,7 +96,7 @@ key:"role",
 q:"Who are you in this transaction?",
 type:"select",
 options:["Owner","Buyer","Seller","Agent","Executor"],
-why:"Defines role context"
+why:"Defines user role in transaction system"
 },
 
 {
@@ -104,12 +104,12 @@ key:"transaction",
 q:"What type of transaction is this?",
 type:"select",
 options:["Sale","Probate","Transfer","Mortgage"],
-why:"Defines transaction structure"
+why:"Defines transaction category"
 },
 
 {
 key:"structure",
-q:"How is this transaction arranged?",
+q:"Is this Direct or Indirect transaction?",
 type:"select",
 options:["Direct","Indirect"],
 why:"Defines party linkage model"
@@ -119,7 +119,7 @@ why:"Defines party linkage model"
 key:"owner",
 q:"Enter Owner Name",
 type:"text",
-why:"Ownership identity reference"
+why:"Ownership identity anchor"
 },
 
 {
@@ -137,6 +137,13 @@ why:"Receiving party identity"
 },
 
 {
+key:"agent1",
+q:"Primary Agent (if any)",
+type:"text",
+why:"Intermediary participant (optional but tracked)"
+},
+
+{
 key:"kyc_name",
 q:"KYC Name (Person completing this)",
 type:"text",
@@ -148,7 +155,7 @@ key:"kyc_idType",
 q:"Select ID Type",
 type:"select",
 options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"],
-why:"Identity verification type"
+why:"Identity classification"
 },
 
 {
@@ -156,7 +163,7 @@ key:"kyc_capacity",
 q:"Select Capacity",
 type:"select",
 options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
-why:"Legal/transactional role classification"
+why:"Legal role classification"
 }
 
 ];
@@ -195,7 +202,7 @@ if(f.type === "select"){
 }
 }
 
-/* ================= NEXT ================= */
+/* ================= STEP CONTROL ================= */
 
 function nextStep(){
 
@@ -206,7 +213,7 @@ let value = (f.type === "select")
   : document.getElementById("textInput").value.trim();
 
 if(!value){
-  alert("Field required");
+  alert("This field is required");
   return;
 }
 
@@ -220,35 +227,35 @@ Object.entries(data)
 
 step++;
 
-if(step < flow.length){
-  renderStep();
-}else{
+/* SAFE FLOW TERMINATION */
+if(step >= flow.length){
   runEngine();
-}
+  return;
 }
 
-/* ================= ENGINE (FIXED) ================= */
+renderStep();
+}
+
+/* ================= COMPLETENESS CHECK ================= */
+
+function isComplete(){
+
+for(let f of flow){
+  if(!data[f.key] || data[f.key].trim() === ""){
+    return false;
+  }
+}
+return true;
+}
+
+/* ================= ENGINE ================= */
 
 function runEngine(){
 
-/* ================= HARD VALIDATION GATE ================= */
-
-if(!data.kyc_name){
-alert("KYC Name required");
+if(!isComplete()){
+alert("Incomplete case data. Please complete all fields.");
 return;
 }
-
-if(!data.kyc_idType){
-alert("ID Type required");
-return;
-}
-
-if(!data.kyc_capacity){
-alert("Capacity required");
-return;
-}
-
-/* ================= SIGNAL ENGINE ================= */
 
 let flags = [];
 let score = 0;
@@ -259,37 +266,31 @@ score += w;
 }
 
 /* Identity checks */
-if(!data.owner) add("Missing Owner",2);
-if(!data.seller) add("Missing Seller",2);
-if(!data.buyer && data.transaction !== "Probate") add("Missing Buyer",2);
-
-/* Identity conflicts */
 if(data.owner && data.buyer &&
-data.owner.toLowerCase().replace(/[^a-z0-9]/g,'') ===
-data.buyer.toLowerCase().replace(/[^a-z0-9]/g,'')){
+norm(data.owner) === norm(data.buyer)){
 add("Owner = Buyer identity overlap",3);
 }
 
 if(data.buyer && data.seller &&
-data.buyer.toLowerCase().replace(/[^a-z0-9]/g,'') ===
-data.seller.toLowerCase().replace(/[^a-z0-9]/g,'')){
+norm(data.buyer) === norm(data.seller)){
 add("Buyer = Seller identity overlap",3);
 }
 
 /* Structure logic */
-if(data.structure === "Direct" && data.agent1){
+if(data.structure === "Direct" && data.agent1 && data.agent1.trim() !== ""){
 add("Agent present in Direct transaction",2);
 }
 
-if(data.structure === "Indirect" && !data.agent1){
+if(data.structure === "Indirect" && (!data.agent1 || data.agent1.trim() === "")){
 add("Missing agent in Indirect transaction",3);
 }
 
 /* KYC integrity */
 if(!data.kyc_name) add("Missing KYC Name",2);
+if(!data.kyc_idType) add("Missing ID Type",2);
+if(!data.kyc_capacity) add("Missing Capacity",2);
 
-/* ================= RESULT CLASSIFICATION ================= */
-
+/* Classification */
 let level = "CLEAN";
 let color = "green";
 
@@ -301,8 +302,7 @@ level = "WATCH";
 color = "orange";
 }
 
-/* ================= OUTPUT ================= */
-
+/* OUTPUT */
 document.getElementById("resultCard").style.display = "block";
 
 document.getElementById("result").innerHTML =
@@ -311,6 +311,12 @@ Score: ${score}<br><br>
 ${flags.length ?
 flags.map(f=>`- ${f.msg}`).join("<br>")
 : "No inconsistencies detected"}`;
+}
+
+/* ================= UTILITY ================= */
+
+function norm(s){
+return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
 
 /* ================= INIT ================= */
