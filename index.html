@@ -6,256 +6,286 @@
 <title>FSTL COMET OS</title>
 
 <style>
-html,body{
-margin:0;
-padding:0;
-height:100%;
-overflow:hidden;
-font-family:Arial;
-background:#0b1220;
-color:#fff;
-}
-
-.app{
-height:100vh;
-display:flex;
-flex-direction:column;
-}
-
-.scroll{
-flex:1;
-overflow-y:auto;
-overflow-x:hidden;
-}
-
-.card{
-background:#111c2e;
-padding:14px;
-margin:10px;
-border-radius:12px;
-}
-
-button{
-width:100%;
-padding:14px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#1e88e5;
-color:#fff;
-font-weight:bold;
-}
-
-select,input{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:none;
-background:#152238;
-color:#fff;
-}
-
-.small{font-size:12px;color:#9fb3c8}
-
-.badge{
-padding:6px 10px;
-border-radius:8px;
-font-weight:bold;
-display:inline-block;
-}
-
+body{margin:0;font-family:Arial;background:#0b1220;color:#fff}
+.card{margin:10px;padding:14px;background:#111c2e;border-radius:12px}
+input,select{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none;background:#152238;color:#fff}
+button{width:100%;padding:14px;margin-top:12px;border:none;border-radius:10px;background:#1e88e5;color:#fff}
+.badge{padding:6px 10px;border-radius:8px;font-weight:bold}
 .green{background:#2e7d32}
 .orange{background:#f9a825}
 .red{background:#c62828}
+.section{margin-top:14px;padding:10px;background:#152238;border-radius:10px}
+.small{font-size:12px;color:#9fb3c8}
+canvas{background:#fff;padding:10px;border-radius:10px}
 </style>
 </head>
 
 <body>
 
-<div class="app">
-<div class="scroll">
-
 <div class="card">
-<b>COMET OS</b><br>
-<span class="small">Identity + Property + Possession Verification Engine</span>
+<b>FIRST STANDARD TITLE LIMITED</b><br>
+<span class="small">COMET OS – Verification & Service Engine</span>
 </div>
 
-<div class="card">
-<b>Case Summary</b>
-<div id="summary">No data captured</div>
-</div>
-
-<div class="card" id="questionCard">
-<div id="questionText"></div>
-<select id="dropdown"></select>
-<input id="textInput" style="display:none"/>
-<div class="small" id="whyText"></div>
-<button onclick="nextStep()">Continue</button>
-</div>
-
-<div class="card" id="resultCard" style="display:none">
-<div id="result"></div>
-</div>
-
-</div>
-</div>
+<div class="card" id="app"></div>
 
 <script>
 
-/* STATE */
-let step=0;
-let data={};
-let mode="FLOW";
+/* =========================
+   GLOBAL STATE (LOCKED)
+========================= */
+let step = 0;
 
-/* FLOW */
-const flow=[
+let state = {
+case_id: "CASE-" + Date.now(),
+data: {},
+flags: [],
+score: 0,
+service: "",
+paid: false,
+receipt: ""
+};
 
-/* IDENTITY */
-{key:"role",q:"Who are you?",type:"select",options:["Owner","Buyer","Seller","Agent","Executor"]},
-{key:"kyc_name",q:"Your Full Name",type:"text"},
-{key:"kyc_idType",q:"ID Type",type:"select",options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"]},
-{key:"kyc_capacity",q:"Capacity",type:"select",options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR"]},
+/* =========================
+   FLOW (STRUCTURED)
+========================= */
+const flow = [
+{key:"case_type",label:"Transaction Type",type:"select",options:["exchange","probate","verification","dispute"]},
+{key:"role",label:"Your Role",type:"select",options:["Owner","Seller","Buyer","Agent"]},
 
-/* PROPERTY */
-{key:"property_type",q:"Property Type",type:"select",options:["Land","Building","Commercial","Mixed"]},
-{key:"property_location",q:"Property Location",type:"text"},
-{key:"property_control",q:"Who controls the property?",type:"select",options:["Owner","Family","Agent","Unknown"]},
+{key:"name",label:"Full Name",type:"text"},
+{key:"id",label:"ID Number",type:"text"},
+{key:"phone",label:"Phone Number",type:"text"},
 
-/* PARTIES */
-{key:"owner",q:"Owner Name",type:"text"},
-{key:"seller",q:"Seller Name",type:"text"},
-{key:"buyer",q:"Buyer Name",type:"text"},
+{key:"property",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
+{key:"location",label:"Property Location",type:"text"},
+{key:"ref",label:"Property Reference ID",type:"text"},
 
-/* AGENT */
-{key:"agent_status",q:"Is there an Agent?",type:"select",options:["NO","YES"]},
-{key:"agent_name",q:"Agent Name",type:"select",options:["N/A","Agent A","Agent B","Other"]},
+{key:"ownership",label:"Ownership Claim",type:"text"},
+{key:"control",label:"Control Status",type:"select",options:["Owner","Agent","Family","Unknown"]},
 
-/* TENANTS */
-{key:"tenant_status",q:"Is property occupied?",type:"select",options:["VACANT","TENANTED","UNKNOWN"]},
-{key:"tenant_count",q:"Number of tenants",type:"select",options:["0","1","2-5","5+"]},
-{key:"rent_status",q:"Are tenants paying owner?",type:"select",options:["YES","NO","UNKNOWN"]},
-
-/* STRUCTURE */
-{key:"structure",q:"Transaction Structure",type:"select",options:["Direct","Indirect"]}
-
+{key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","UNKNOWN"]},
+{key:"rent",label:"Rent Status",type:"select",options:["YES","NO","UNKNOWN"]}
 ];
 
-/* UTILS */
-function clean(v){
-if(!v)return"";
-v=v.trim().toUpperCase();
-if(v==="NONE"||v==="N/A")return"";
-return v;
-}
+/* =========================
+   RENDER ENGINE (STABLE)
+========================= */
+function render(){
 
-function norm(s){
-return(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-}
+const app = document.getElementById("app");
+app.innerHTML = "";
 
-/* RENDER */
-function renderStep(){
-let f=flow[step];
-
-document.getElementById("questionText").innerText=f.q;
-document.getElementById("whyText").innerText=f.why||"";
-
-let dd=document.getElementById("dropdown");
-let inp=document.getElementById("textInput");
-
-dd.innerHTML="";
-
-if(f.type==="select"){
-dd.style.display="block";
-inp.style.display="none";
-
-f.options.forEach(o=>{
-let opt=document.createElement("option");
-opt.value=o;
-opt.text=o;
-dd.appendChild(opt);
-});
-}else{
-dd.style.display="none";
-inp.style.display="block";
-inp.value="";
-}
-}
-
-/* NEXT */
-function nextStep(){
-if(mode!=="FLOW")return;
-
-let f=flow[step];
-let value=(f.type==="select")?document.getElementById("dropdown").value:document.getElementById("textInput").value;
-
-data[f.key]=clean(value);
-
-/* SUMMARY */
-document.getElementById("summary").innerHTML=
-Object.entries(data).map(([k,v])=>`${k}: ${v||"❌"}`).join("<br>");
-
-step++;
-
-if(step>=flow.length){
-runEngine();
+if(step >= flow.length){
+engine();
 return;
 }
 
-renderStep();
+let f = flow[step];
+
+let html = `<b>${f.label}</b><br>`;
+
+if(f.type === "select"){
+html += `<select id="input">`;
+f.options.forEach(o=>{
+html += `<option value="${o}">${o}</option>`;
+});
+html += `</select>`;
+}else{
+html += `<input id="input" type="text"/>`;
 }
 
-/* ENGINE */
-function runEngine(){
+html += `<button onclick="next()">Continue</button>`;
 
-mode="RESULT";
-document.getElementById("questionCard").style.display="none";
+app.innerHTML = html;
+}
 
-let flags=[];
-let score=0;
-function add(m,w){flags.push(m);score+=w;}
+/* =========================
+   STEP CONTROL
+========================= */
+function next(){
+let input = document.getElementById("input");
+if(!input) return;
 
-const hasAgent=data.agent_status==="YES"&&data.agent_name;
+state.data[flow[step].key] = input.value;
+
+step++;
+render();
+}
+
+/* =========================
+   SERVICE ROUTING
+========================= */
+function route(score){
+if(score >= 7) return "RISK MANAGEMENT";
+if(score >= 4) return "ASSET VERIFICATION";
+return "FAST SETTLEMENT";
+}
+
+/* =========================
+   QR GENERATOR (SAFE)
+========================= */
+function drawQR(text){
+let canvas = document.getElementById("qrCanvas");
+if(!canvas) return;
+
+let ctx = canvas.getContext("2d");
+ctx.fillStyle="#000";
+ctx.fillRect(0,0,200,200);
+
+ctx.fillStyle="#fff";
+
+for(let i=0;i<text.length;i++){
+let x = (i*7)%180;
+let y = Math.floor(i/25)*7;
+ctx.fillRect(x,y,5,5);
+}
+}
+
+/* =========================
+   CORE ENGINE
+========================= */
+function engine(){
+
+const app = document.getElementById("app");
+app.innerHTML = "";
+
+let d = state.data;
+let score = 0;
+let flags = [];
 
 /* IDENTITY */
-if(!data.kyc_name)add("Missing identity",3);
+if(!d.name){score+=2;flags.push("Missing Name");}
+if(!d.id){score+=3;flags.push("Missing ID");}
+if(!d.phone){score+=2;flags.push("Missing Phone");}
 
 /* PROPERTY */
-if(!data.property_location)add("Missing property location",2);
-if(data.property_control==="UNKNOWN")add("Property control unclear",3);
+if(!d.ref){score+=3;flags.push("Missing Property Reference");}
+if(d.control==="Unknown"){score+=2;flags.push("Unclear Control");}
 
-/* PARTY CONSISTENCY */
-if(norm(data.owner)===norm(data.buyer))add("Owner equals Buyer",3);
-if(norm(data.seller)===norm(data.buyer))add("Seller equals Buyer",3);
+/* POSSESSION */
+if(d.occupancy==="TENANTED" && d.rent==="NO"){
+score+=2;flags.push("Rent Conflict");
+}
 
-/* AGENT */
-if(data.structure==="Indirect"&&!hasAgent)add("Indirect without agent",3);
-if(data.structure==="Direct"&&hasAgent)add("Agent in direct deal",2);
+/* RISK LEVEL */
+let level="CLEAN", color="green";
+if(score>=7){level="HIGH RISK";color="red";}
+else if(score>=4){level="WATCH";color="orange";}
 
-/* TENANTS */
-if(data.tenant_status==="TENANTED"&&data.rent_status==="NO")
-add("Tenants not paying owner",3);
+/* SERVICE */
+let service = route(score);
 
-if(data.tenant_status==="TENANTED"&&data.property_control==="UNKNOWN")
-add("Tenants but control unclear",3);
+/* STORE */
+state.score = score;
+state.flags = flags;
+state.service = service;
 
-/* CLASSIFY */
-let level="CLEAN",color="green";
-if(score>=8){level="HIGH RISK";color="red";}
-else if(score>=3){level="WATCH";color="orange";}
+/* QR PAYLOAD */
+let payload = JSON.stringify({
+case_id: state.case_id,
+score: score,
+status: level,
+service: service
+});
 
 /* OUTPUT */
-document.getElementById("resultCard").style.display="block";
-document.getElementById("result").innerHTML=
-`<span class="badge ${color}">${level}</span><br><br>
-Score: ${score}<br><br>
-${flags.length?flags.join("<br>"):"No inconsistencies"}`;
+app.innerHTML = `
+<div id="report">
 
-document.getElementById("resultCard").scrollIntoView({behavior:"smooth"});
+<b>CASE COMPLETE</b><br><br>
+
+<b>CASE ID:</b> ${state.case_id}<br><br>
+
+<span class="badge ${color}">${level}</span><br><br>
+
+<b>Trust Score:</b> ${score}<br><br>
+
+<b>Service Route:</b><br>${service}<br><br>
+
+<b>Flags:</b><br>${flags.join("<br>") || "None"}<br><br>
+
+<canvas id="qrCanvas" width="200" height="200"></canvas>
+
+<div class="section">
+<b>FSTL Service Activation</b><br><br>
+
+Service: ${service}<br>
+Fee: ₦25,000<br><br>
+
+Bank: First Bank Nigeria (FBHN PLC)<br>
+Account Name: First Standard Limited<br>
+Account Number: 2025222557<br><br>
+
+<input id="receipt" placeholder="Enter Payment Reference"/>
+<button onclick="confirmPayment()">Confirm Payment</button>
+</div>
+
+<div class="section">
+<b>FSTL Contact</b><br><br>
+
+Address:<br>
+No. 19 Egbor Avenue, GRA, Benin City, Nigeria<br><br>
+
+Phone / WhatsApp:<br>
++2348035888622<br><br>
+
+Email:<br>
+fstlsite@gmail.com
+</div>
+
+</div>
+
+<button onclick="printPDF()">Export PDF</button>
+<button onclick="restart()">New Case</button>
+`;
+
+drawQR(payload);
+}
+
+/* =========================
+   PAYMENT CONFIRM
+========================= */
+function confirmPayment(){
+let ref = document.getElementById("receipt").value;
+
+if(!ref){
+alert("Enter payment reference");
+return;
+}
+
+state.paid = true;
+state.receipt = ref;
+
+alert("Payment recorded. Contact FSTL to proceed.");
+}
+
+/* =========================
+   PDF EXPORT
+========================= */
+function printPDF(){
+window.print();
+}
+
+/* =========================
+   RESET
+========================= */
+function restart(){
+step = 0;
+state = {
+case_id: "CASE-" + Date.now(),
+data: {},
+flags: [],
+score: 0,
+service: "",
+paid: false,
+receipt: ""
+};
+render();
 }
 
 /* INIT */
-renderStep();
+render();
 
 </script>
 
