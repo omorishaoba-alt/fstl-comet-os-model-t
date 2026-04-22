@@ -54,16 +54,17 @@ select,input{
 <div class="card">
 <b>COMET OS Assistant</b><br>
 <span class="small">
-We help structure transaction and identity information clearly and consistently.
+Structured identity + transaction clarity system
 </span>
 </div>
 
 <div class="card">
-<b>Current Case Summary</b>
+<b>Case Summary</b>
 <div id="summary">No data captured yet.</div>
 </div>
 
-<div class="card" id="questionCard">
+<div class="card">
+
 <div id="questionText"></div>
 
 <select id="dropdown"></select>
@@ -72,6 +73,7 @@ We help structure transaction and identity information clearly and consistently.
 <div class="small" id="whyText"></div>
 
 <button onclick="nextStep()">Continue</button>
+
 </div>
 
 <div class="card" id="resultCard" style="display:none">
@@ -83,8 +85,9 @@ We help structure transaction and identity information clearly and consistently.
 /* ================= STATE ================= */
 
 let step = 0;
-
 let data = {};
+
+/* ================= FLOW ================= */
 
 const flow = [
 
@@ -93,7 +96,7 @@ key:"role",
 q:"Who are you in this transaction?",
 type:"select",
 options:["Owner","Buyer","Seller","Agent","Executor"],
-why:"Defines your role in the transaction structure"
+why:"Defines role context"
 },
 
 {
@@ -101,43 +104,43 @@ key:"transaction",
 q:"What type of transaction is this?",
 type:"select",
 options:["Sale","Probate","Transfer","Mortgage"],
-why:"Defines transaction context for consistency rules"
+why:"Defines transaction structure"
 },
 
 {
 key:"structure",
 q:"How is this transaction arranged?",
 type:"select",
-options:["Direct","Indirect (via agent)"],
-why:"Defines relationship between parties"
+options:["Direct","Indirect"],
+why:"Defines party linkage model"
 },
 
 {
 key:"owner",
 q:"Enter Owner Name",
 type:"text",
-why:"Establishes ownership identity reference"
+why:"Ownership identity reference"
 },
 
 {
 key:"seller",
 q:"Enter Seller Name",
 type:"text",
-why:"Defines selling party identity"
+why:"Selling party identity"
 },
 
 {
 key:"buyer",
 q:"Enter Buyer Name",
 type:"text",
-why:"Defines receiving party identity"
+why:"Receiving party identity"
 },
 
 {
 key:"kyc_name",
 q:"KYC Name (Person completing this)",
 type:"text",
-why:"Identity of user completing structured input"
+why:"User identity anchor"
 },
 
 {
@@ -145,7 +148,7 @@ key:"kyc_idType",
 q:"Select ID Type",
 type:"select",
 options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"],
-why:"Standard identity classification"
+why:"Identity verification type"
 },
 
 {
@@ -153,7 +156,7 @@ key:"kyc_capacity",
 q:"Select Capacity",
 type:"select",
 options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
-why:"Defines legal/transactional capacity context"
+why:"Legal/transactional role classification"
 }
 
 ];
@@ -178,9 +181,12 @@ if(f.type === "select"){
 
   f.options.forEach(o=>{
     let opt = document.createElement("option");
+    opt.value = o;
     opt.text = o;
-    dd.add(opt);
+    dd.appendChild(opt);
   });
+
+  dd.selectedIndex = 0;
 
 }else{
   dd.style.display = "none";
@@ -200,7 +206,7 @@ let value = (f.type === "select")
   : document.getElementById("textInput").value.trim();
 
 if(!value){
-  alert("Please provide an answer");
+  alert("Field required");
   return;
 }
 
@@ -209,7 +215,7 @@ data[f.key] = value;
 /* LIVE SUMMARY */
 document.getElementById("summary").innerHTML =
 Object.entries(data)
-.map(([k,v])=>`- ${k}: ${v}`)
+.map(([k,v])=>`- ${k}: ${v || "❌ MISSING"}`)
 .join("<br>");
 
 step++;
@@ -221,18 +227,33 @@ if(step < flow.length){
 }
 }
 
-/* ================= ENGINE ================= */
-
-function norm(s){
-return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-}
+/* ================= ENGINE (FIXED) ================= */
 
 function runEngine(){
+
+/* ================= HARD VALIDATION GATE ================= */
+
+if(!data.kyc_name){
+alert("KYC Name required");
+return;
+}
+
+if(!data.kyc_idType){
+alert("ID Type required");
+return;
+}
+
+if(!data.kyc_capacity){
+alert("Capacity required");
+return;
+}
+
+/* ================= SIGNAL ENGINE ================= */
 
 let flags = [];
 let score = 0;
 
-function add(msg, w){
+function add(msg,w){
 flags.push({msg,w});
 score += w;
 }
@@ -240,44 +261,48 @@ score += w;
 /* Identity checks */
 if(!data.owner) add("Missing Owner",2);
 if(!data.seller) add("Missing Seller",2);
-if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
+if(!data.buyer && data.transaction !== "Probate") add("Missing Buyer",2);
 
-/* Role conflicts */
-if(data.owner && data.buyer && norm(data.owner) === norm(data.buyer)){
+/* Identity conflicts */
+if(data.owner && data.buyer &&
+data.owner.toLowerCase().replace(/[^a-z0-9]/g,'') ===
+data.buyer.toLowerCase().replace(/[^a-z0-9]/g,'')){
 add("Owner = Buyer identity overlap",3);
 }
 
-if(data.buyer && data.seller && norm(data.buyer) === norm(data.seller)){
+if(data.buyer && data.seller &&
+data.buyer.toLowerCase().replace(/[^a-z0-9]/g,'') ===
+data.seller.toLowerCase().replace(/[^a-z0-9]/g,'')){
 add("Buyer = Seller identity overlap",3);
 }
 
 /* Structure logic */
-if(data.structure === "DIRECT" && data.agent1){
-add("Agent present in DIRECT transaction",2);
+if(data.structure === "Direct" && data.agent1){
+add("Agent present in Direct transaction",2);
 }
 
-if(data.structure === "INDIRECT" && !data.agent1){
-add("Missing agent in INDIRECT transaction",3);
+if(data.structure === "Indirect" && !data.agent1){
+add("Missing agent in Indirect transaction",3);
 }
 
-/* KYC validation */
+/* KYC integrity */
 if(!data.kyc_name) add("Missing KYC Name",2);
-if(!data.kyc_idType) add("Missing ID Type",2);
-if(!data.kyc_capacity) add("Missing Capacity",2);
 
-/* Classification */
+/* ================= RESULT CLASSIFICATION ================= */
+
 let level = "CLEAN";
 let color = "green";
 
 if(score >= 8){
-level = "RED FLAGS";
+level = "HIGH RISK";
 color = "red";
 }else if(score >= 3){
 level = "WATCH";
 color = "orange";
 }
 
-/* Output */
+/* ================= OUTPUT ================= */
+
 document.getElementById("resultCard").style.display = "block";
 
 document.getElementById("result").innerHTML =
