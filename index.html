@@ -6,109 +6,92 @@
 <title>FSTL COMET OS</title>
 
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
-  width:100%;
-  overflow:hidden;
-  font-family:Arial;
-  background:#0b1220;
-  color:#fff;
+html,body{
+margin:0;
+padding:0;
+height:100%;
+overflow:hidden;
+font-family:Arial;
+background:#0b1220;
+color:#fff;
 }
 
 .app{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
+height:100vh;
+display:flex;
+flex-direction:column;
 }
 
 .scroll{
-  flex:1;
-  overflow-y:auto;
-  overflow-x:hidden;
+flex:1;
+overflow-y:auto;
+overflow-x:hidden;
 }
 
 .card{
-  background:#111c2e;
-  padding:14px;
-  margin:10px;
-  border-radius:12px;
-  box-sizing:border-box;
+background:#111c2e;
+padding:14px;
+margin:10px;
+border-radius:12px;
 }
 
 button{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border:none;
-  border-radius:10px;
-  background:#1e88e5;
-  color:#fff;
-  font-weight:bold;
+width:100%;
+padding:14px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#1e88e5;
+color:#fff;
+font-weight:bold;
 }
 
 select,input{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:8px;
-  border:none;
-  background:#152238;
-  color:#fff;
-  box-sizing:border-box;
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+background:#152238;
+color:#fff;
 }
 
 .small{font-size:12px;color:#9fb3c8}
 
 .badge{
-  padding:6px 10px;
-  border-radius:8px;
-  font-weight:bold;
-  display:inline-block;
+padding:6px 10px;
+border-radius:8px;
+font-weight:bold;
+display:inline-block;
 }
 
 .green{background:#2e7d32}
 .orange{background:#f9a825}
 .red{background:#c62828}
-
-.fixed-result{
-  position:sticky;
-  bottom:0;
-  background:#0b1220;
-  padding:10px;
-  border-top:1px solid #1e2a3a;
-}
 </style>
 </head>
 
 <body>
 
 <div class="app">
-
 <div class="scroll">
 
 <div class="card">
-<b>COMET OS Assistant</b><br>
-<span class="small">Structured identity + transaction intelligence system</span>
+<b>COMET OS</b><br>
+<span class="small">Identity + Property + Possession Verification Engine</span>
 </div>
 
 <div class="card">
 <b>Case Summary</b>
-<div id="summary">No data captured yet.</div>
+<div id="summary">No data captured</div>
 </div>
 
 <div class="card" id="questionCard">
-
 <div id="questionText"></div>
-
 <select id="dropdown"></select>
 <input id="textInput" style="display:none"/>
-
 <div class="small" id="whyText"></div>
-
 <button onclick="nextStep()">Continue</button>
-
 </div>
 
 <div class="card" id="resultCard" style="display:none">
@@ -116,262 +99,162 @@ select,input{
 </div>
 
 </div>
-
 </div>
 
 <script>
 
-/* ================= STATE MACHINE ================= */
+/* STATE */
+let step=0;
+let data={};
+let mode="FLOW";
 
-let step = 0;
-let data = {};
-let mode = "FLOW";
+/* FLOW */
+const flow=[
 
-/* ================= FLOW ================= */
+/* IDENTITY */
+{key:"role",q:"Who are you?",type:"select",options:["Owner","Buyer","Seller","Agent","Executor"]},
+{key:"kyc_name",q:"Your Full Name",type:"text"},
+{key:"kyc_idType",q:"ID Type",type:"select",options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"]},
+{key:"kyc_capacity",q:"Capacity",type:"select",options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR"]},
 
-const flow = [
+/* PROPERTY */
+{key:"property_type",q:"Property Type",type:"select",options:["Land","Building","Commercial","Mixed"]},
+{key:"property_location",q:"Property Location",type:"text"},
+{key:"property_control",q:"Who controls the property?",type:"select",options:["Owner","Family","Agent","Unknown"]},
 
-{
-key:"role",
-q:"Who are you in this transaction?",
-type:"select",
-options:["Owner","Buyer","Seller","Agent","Executor"],
-why:"Defines role context"
-},
+/* PARTIES */
+{key:"owner",q:"Owner Name",type:"text"},
+{key:"seller",q:"Seller Name",type:"text"},
+{key:"buyer",q:"Buyer Name",type:"text"},
 
-{
-key:"transaction",
-q:"What type of transaction is this?",
-type:"select",
-options:["Sale","Probate","Transfer","Mortgage"],
-why:"Defines transaction type"
-},
+/* AGENT */
+{key:"agent_status",q:"Is there an Agent?",type:"select",options:["NO","YES"]},
+{key:"agent_name",q:"Agent Name",type:"select",options:["N/A","Agent A","Agent B","Other"]},
 
-{
-key:"structure",
-q:"Direct or Indirect transaction?",
-type:"select",
-options:["Direct","Indirect"],
-why:"Defines linkage model"
-},
+/* TENANTS */
+{key:"tenant_status",q:"Is property occupied?",type:"select",options:["VACANT","TENANTED","UNKNOWN"]},
+{key:"tenant_count",q:"Number of tenants",type:"select",options:["0","1","2-5","5+"]},
+{key:"rent_status",q:"Are tenants paying owner?",type:"select",options:["YES","NO","UNKNOWN"]},
 
-{
-key:"owner",
-q:"Enter Owner Name",
-type:"text",
-why:"Ownership identity"
-},
-
-{
-key:"seller",
-q:"Enter Seller Name",
-type:"text",
-why:"Seller identity"
-},
-
-{
-key:"buyer",
-q:"Enter Buyer Name",
-type:"text",
-why:"Buyer identity"
-},
-
-{
-key:"agent_status",
-q:"Is an Agent involved?",
-type:"select",
-options:["NO AGENT","AGENT INVOLVED"],
-why:"Determines intermediary presence"
-},
-
-{
-key:"agent_name",
-q:"Select Agent Name (if applicable)",
-type:"select",
-options:["N/A","Agent A","Agent B","Agent C","Other"],
-why:"Agent identity (controlled state)"
-},
-
-{
-key:"kyc_name",
-q:"KYC Name",
-type:"text",
-why:"User identity anchor"
-},
-
-{
-key:"kyc_idType",
-q:"Select ID Type",
-type:"select",
-options:["NIN","BVN","PASSPORT","DRIVERS_LICENSE"],
-why:"Identity classification"
-},
-
-{
-key:"kyc_capacity",
-q:"Select Capacity",
-type:"select",
-options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
-why:"Legal role classification"
-}
+/* STRUCTURE */
+{key:"structure",q:"Transaction Structure",type:"select",options:["Direct","Indirect"]}
 
 ];
 
-/* ================= UTILS ================= */
-
+/* UTILS */
 function clean(v){
-if(!v) return "";
-v = v.trim().toUpperCase();
-if(v === "NONE" || v === "N/A") return "";
+if(!v)return"";
+v=v.trim().toUpperCase();
+if(v==="NONE"||v==="N/A")return"";
 return v;
 }
 
 function norm(s){
-return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+return(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
 
-/* ================= RENDER ================= */
-
+/* RENDER */
 function renderStep(){
+let f=flow[step];
 
-let f = flow[step];
+document.getElementById("questionText").innerText=f.q;
+document.getElementById("whyText").innerText=f.why||"";
 
-document.getElementById("questionText").innerText = f.q;
-document.getElementById("whyText").innerText = f.why;
+let dd=document.getElementById("dropdown");
+let inp=document.getElementById("textInput");
 
-let dd = document.getElementById("dropdown");
-let inp = document.getElementById("textInput");
+dd.innerHTML="";
 
-dd.innerHTML = "";
+if(f.type==="select"){
+dd.style.display="block";
+inp.style.display="none";
 
-if(f.type === "select"){
-  dd.style.display = "block";
-  inp.style.display = "none";
-
-  f.options.forEach(o=>{
-    let opt = document.createElement("option");
-    opt.value = o;
-    opt.text = o;
-    dd.appendChild(opt);
-  });
-
-  dd.selectedIndex = 0;
-
+f.options.forEach(o=>{
+let opt=document.createElement("option");
+opt.value=o;
+opt.text=o;
+dd.appendChild(opt);
+});
 }else{
-  dd.style.display = "none";
-  inp.style.display = "block";
-  inp.value = "";
+dd.style.display="none";
+inp.style.display="block";
+inp.value="";
 }
 }
 
-/* ================= FLOW CONTROL ================= */
-
+/* NEXT */
 function nextStep(){
+if(mode!=="FLOW")return;
 
-if(mode !== "FLOW") return;
+let f=flow[step];
+let value=(f.type==="select")?document.getElementById("dropdown").value:document.getElementById("textInput").value;
 
-let f = flow[step];
+data[f.key]=clean(value);
 
-let value = (f.type === "select")
-  ? document.getElementById("dropdown").value
-  : document.getElementById("textInput").value.trim();
-
-data[f.key] = clean(value);
-
-/* summary */
-document.getElementById("summary").innerHTML =
-Object.entries(data)
-.map(([k,v])=>`- ${k}: ${v || "❌ EMPTY"}`)
-.join("<br>");
+/* SUMMARY */
+document.getElementById("summary").innerHTML=
+Object.entries(data).map(([k,v])=>`${k}: ${v||"❌"}`).join("<br>");
 
 step++;
 
-/* FLOW END */
-if(step >= flow.length){
-  runEngine();
-  return;
+if(step>=flow.length){
+runEngine();
+return;
 }
 
 renderStep();
 }
 
-/* ================= ENGINE ================= */
-
+/* ENGINE */
 function runEngine(){
 
-mode = "RESULT";
+mode="RESULT";
+document.getElementById("questionCard").style.display="none";
 
-/* LOCK UI */
-document.getElementById("questionCard").style.display = "none";
+let flags=[];
+let score=0;
+function add(m,w){flags.push(m);score+=w;}
 
-/* AGENT LOGIC (CONTROLLED STATE) */
-const hasAgent =
-data.agent_status === "AGENT INVOLVED" &&
-data.agent_name &&
-data.agent_name !== "N/A";
+const hasAgent=data.agent_status==="YES"&&data.agent_name;
 
-/* VALIDATION */
-let flags = [];
-let score = 0;
+/* IDENTITY */
+if(!data.kyc_name)add("Missing identity",3);
 
-function add(m,w){ flags.push(m); score += w; }
+/* PROPERTY */
+if(!data.property_location)add("Missing property location",2);
+if(data.property_control==="UNKNOWN")add("Property control unclear",3);
 
-if(!data.owner) add("Missing Owner",2);
-if(!data.seller) add("Missing Seller",2);
-if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
+/* PARTY CONSISTENCY */
+if(norm(data.owner)===norm(data.buyer))add("Owner equals Buyer",3);
+if(norm(data.seller)===norm(data.buyer))add("Seller equals Buyer",3);
 
-/* conflicts */
-if(data.owner && data.buyer &&
-norm(data.owner) === norm(data.buyer)){
-add("Owner = Buyer overlap",3);
-}
+/* AGENT */
+if(data.structure==="Indirect"&&!hasAgent)add("Indirect without agent",3);
+if(data.structure==="Direct"&&hasAgent)add("Agent in direct deal",2);
 
-if(data.buyer && data.seller &&
-norm(data.buyer) === norm(data.seller)){
-add("Buyer = Seller overlap",3);
-}
+/* TENANTS */
+if(data.tenant_status==="TENANTED"&&data.rent_status==="NO")
+add("Tenants not paying owner",3);
 
-/* structure logic */
-if(data.structure === "Direct" && hasAgent){
-add("Agent present in Direct transaction",2);
-}
+if(data.tenant_status==="TENANTED"&&data.property_control==="UNKNOWN")
+add("Tenants but control unclear",3);
 
-if(data.structure === "Indirect" && !hasAgent){
-add("Missing agent in Indirect transaction",3);
-}
+/* CLASSIFY */
+let level="CLEAN",color="green";
+if(score>=8){level="HIGH RISK";color="red";}
+else if(score>=3){level="WATCH";color="orange";}
 
-/* KYC */
-if(!data.kyc_name) add("Missing KYC Name",2);
-if(!data.kyc_idType) add("Missing ID Type",2);
-if(!data.kyc_capacity) add("Missing Capacity",2);
-
-/* classification */
-let level = "CLEAN";
-let color = "green";
-
-if(score >= 8){
-level = "HIGH RISK";
-color = "red";
-}else if(score >= 3){
-level = "WATCH";
-color = "orange";
-}
-
-/* RESULT */
-document.getElementById("resultCard").style.display = "block";
-
-document.getElementById("result").innerHTML =
+/* OUTPUT */
+document.getElementById("resultCard").style.display="block";
+document.getElementById("result").innerHTML=
 `<span class="badge ${color}">${level}</span><br><br>
 Score: ${score}<br><br>
-${flags.length ? flags.join("<br>") : "No inconsistencies detected"}`;
+${flags.length?flags.join("<br>"):"No inconsistencies"}`;
 
-/* anchor */
-document.getElementById("resultCard")
-.scrollIntoView({behavior:"smooth"});
+document.getElementById("resultCard").scrollIntoView({behavior:"smooth"});
 }
 
-/* ================= INIT ================= */
-
+/* INIT */
 renderStep();
 
 </script>
