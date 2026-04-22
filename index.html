@@ -2,196 +2,346 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>FSTL COMET OS</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1220;color:#fff}
-.card{margin:10px;padding:14px;background:#111c2e;border-radius:12px}
-input,select{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none;background:#152238;color:#fff}
-button{width:100%;padding:14px;margin-top:12px;border:none;border-radius:10px;background:#1e88e5;color:#fff}
-.badge{padding:6px 10px;border-radius:8px;font-weight:bold}
+html,body{
+margin:0;
+padding:0;
+overflow-x:hidden;
+background:#0b1220;
+color:#fff;
+font-family:Arial;
+}
+
+/* APP FRAME */
+.app{
+max-width:420px;
+margin:0 auto;
+height:100vh;
+display:flex;
+flex-direction:column;
+}
+
+/* HEADER (FRONT COVER BRAND) */
+.header{
+text-align:center;
+padding:12px;
+background:#111c2e;
+}
+
+.brand-title{
+font-size:16px;
+font-weight:700;
+letter-spacing:0.5px;
+}
+
+.brand-sub{
+font-size:12px;
+color:#9fb3c8;
+margin-top:4px;
+}
+
+/* SCREEN */
+.screen{
+flex:1;
+padding:16px;
+overflow-y:auto;
+}
+
+/* CARD */
+.card{
+background:#111c2e;
+padding:14px;
+border-radius:12px;
+margin-bottom:10px;
+}
+
+/* INPUTS */
+input,select{
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+background:#152238;
+color:#fff;
+box-sizing:border-box;
+}
+
+/* BUTTONS */
+button{
+width:100%;
+padding:14px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#1e88e5;
+color:#fff;
+}
+
+/* NAV ROW */
+.row{
+display:flex;
+gap:10px;
+}
+
+.row button{
+flex:1;
+}
+
+/* BADGES */
+.badge{
+padding:6px 10px;
+border-radius:8px;
+display:inline-block;
+font-weight:bold;
+}
+
 .green{background:#2e7d32}
 .orange{background:#f9a825}
 .red{background:#c62828}
-.section{margin-top:14px;padding:10px;background:#152238;border-radius:10px}
-.small{font-size:12px;color:#9fb3c8}
-canvas{background:#fff;padding:10px;border-radius:10px}
+
+/* SECTIONS */
+.section{
+margin-top:12px;
+padding:10px;
+background:#152238;
+border-radius:10px;
+font-size:13px;
+}
+
+pre{
+white-space:pre-wrap;
+font-size:11px;
+background:#000;
+padding:10px;
+border-radius:8px;
+}
 </style>
 </head>
 
 <body>
 
-<div class="card">
-<b>FIRST STANDARD TITLE LIMITED</b><br>
-<span class="small">COMET OS – Verification & Service Engine</span>
+<div class="app">
+
+<!-- FRONT HEADER -->
+<div class="header">
+<div class="brand-title">FIRST STANDARD TITLE LIMITED</div>
+<div class="brand-sub">COMET OS · Verification · Risk · Transaction Engine</div>
 </div>
 
-<div class="card" id="app"></div>
+<!-- DYNAMIC SCREEN -->
+<div class="screen" id="app"></div>
+
+</div>
 
 <script>
 
 /* =========================
-   GLOBAL STATE (LOCKED)
+   STATE ENGINE
 ========================= */
+
+let mode = "front";
 let step = 0;
 
 let state = {
-case_id: "CASE-" + Date.now(),
-data: {},
-flags: [],
-score: 0,
-service: "",
-paid: false,
-receipt: ""
+case_id:"CASE-"+Date.now(),
+data:{},
+flags:[],
+score:0,
+service:"",
+paid:false,
+receipt:""
 };
 
 /* =========================
-   FLOW (STRUCTURED)
+   FRONT COVER (INTENT GATE)
 ========================= */
-const flow = [
-{key:"case_type",label:"Transaction Type",type:"select",options:["exchange","probate","verification","dispute"]},
-{key:"role",label:"Your Role",type:"select",options:["Owner","Seller","Buyer","Agent"]},
 
-{key:"name",label:"Full Name",type:"text"},
-{key:"id",label:"ID Number",type:"text"},
+const front = {
+label:"How can COMET OS assist you?",
+options:[
+"Property Verification",
+"Ownership / Probate",
+"Sale / Purchase Structuring",
+"Risk Check Only"
+]
+};
+
+/* =========================
+   MAIN FLOW (STRUCTURED KYC + PROPERTY)
+========================= */
+
+const flow = [
+{key:"role",label:"Your Role",type:"select",options:["Owner","Seller","Buyer","Agent","Institution","Family Rep"]},
+
+{key:"id_type",label:"ID Type",type:"select",options:["NIN","Voter Card","Passport","Driver License","RC Number"]},
+{key:"id_number",label:"ID Number",type:"text"},
 {key:"phone",label:"Phone Number",type:"text"},
 
-{key:"property",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
+{key:"property_type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
 {key:"location",label:"Property Location",type:"text"},
 {key:"ref",label:"Property Reference ID",type:"text"},
 
-{key:"ownership",label:"Ownership Claim",type:"text"},
 {key:"control",label:"Control Status",type:"select",options:["Owner","Agent","Family","Unknown"]},
-
-{key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","UNKNOWN"]},
-{key:"rent",label:"Rent Status",type:"select",options:["YES","NO","UNKNOWN"]}
+{key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","OWNER OCCUPIED","UNKNOWN"]},
+{key:"rent",label:"Rent Status (if applicable)",type:"select",options:["PAYING","NOT PAYING","UNKNOWN"]}
 ];
 
 /* =========================
-   RENDER ENGINE (STABLE)
+   RENDER ENGINE
 ========================= */
+
 function render(){
 
-const app = document.getElementById("app");
-app.innerHTML = "";
+const app=document.getElementById("app");
+app.innerHTML="";
 
-if(step >= flow.length){
-engine();
+/* FRONT COVER */
+if(mode==="front"){
+app.innerHTML=`
+<div class="card">
+
+<b>${front.label}</b>
+
+<select id="input">
+${front.options.map(o=>`<option>${o}</option>`).join("")}
+</select>
+
+<button onclick="enter()">Proceed</button>
+
+</div>
+`;
 return;
 }
 
-let f = flow[step];
-
-let html = `<b>${f.label}</b><br>`;
-
-if(f.type === "select"){
-html += `<select id="input">`;
-f.options.forEach(o=>{
-html += `<option value="${o}">${o}</option>`;
-});
-html += `</select>`;
-}else{
-html += `<input id="input" type="text"/>`;
+/* MAIN FLOW */
+if(step>=flow.length){
+return engine();
 }
 
-html += `<button onclick="next()">Continue</button>`;
+let f=flow[step];
+let val=state.data[f.key]||"";
 
-app.innerHTML = html;
+let html=`<div class="card">
+
+<b>${f.label}</b><br>`;
+
+if(f.type==="select"){
+html+=`<select id="input">`;
+f.options.forEach(o=>{
+html+=`<option ${o===val?"selected":""}>${o}</option>`;
+});
+html+=`</select>`;
+}else{
+html+=`<input id="input" value="${val}"/>`;
+}
+
+html+=`
+<div class="row">
+${step>0?`<button onclick="back()">Back</button>`:""}
+<button onclick="next()">Next</button>
+</div>
+
+</div>`;
+
+app.innerHTML=html;
 }
 
 /* =========================
-   STEP CONTROL
+   FRONT ENTRY
 ========================= */
-function next(){
-let input = document.getElementById("input");
-if(!input) return;
 
-state.data[flow[step].key] = input.value;
-
-step++;
+function enter(){
+let v=document.getElementById("input").value;
+state.data.intent=v;
+mode="main";
 render();
 }
 
 /* =========================
-   SERVICE ROUTING
+   NAVIGATION
 ========================= */
+
+function next(){
+let input=document.getElementById("input");
+if(!input)return;
+
+state.data[flow[step].key]=input.value;
+step++;
+render();
+}
+
+function back(){
+if(step>0)step--;
+render();
+}
+
+/* =========================
+   ROUTING ENGINE
+========================= */
+
 function route(score){
-if(score >= 7) return "RISK MANAGEMENT";
-if(score >= 4) return "ASSET VERIFICATION";
-return "FAST SETTLEMENT";
+if(score>=7)return"RISK MANAGEMENT";
+if(score>=4)return"ASSET VERIFICATION";
+return"FAST SETTLEMENT";
 }
 
 /* =========================
-   QR GENERATOR (SAFE)
+   CORE ENGINE (RISK + OUTPUT)
 ========================= */
-function drawQR(text){
-let canvas = document.getElementById("qrCanvas");
-if(!canvas) return;
 
-let ctx = canvas.getContext("2d");
-ctx.fillStyle="#000";
-ctx.fillRect(0,0,200,200);
-
-ctx.fillStyle="#fff";
-
-for(let i=0;i<text.length;i++){
-let x = (i*7)%180;
-let y = Math.floor(i/25)*7;
-ctx.fillRect(x,y,5,5);
-}
-}
-
-/* =========================
-   CORE ENGINE
-========================= */
 function engine(){
 
-const app = document.getElementById("app");
-app.innerHTML = "";
+const app=document.getElementById("app");
+app.innerHTML="";
 
-let d = state.data;
-let score = 0;
-let flags = [];
+let d=state.data;
+let score=0;
+let flags=[];
 
 /* IDENTITY */
-if(!d.name){score+=2;flags.push("Missing Name");}
-if(!d.id){score+=3;flags.push("Missing ID");}
+if(!d.id_number){score+=3;flags.push("Missing ID Number");}
 if(!d.phone){score+=2;flags.push("Missing Phone");}
 
 /* PROPERTY */
 if(!d.ref){score+=3;flags.push("Missing Property Reference");}
 if(d.control==="Unknown"){score+=2;flags.push("Unclear Control");}
 
-/* POSSESSION */
-if(d.occupancy==="TENANTED" && d.rent==="NO"){
-score+=2;flags.push("Rent Conflict");
+/* OCCUPANCY RISK */
+if(d.occupancy==="TENANTED" && d.rent==="NOT PAYING"){
+score+=2;
+flags.push("Rent Conflict");
 }
 
-/* RISK LEVEL */
-let level="CLEAN", color="green";
+/* CLASSIFICATION */
+let level="CLEAN",color="green";
 if(score>=7){level="HIGH RISK";color="red";}
 else if(score>=4){level="WATCH";color="orange";}
 
-/* SERVICE */
-let service = route(score);
+/* SERVICE ROUTE */
+let service=route(score);
 
-/* STORE */
-state.score = score;
-state.flags = flags;
-state.service = service;
+/* SAVE */
+state.score=score;
+state.flags=flags;
+state.service=service;
 
-/* QR PAYLOAD */
-let payload = JSON.stringify({
-case_id: state.case_id,
-score: score,
-status: level,
-service: service
-});
+/* QR DATA (TEXT ONLY) */
+let qrPayload={
+case_id:state.case_id,
+intent:d.intent,
+score:score,
+status:level,
+service:service
+};
 
 /* OUTPUT */
-app.innerHTML = `
-<div id="report">
+app.innerHTML=`
+
+<div class="card">
 
 <b>CASE COMPLETE</b><br><br>
 
@@ -199,87 +349,82 @@ app.innerHTML = `
 
 <span class="badge ${color}">${level}</span><br><br>
 
-<b>Trust Score:</b> ${score}<br><br>
+<b>Intent:</b> ${d.intent}<br>
+<b>Score:</b> ${score}<br>
+<b>Service:</b> ${service}<br><br>
 
-<b>Service Route:</b><br>${service}<br><br>
-
-<b>Flags:</b><br>${flags.join("<br>") || "None"}<br><br>
-
-<canvas id="qrCanvas" width="200" height="200"></canvas>
+<b>Flags:</b><br>
+${flags.length?flags.join("<br>"):"None"}<br>
 
 <div class="section">
-<b>FSTL Service Activation</b><br><br>
+<b>QR DATA (TEXT STRUCTURE)</b>
+<pre>${JSON.stringify(qrPayload,null,2)}</pre>
+</div>
 
-Service: ${service}<br>
-Fee: ₦25,000<br><br>
+<div class="section">
+<b>FSTL PAYMENT</b><br><br>
 
-Bank: First Bank Nigeria (FBHN PLC)<br>
-Account Name: First Standard Limited<br>
-Account Number: 2025222557<br><br>
+Fee: ₦25,000<br>
+Bank: First Bank Nigeria<br>
+Account: 2025222557<br>
+Name: First Standard Limited<br>
 
-<input id="receipt" placeholder="Enter Payment Reference"/>
+<input id="receipt" placeholder="Payment Reference"/>
 <button onclick="confirmPayment()">Confirm Payment</button>
 </div>
 
 <div class="section">
-<b>FSTL Contact</b><br><br>
-
-Address:<br>
-No. 19 Egbor Avenue, GRA, Benin City, Nigeria<br><br>
-
-Phone / WhatsApp:<br>
-+2348035888622<br><br>
-
-Email:<br>
-fstlsite@gmail.com
+<b>CONTACT</b><br>
++2348035888622<br>
+fstlsite@gmail.com<br>
+No. 19 Egbor Avenue, GRA Benin City
 </div>
 
 </div>
 
 <button onclick="printPDF()">Export PDF</button>
 <button onclick="restart()">New Case</button>
-`;
 
-drawQR(payload);
+`;
 }
 
 /* =========================
    PAYMENT CONFIRM
 ========================= */
+
 function confirmPayment(){
-let ref = document.getElementById("receipt").value;
+let r=document.getElementById("receipt").value;
+if(!r)return alert("Enter payment reference");
 
-if(!ref){
-alert("Enter payment reference");
-return;
-}
+state.paid=true;
+state.receipt=r;
 
-state.paid = true;
-state.receipt = ref;
-
-alert("Payment recorded. Contact FSTL to proceed.");
+alert("Payment recorded successfully");
 }
 
 /* =========================
    PDF EXPORT
 ========================= */
+
 function printPDF(){
 window.print();
 }
 
 /* =========================
-   RESET
+   RESET SYSTEM
 ========================= */
+
 function restart(){
-step = 0;
-state = {
-case_id: "CASE-" + Date.now(),
-data: {},
-flags: [],
-score: 0,
-service: "",
-paid: false,
-receipt: ""
+mode="front";
+step=0;
+state={
+case_id:"CASE-"+Date.now(),
+data:{},
+flags:[],
+score:0,
+service:"",
+paid:false,
+receipt:""
 };
 render();
 }
