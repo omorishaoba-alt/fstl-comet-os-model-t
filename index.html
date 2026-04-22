@@ -6,11 +6,27 @@
 <title>FSTL COMET OS</title>
 
 <style>
-body{
+html, body {
   margin:0;
+  padding:0;
+  height:100%;
+  width:100%;
+  overflow:hidden;
   font-family:Arial;
   background:#0b1220;
   color:#fff;
+}
+
+.app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.scroll{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
 }
 
 .card{
@@ -18,6 +34,7 @@ body{
   padding:14px;
   margin:10px;
   border-radius:12px;
+  box-sizing:border-box;
 }
 
 button{
@@ -39,21 +56,41 @@ select,input{
   border:none;
   background:#152238;
   color:#fff;
+  box-sizing:border-box;
 }
 
 .small{font-size:12px;color:#9fb3c8}
-.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
+
+.badge{
+  padding:6px 10px;
+  border-radius:8px;
+  font-weight:bold;
+  display:inline-block;
+}
+
 .green{background:#2e7d32}
 .orange{background:#f9a825}
 .red{background:#c62828}
+
+.fixed-result{
+  position:sticky;
+  bottom:0;
+  background:#0b1220;
+  padding:10px;
+  border-top:1px solid #1e2a3a;
+}
 </style>
 </head>
 
 <body>
 
+<div class="app">
+
+<div class="scroll">
+
 <div class="card">
 <b>COMET OS Assistant</b><br>
-<span class="small">Structured transaction + identity engine</span>
+<span class="small">Structured identity + transaction intelligence system</span>
 </div>
 
 <div class="card">
@@ -61,7 +98,7 @@ select,input{
 <div id="summary">No data captured yet.</div>
 </div>
 
-<div class="card">
+<div class="card" id="questionCard">
 
 <div id="questionText"></div>
 
@@ -78,12 +115,17 @@ select,input{
 <div id="result"></div>
 </div>
 
+</div>
+
+</div>
+
 <script>
 
-/* ================= STATE ================= */
+/* ================= STATE MACHINE ================= */
 
 let step = 0;
 let data = {};
+let mode = "FLOW";
 
 /* ================= FLOW ================= */
 
@@ -94,7 +136,7 @@ key:"role",
 q:"Who are you in this transaction?",
 type:"select",
 options:["Owner","Buyer","Seller","Agent","Executor"],
-why:"Defines user role context"
+why:"Defines role context"
 },
 
 {
@@ -102,15 +144,15 @@ key:"transaction",
 q:"What type of transaction is this?",
 type:"select",
 options:["Sale","Probate","Transfer","Mortgage"],
-why:"Defines transaction category"
+why:"Defines transaction type"
 },
 
 {
 key:"structure",
-q:"Is this Direct or Indirect transaction?",
+q:"Direct or Indirect transaction?",
 type:"select",
 options:["Direct","Indirect"],
-why:"Defines relationship structure"
+why:"Defines linkage model"
 },
 
 {
@@ -134,14 +176,12 @@ type:"text",
 why:"Buyer identity"
 },
 
-/* ================= FIXED AGENT SYSTEM ================= */
-
 {
 key:"agent_status",
-q:"Is an Agent involved in this transaction?",
+q:"Is an Agent involved?",
 type:"select",
 options:["NO AGENT","AGENT INVOLVED"],
-why:"Determines if intermediary exists"
+why:"Determines intermediary presence"
 },
 
 {
@@ -149,12 +189,12 @@ key:"agent_name",
 q:"Select Agent Name (if applicable)",
 type:"select",
 options:["N/A","Agent A","Agent B","Agent C","Other"],
-why:"Agent identity (only valid if agent exists)"
+why:"Agent identity (controlled state)"
 },
 
 {
 key:"kyc_name",
-q:"KYC Name (Person completing this)",
+q:"KYC Name",
 type:"text",
 why:"User identity anchor"
 },
@@ -172,10 +212,23 @@ key:"kyc_capacity",
 q:"Select Capacity",
 type:"select",
 options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
-why:"Legal capacity classification"
+why:"Legal role classification"
 }
 
 ];
+
+/* ================= UTILS ================= */
+
+function clean(v){
+if(!v) return "";
+v = v.trim().toUpperCase();
+if(v === "NONE" || v === "N/A") return "";
+return v;
+}
+
+function norm(s){
+return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+}
 
 /* ================= RENDER ================= */
 
@@ -211,18 +264,11 @@ if(f.type === "select"){
 }
 }
 
-/* ================= INPUT STORAGE ================= */
-
-function clean(v){
-if(!v) return "";
-v = v.trim().toUpperCase();
-if(v === "NONE" || v === "N/A") return "";
-return v;
-}
-
-/* ================= NEXT ================= */
+/* ================= FLOW CONTROL ================= */
 
 function nextStep(){
+
+if(mode !== "FLOW") return;
 
 let f = flow[step];
 
@@ -230,10 +276,9 @@ let value = (f.type === "select")
   ? document.getElementById("dropdown").value
   : document.getElementById("textInput").value.trim();
 
-/* STORE */
 data[f.key] = clean(value);
 
-/* LIVE SUMMARY */
+/* summary */
 document.getElementById("summary").innerHTML =
 Object.entries(data)
 .map(([k,v])=>`- ${k}: ${v || "❌ EMPTY"}`)
@@ -241,6 +286,7 @@ Object.entries(data)
 
 step++;
 
+/* FLOW END */
 if(step >= flow.length){
   runEngine();
   return;
@@ -253,39 +299,39 @@ renderStep();
 
 function runEngine(){
 
-let flags = [];
-let score = 0;
+mode = "RESULT";
 
-function add(msg,w){
-flags.push({msg,w});
-score += w;
-}
+/* LOCK UI */
+document.getElementById("questionCard").style.display = "none";
 
-/* ================= AGENT LOGIC (FIXED) ================= */
-
+/* AGENT LOGIC (CONTROLLED STATE) */
 const hasAgent =
 data.agent_status === "AGENT INVOLVED" &&
 data.agent_name &&
 data.agent_name !== "N/A";
 
-/* ================= VALIDATION ================= */
+/* VALIDATION */
+let flags = [];
+let score = 0;
+
+function add(m,w){ flags.push(m); score += w; }
 
 if(!data.owner) add("Missing Owner",2);
 if(!data.seller) add("Missing Seller",2);
 if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
 
-/* identity conflicts */
+/* conflicts */
 if(data.owner && data.buyer &&
-data.owner.toLowerCase() === data.buyer.toLowerCase()){
-add("Owner = Buyer identity overlap",3);
+norm(data.owner) === norm(data.buyer)){
+add("Owner = Buyer overlap",3);
 }
 
 if(data.buyer && data.seller &&
-data.buyer.toLowerCase() === data.seller.toLowerCase()){
-add("Buyer = Seller identity overlap",3);
+norm(data.buyer) === norm(data.seller)){
+add("Buyer = Seller overlap",3);
 }
 
-/* structure + agent */
+/* structure logic */
 if(data.structure === "Direct" && hasAgent){
 add("Agent present in Direct transaction",2);
 }
@@ -311,15 +357,17 @@ level = "WATCH";
 color = "orange";
 }
 
-/* OUTPUT */
+/* RESULT */
 document.getElementById("resultCard").style.display = "block";
 
 document.getElementById("result").innerHTML =
 `<span class="badge ${color}">${level}</span><br><br>
 Score: ${score}<br><br>
-${flags.length ?
-flags.map(f=>`- ${f.msg}`).join("<br>")
-: "No inconsistencies detected"}`;
+${flags.length ? flags.join("<br>") : "No inconsistencies detected"}`;
+
+/* anchor */
+document.getElementById("resultCard")
+.scrollIntoView({behavior:"smooth"});
 }
 
 /* ================= INIT ================= */
