@@ -54,7 +54,7 @@ select,input{
 <div class="card">
 <b>COMET OS Assistant</b><br>
 <span class="small">
-Structured identity + transaction intelligence system
+Structured identity + transaction intelligence engine
 </span>
 </div>
 
@@ -87,7 +87,7 @@ Structured identity + transaction intelligence system
 let step = 0;
 let data = {};
 
-/* ================= FLOW (FULL SCHEMA-CONSISTENT) ================= */
+/* ================= FLOW ================= */
 
 const flow = [
 
@@ -96,7 +96,7 @@ key:"role",
 q:"Who are you in this transaction?",
 type:"select",
 options:["Owner","Buyer","Seller","Agent","Executor"],
-why:"Defines user role in transaction system"
+why:"Defines user role context"
 },
 
 {
@@ -119,28 +119,28 @@ why:"Defines party linkage model"
 key:"owner",
 q:"Enter Owner Name",
 type:"text",
-why:"Ownership identity anchor"
+why:"Ownership identity"
 },
 
 {
 key:"seller",
 q:"Enter Seller Name",
 type:"text",
-why:"Selling party identity"
+why:"Seller identity"
 },
 
 {
 key:"buyer",
 q:"Enter Buyer Name",
 type:"text",
-why:"Receiving party identity"
+why:"Buyer identity"
 },
 
 {
 key:"agent1",
 q:"Primary Agent (if any)",
 type:"text",
-why:"Intermediary participant (optional but tracked)"
+why:"Optional intermediary"
 },
 
 {
@@ -163,10 +163,24 @@ key:"kyc_capacity",
 q:"Select Capacity",
 type:"select",
 options:["OWNER","BUYER","SELLER","AGENT","EXECUTOR","ADMINISTRATOR"],
-why:"Legal role classification"
+why:"Legal capacity classification"
 }
 
 ];
+
+/* ================= NORMALIZER ================= */
+
+function clean(v){
+if(!v) return "";
+
+v = v.trim().toUpperCase();
+
+if(v === "NONE") return "";
+if(v === "N/A") return "";
+if(v === "NULL") return "";
+
+return v;
+}
 
 /* ================= RENDER ================= */
 
@@ -202,7 +216,7 @@ if(f.type === "select"){
 }
 }
 
-/* ================= STEP CONTROL ================= */
+/* ================= NEXT ================= */
 
 function nextStep(){
 
@@ -213,21 +227,21 @@ let value = (f.type === "select")
   : document.getElementById("textInput").value.trim();
 
 if(!value){
-  alert("This field is required");
+  alert("Field required");
   return;
 }
 
-data[f.key] = value;
+/* APPLY NORMALIZATION */
+data[f.key] = clean(value);
 
 /* LIVE SUMMARY */
 document.getElementById("summary").innerHTML =
 Object.entries(data)
-.map(([k,v])=>`- ${k}: ${v || "❌ MISSING"}`)
+.map(([k,v])=>`- ${k}: ${v || "❌ EMPTY"}`)
 .join("<br>");
 
 step++;
 
-/* SAFE FLOW TERMINATION */
 if(step >= flow.length){
   runEngine();
   return;
@@ -236,26 +250,9 @@ if(step >= flow.length){
 renderStep();
 }
 
-/* ================= COMPLETENESS CHECK ================= */
-
-function isComplete(){
-
-for(let f of flow){
-  if(!data[f.key] || data[f.key].trim() === ""){
-    return false;
-  }
-}
-return true;
-}
-
 /* ================= ENGINE ================= */
 
 function runEngine(){
-
-if(!isComplete()){
-alert("Incomplete case data. Please complete all fields.");
-return;
-}
 
 let flags = [];
 let score = 0;
@@ -265,32 +262,40 @@ flags.push({msg,w});
 score += w;
 }
 
-/* Identity checks */
+/* SAFE AGENT CHECK */
+const hasAgent = data.agent1 && data.agent1.trim() !== "";
+
+/* IDENTITY CHECKS */
+if(!data.owner) add("Missing Owner",2);
+if(!data.seller) add("Missing Seller",2);
+if(!data.buyer && data.transaction !== "PROBATE") add("Missing Buyer",2);
+
+/* CONFLICT CHECKS */
 if(data.owner && data.buyer &&
-norm(data.owner) === norm(data.buyer)){
+data.owner.toLowerCase() === data.buyer.toLowerCase()){
 add("Owner = Buyer identity overlap",3);
 }
 
 if(data.buyer && data.seller &&
-norm(data.buyer) === norm(data.seller)){
+data.buyer.toLowerCase() === data.seller.toLowerCase()){
 add("Buyer = Seller identity overlap",3);
 }
 
-/* Structure logic */
-if(data.structure === "Direct" && data.agent1 && data.agent1.trim() !== ""){
+/* STRUCTURE LOGIC */
+if(data.structure === "Direct" && hasAgent){
 add("Agent present in Direct transaction",2);
 }
 
-if(data.structure === "Indirect" && (!data.agent1 || data.agent1.trim() === "")){
+if(data.structure === "Indirect" && !hasAgent){
 add("Missing agent in Indirect transaction",3);
 }
 
-/* KYC integrity */
+/* KYC */
 if(!data.kyc_name) add("Missing KYC Name",2);
 if(!data.kyc_idType) add("Missing ID Type",2);
 if(!data.kyc_capacity) add("Missing Capacity",2);
 
-/* Classification */
+/* CLASSIFICATION */
 let level = "CLEAN";
 let color = "green";
 
@@ -311,12 +316,6 @@ Score: ${score}<br><br>
 ${flags.length ?
 flags.map(f=>`- ${f.msg}`).join("<br>")
 : "No inconsistencies detected"}`;
-}
-
-/* ================= UTILITY ================= */
-
-function norm(s){
-return (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 }
 
 /* ================= INIT ================= */
