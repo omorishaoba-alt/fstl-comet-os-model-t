@@ -6,70 +6,18 @@
 <title>FSTL COMET OS</title>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#0b1220;
-color:#fff;
-font-size:16px;
-}
-
-.card{
-background:#111c2e;
-padding:18px;
-margin:10px;
-border-radius:14px;
-}
-
-.screen{display:none;padding:10px;}
-.active{display:block;}
-
-button{
-width:100%;
-padding:16px;
-margin-top:12px;
-border:none;
-border-radius:12px;
-background:#1e88e5;
-color:#fff;
-font-weight:bold;
-font-size:16px;
-}
-
-input{
-width:100%;
-padding:14px;
-margin-top:10px;
-border-radius:10px;
-border:none;
-background:#152238;
-color:#fff;
-font-size:16px;
-}
-
-label{display:block;margin:8px 0;}
-
-.badge{
-padding:6px 10px;
-border-radius:8px;
-font-weight:bold;
-display:inline-block;
-}
-
-.green{background:#2e7d32;}
-.orange{background:#f9a825;}
-.red{background:#c62828;}
-.blue{background:#1e88e5;}
-
-.qrbox{
-background:#fff;
-padding:12px;
-border-radius:10px;
-text-align:center;
-margin-top:10px;
-}
-
-.small{font-size:12px;color:#9fb3c8;}
+body{margin:0;font-family:Arial;background:#0b1220;color:#fff;font-size:16px}
+.card{background:#111c2e;padding:18px;margin:10px;border-radius:14px}
+.screen{display:none;padding:10px}
+.active{display:block}
+button{width:100%;padding:16px;margin-top:12px;border:none;border-radius:12px;background:#1e88e5;color:#fff;font-weight:bold}
+input{width:100%;padding:14px;margin-top:10px;border-radius:10px;border:none;background:#152238;color:#fff}
+label{display:block;margin:8px 0}
+.badge{padding:6px 10px;border-radius:8px;font-weight:bold;display:inline-block}
+.green{background:#2e7d32}.orange{background:#f9a825}.red{background:#c62828}.blue{background:#1e88e5}
+.qrbox{background:#fff;color:#000;padding:10px;border-radius:10px;margin-top:10px;font-size:11px;word-break:break-all}
+.small{font-size:12px;color:#9fb3c8}
+#log{font-size:11px;color:#9fb3c8;margin-top:6px}
 </style>
 </head>
 
@@ -77,185 +25,177 @@ margin-top:10px;
 
 <div class="card">
 <b>FSTL COMET OS</b><br>
-<span class="small">Land & Property Verification Engine</span>
+<span class="small">Verification Engine (Stable Build)</span>
+<div id="log"></div>
 </div>
 
-<!-- STEP 0 -->
+<!-- START -->
 <div id="s0" class="screen active">
 <div class="card">
 <h2>Start</h2>
-<button onclick="go(1)">START</button>
+<button id="startBtn">START</button>
 </div>
 </div>
 
-<!-- STEP 1 -->
+<!-- ROLE -->
 <div id="s1" class="screen">
 <div class="card">
 <h3>Select Mode</h3>
-<button onclick="setRole('USER')">USER</button>
-<button onclick="setRole('AGENT')">AGENT</button>
-<button onclick="setRole('ADMIN')">ADMIN</button>
+<button data-role="USER">USER</button>
+<button data-role="AGENT">AGENT</button>
+<button data-role="ADMIN">ADMIN</button>
 <div id="roleOut"></div>
 </div>
 </div>
 
-<!-- STEP 2 -->
+<!-- INPUT -->
 <div id="s2" class="screen">
 <div class="card">
 <h3>Property Input</h3>
-
 <input id="type" placeholder="Property Type"/>
 <input id="location" placeholder="Location"/>
 <input id="owner" placeholder="Owner"/>
 <input id="buyer" placeholder="Buyer"/>
 <input id="seller" placeholder="Seller"/>
-
-<button onclick="createCase()">CONTINUE</button>
+<button id="continueBtn">CONTINUE</button>
 </div>
 </div>
 
-<!-- STEP 3 -->
+<!-- VERIFY -->
 <div id="s3" class="screen">
 <div class="card">
 <h3>Verification</h3>
-
 <label><input type="checkbox" id="v_title"/> Title Verified</label>
 <label><input type="checkbox" id="v_id"/> Identity Verified</label>
 <label><input type="checkbox" id="v_docs"/> Documents Complete</label>
-
 <hr>
-
 <label><input type="checkbox" id="r_duplicate"/> Duplicate Case</label>
 <label><input type="checkbox" id="r_suspect"/> Suspicious Pattern</label>
-
-<button onclick="runDecision()">RUN DECISION</button>
+<button id="runBtn">RUN DECISION</button>
 </div>
 </div>
 
-<!-- STEP 4 -->
+<!-- RESULT -->
 <div id="s4" class="screen">
 <div class="card">
 <h3>Result</h3>
 <div id="result"></div>
 <div id="qr" class="qrbox"></div>
-<button onclick="resetAll()">NEW CASE</button>
+<button id="resetBtn">NEW CASE</button>
 </div>
 </div>
 
 <script>
+(function(){
 
-/* STATE */
-let STATE = {
-role:null,
-current:null
-};
+/* ===== SAFE HELPERS ===== */
+function el(id){ return document.getElementById(id); }
+function val(id){ let e=el(id); return e ? (e.value||"").trim() : ""; }
+function chk(id){ let e=el(id); return e ? e.checked : false; }
+function log(msg){ let l=el("log"); if(l) l.textContent = msg; }
 
-/* NAV */
-function go(i){
-document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-document.getElementById("s"+i).classList.add("active");
+/* ===== STATE ===== */
+var STATE = { role:null, current:null };
+
+/* ===== NAV ===== */
+function go(n){
+var screens = document.querySelectorAll(".screen");
+for(var i=0;i<screens.length;i++){ screens[i].classList.remove("active"); }
+var target = el("s"+n);
+if(target){ target.classList.add("active"); log("Screen: s"+n); }
 }
 
-/* ROLE */
+/* ===== ROLE ===== */
 function setRole(r){
 STATE.role = r;
-document.getElementById("roleOut").innerHTML =
-`<span class="badge blue">${r}</span>`;
+el("roleOut").innerHTML = '<span class="badge blue">'+r+'</span>';
 go(2);
 }
 
-/* CREATE CASE (FIXED) */
+/* ===== CREATE CASE ===== */
 function createCase(){
+var t = val("type");
+var l = val("location");
+var o = val("owner");
+var b = val("buyer");
+var s = val("seller");
 
-let t = document.getElementById("type").value.trim();
-let l = document.getElementById("location").value.trim();
-let o = document.getElementById("owner").value.trim();
-let b = document.getElementById("buyer").value.trim();
-let s = document.getElementById("seller").value.trim();
-
-/* STRICT VALIDATION */
-if(t === "" || l === ""){
+if(!t || !l){
 alert("Type + Location required");
+log("Validation failed");
 return;
 }
 
-/* BUILD STATE */
 STATE.current = {
 id:"CASE-"+Date.now(),
-type:t,
-location:l,
-owner:o,
-buyer:b,
-seller:s
+type:t, location:l,
+owner:o, buyer:b, seller:s
 };
 
+log("Case created");
 go(3);
 }
 
-/* DECISION ENGINE */
+/* ===== DECISION ===== */
 function runDecision(){
+if(!STATE.current){ alert("No case"); return; }
 
-let score = 0;
-
+var score = 0;
 if(!STATE.current.owner) score+=2;
 if(!STATE.current.type) score+=2;
 if(!STATE.current.location) score+=2;
 
-let verified =
-(document.getElementById("v_title").checked?2:0)+
-(document.getElementById("v_id").checked?2:0)+
-(document.getElementById("v_docs").checked?1:0);
+var verified = (chk("v_title")?2:0)+(chk("v_id")?2:0)+(chk("v_docs")?1:0);
+var risk = (chk("r_duplicate")?3:0)+(chk("r_suspect")?3:0);
 
-let risk =
-(document.getElementById("r_duplicate").checked?3:0)+
-(document.getElementById("r_suspect").checked?3:0);
+var finalScore = score + risk - verified;
 
-let finalScore = score + risk - verified;
-
-let decision =
-finalScore >=5 ? "BLOCKED" :
-finalScore >2 ? "CONDITIONAL" :
-"APPROVED";
-
-let color =
-decision==="APPROVED"?"green":
-decision==="CONDITIONAL"?"orange":"red";
+var decision = finalScore>=5?"BLOCKED":finalScore>2?"CONDITIONAL":"APPROVED";
+var color = decision==="APPROVED"?"green":decision==="CONDITIONAL"?"orange":"red";
 
 STATE.current.decision = decision;
 
-/* OUTPUT */
-document.getElementById("result").innerHTML =
-`<span class="badge ${color}">${decision}</span><br><br>
-Case ID: ${STATE.current.id}<br>
-Score: ${finalScore}`;
+el("result").innerHTML =
+'<span class="badge '+color+'">'+decision+'</span><br><br>'+
+'Case ID: '+STATE.current.id+'<br>Score: '+finalScore;
 
-/* SIMPLE QR SAFE */
-document.getElementById("qr").innerHTML =
-`<div style="color:black;font-size:12px;word-break:break-all;">
-${btoa(JSON.stringify(STATE.current))}
-</div>`;
+/* SAFE DATA DISPLAY */
+el("qr").textContent = JSON.stringify(STATE.current);
 
+log("Decision: "+decision);
 go(4);
 }
 
-/* RESET */
+/* ===== RESET ===== */
 function resetAll(){
 STATE.current=null;
-
-/* CLEAR INPUTS */
-["type","location","owner","buyer","seller"].forEach(id=>{
-document.getElementById(id).value="";
-});
-
-/* CLEAR CHECKBOXES */
-["v_title","v_id","v_docs","r_duplicate","r_suspect"].forEach(id=>{
-document.getElementById(id).checked=false;
-});
-
-document.getElementById("result").innerHTML="";
-document.getElementById("qr").innerHTML="";
-
+["type","location","owner","buyer","seller"].forEach(function(id){ if(el(id)) el(id).value=""; });
+["v_title","v_id","v_docs","r_duplicate","r_suspect"].forEach(function(id){ if(el(id)) el(id).checked=false; });
+el("result").innerHTML="";
+el("qr").textContent="";
+log("Reset");
 go(0);
 }
 
-</script
+/* ===== EVENTS (NO INLINE JS) ===== */
+document.addEventListener("DOMContentLoaded", function(){
+
+el("startBtn").addEventListener("click", function(){ go(1); });
+
+var roleBtns = document.querySelectorAll("[data-role]");
+for(var i=0;i<roleBtns.length;i++){
+roleBtns[i].addEventListener("click", function(){ setRole(this.getAttribute("data-role")); });
+}
+
+el("continueBtn").addEventListener("click", createCase);
+el("runBtn").addEventListener("click", runDecision);
+el("resetBtn").addEventListener("click", resetAll);
+
+log("System Ready");
+});
+
+})();
+</script>
+
+</body>
+</html>
