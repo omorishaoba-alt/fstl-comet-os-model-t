@@ -1,167 +1,288 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FSTL COMET OS</title>
+
 <style>
-body{margin:0;font-family:Arial;background:#0b1220;color:#fff}
-.wrap{max-width:420px;margin:0 auto;padding:20px}
-.card{background:#111c2e;padding:16px;border-radius:12px;margin-bottom:12px}
-button,select,input{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none}
-button{background:#1e88e5;color:#fff}
-.row{display:flex;gap:10px}
-.row button{flex:1}
+body { font-family: Arial; margin:0; background:#0b0f14; color:#fff; }
+
+.screen { display:none; padding:16px; }
+.active { display:block; }
+
+.header {
+  padding:18px;
+  background:#111826;
+  font-weight:bold;
+  text-align:center;
+}
+
+button {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  background:#1f6feb;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-weight:bold;
+}
+
+input, textarea, select {
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border-radius:6px;
+  border:none;
+}
+
+.card {
+  background:#111826;
+  padding:12px;
+  margin-top:12px;
+  border-radius:8px;
+}
+
+.small { font-size:12px; opacity:0.8; }
+.status { font-weight:bold; margin-top:10px; }
+
 </style>
 </head>
 
 <body>
 
-<div class="wrap" id="app">
-<!-- BOOT CONTENT (ALWAYS VISIBLE) -->
-<div class="card">
-<b>FSTL COMET OS</b><br><br>
-Loading system...
+<!-- ================= FRONT COVER ================= -->
+<div id="front" class="screen active">
+  <div class="header">FSTL COMET OS</div>
+
+  <div class="card">
+    <h3>PROPERTY VERIFICATION SYSTEM</h3>
+    <p class="small">
+      Structured Property Certification & Risk-Control Engine
+    </p>
+
+    <button onclick="goTo('form')">ENTER SYSTEM</button>
+  </div>
 </div>
+
+<!-- ================= SPCR FORM ================= -->
+<div id="form" class="screen">
+  <div class="header">SPCR SUBMISSION</div>
+
+  <input id="declarant" placeholder="Declarant ID (DID-COMET)" />
+  <input id="property" placeholder="Property Description" />
+  <input id="location" placeholder="Location" />
+
+  <select id="claim">
+    <option value="OWNERSHIP">Ownership Claim</option>
+    <option value="VERIFICATION">Verification Request</option>
+    <option value="TRANSFER">Transfer Intent</option>
+  </select>
+
+  <textarea id="evidence" placeholder="Supporting Notes"></textarea>
+
+  <button onclick="submitSPCR()">SUBMIT TRANSACTION</button>
+</div>
+
+<!-- ================= PAYMENT SCREEN ================= -->
+<div id="payment" class="screen">
+  <div class="header">PAYMENT REQUIRED</div>
+
+  <div class="card" id="paymentInfo"></div>
+
+  <button onclick="confirmPayment()">CONFIRM BANK TRANSFER</button>
+</div>
+
+<!-- ================= RESULT ================= -->
+<div id="result" class="screen">
+  <div class="header">TRANSACTION RESULT</div>
+
+  <div class="card" id="output"></div>
+
+  <button onclick="downloadPDF()">DOWNLOAD PDF</button>
 </div>
 
 <script>
 
-/* HARD SAFE BOOT */
-(function(){
+// ================= STATE =================
+let transaction = null;
 
-var app = document.getElementById("app");
-
-/* FORCE FRONT RENDER IMMEDIATELY */
-app.innerHTML =
-"<div class='card'>"+
-"<b>COMET OS ENTRY</b><br><br>"+
-"Select Intent"+
-"<select id='intent'>"+
-"<option>Property Verification</option>"+
-"<option>Sale / Purchase</option>"+
-"<option>Ownership / Probate</option>"+
-"<option>Risk Assessment</option>"+
-"</select>"+
-"<button id='startBtn'>ENTER SYSTEM</button>"+
-"</div>";
-
-/* ENGINE STATE */
-var OS = {
-step:0,
-intent:null,
-data:{},
-mode:"flow"
+const BANK = {
+  name: "First Bank Nigeria",
+  account: "2025222557",
+  holder: "First Standard Title Limited"
 };
 
-/* FLOW */
-var FLOW = [
-{key:"role",label:"Role",options:["Owner","Buyer","Seller","Agent","Tenant"]},
-{key:"id_number",label:"ID Number"},
-{key:"phone",label:"Phone"},
-{key:"location",label:"Property Location"},
-{key:"ref",label:"Property Ref"},
-{key:"control",label:"Control",options:["Owner","Agent","Family","Unknown"]},
-{key:"occupancy",label:"Occupancy",options:["VACANT","TENANTED"]},
-{key:"rent",label:"Rent",options:["PAYING","NOT PAYING"]}
-];
-
-/* START BUTTON */
-document.getElementById("startBtn").onclick = function(){
-OS.intent = document.getElementById("intent").value;
-renderStep();
-};
-
-/* RENDER STEP */
-function renderStep(){
-
-if(OS.step >= FLOW.length){
-return renderResult();
+// ================= NAV =================
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
 }
 
-var f = FLOW[OS.step];
+// ================= QRS ENGINE =================
+function qrsScore(property, location, evidence) {
+  let score = 20;
 
-var html = "<div class='card'><b>"+f.label+"</b>";
+  if (!property || property.length < 5) score += 30;
+  if (!location || location.length < 3) score += 25;
+  if (evidence && evidence.length > 50) score -= 10;
 
-if(f.options){
-html += "<select id='input'>";
-for(var i=0;i<f.options.length;i++){
-html += "<option>"+f.options[i]+"</option>";
-}
-html += "</select>";
-}else{
-html += "<input id='input'/>";
-}
+  score += Math.floor(Math.random() * 20);
 
-html += "<div class='row'>";
-if(OS.step>0) html += "<button id='back'>Back</button>";
-html += "<button id='next'>Next</button>";
-html += "</div></div>";
-
-app.innerHTML = html;
-
-/* BUTTON BIND */
-if(document.getElementById("next")){
-document.getElementById("next").onclick = next;
-}
-if(document.getElementById("back")){
-document.getElementById("back").onclick = back;
+  return Math.min(score, 100);
 }
 
+// ================= STEP 1: SUBMIT =================
+function submitSPCR() {
+
+  const declarant = document.getElementById("declarant").value;
+  const property = document.getElementById("property").value;
+  const location = document.getElementById("location").value;
+  const claim = document.getElementById("claim").value;
+  const evidence = document.getElementById("evidence").value;
+
+  if (!declarant || !property || !location) {
+    alert("SPCR INCOMPLETE");
+    return;
+  }
+
+  const txID = "TX-" + Date.now();
+  const risk = qrsScore(property, location, evidence);
+
+  transaction = {
+    txID,
+    declarant,
+    property,
+    location,
+    claim,
+    evidence,
+    risk,
+    timestamp: new Date().toISOString()
+  };
+
+  showPayment();
 }
 
-/* NEXT */
-function next(){
-var val = document.getElementById("input").value;
-OS.data[FLOW[OS.step].key] = val;
-OS.step++;
-renderStep();
+// ================= STEP 2: PAYMENT =================
+function showPayment() {
+
+  const baseFee = 5000;
+  let multiplier = 1;
+
+  if (transaction.risk > 60) multiplier = 2;
+  if (transaction.risk > 85) multiplier = 3;
+
+  const amount = baseFee * multiplier;
+
+  transaction.amount = amount;
+
+  document.getElementById("paymentInfo").innerHTML = `
+    <div><b>BANK:</b> ${BANK.name}</div>
+    <div><b>ACCOUNT:</b> ${BANK.account}</div>
+    <div><b>NAME:</b> ${BANK.holder}</div>
+    <br/>
+    <div><b>AMOUNT:</b> ₦${amount}</div>
+    <div><b>REFERENCE:</b> ${transaction.txID}</div>
+    <br/>
+    <div class="small">Transfer must include reference exactly.</div>
+  `;
+
+  goTo('payment');
 }
 
-/* BACK */
-function back(){
-if(OS.step>0) OS.step--;
-renderStep();
+// ================= STEP 3: CONFIRM PAYMENT =================
+function confirmPayment() {
+
+  transaction.payment = {
+    method: "BANK_TRANSFER",
+    amount: transaction.amount,
+    reference: transaction.txID,
+    status: "CONFIRMED"
+  };
+
+  runQRS();
 }
 
-/* ENGINE */
-function engine(){
+// ================= STEP 4: QRS =================
+function runQRS() {
 
-var score = 0;
+  let status = "VERIFIED";
+  let qrsA = "ISSUED";
 
-if(!OS.data.id_number) score+=4;
-if(!OS.data.phone) score+=2;
-if(!OS.data.ref) score+=4;
+  if (transaction.risk > 60) {
+    status = "FLAGGED";
+    qrsA = "PENDING";
+  }
 
-if(OS.data.control==="Unknown") score+=2;
+  if (transaction.risk > 85) {
+    status = "BLOCKED";
+    qrsA = "DENIED";
+  }
 
-if(OS.data.occupancy==="TENANTED" && OS.data.rent==="NOT PAYING"){
-score+=3;
+  transaction.finalStatus = status;
+  transaction.qrsA = qrsA;
+
+  saveRegistry();
 }
 
-var level = "CLEAN";
-if(score>=8) level="HIGH RISK";
-else if(score>=4) level="WATCH";
+// ================= STEP 5: REGISTRY =================
+function saveRegistry() {
 
-return {score:score, level:level};
+  let reg = JSON.parse(localStorage.getItem("COMET_REGISTRY") || "[]");
+  reg.push(transaction);
+  localStorage.setItem("COMET_REGISTRY", JSON.stringify(reg));
+
+  showResult();
 }
 
-/* RESULT */
-function renderResult(){
+// ================= STEP 6: OUTPUT =================
+function showResult() {
 
-var r = engine();
+  const r = transaction;
 
-app.innerHTML =
-"<div class='card'>"+
-"<b>CASE COMPLETE</b><br><br>"+
-"Intent: "+OS.intent+"<br>"+
-"Risk: "+r.level+"<br>"+
-"Score: "+r.score+
-"</div>"+
-"<button onclick='location.reload()'>NEW CASE</button>";
+  const pdf = `
+FSTL COMET OS REPORT
 
+TX: ${r.txID}
+DECLARANT: ${r.declarant}
+PROPERTY: ${r.property}
+LOCATION: ${r.location}
+CLAIM: ${r.claim}
+
+PAYMENT: ₦${r.amount} (${r.payment.status})
+REFERENCE: ${r.payment.reference}
+
+QRS-A: ${r.qrsA}
+RISK: ${r.risk}
+STATUS: ${r.finalStatus}
+TIME: ${r.timestamp}
+`;
+
+  document.getElementById("output").innerHTML = `
+    <div><b>TRANSACTION COMPLETE</b></div>
+    <div class="status">${r.finalStatus}</div>
+    <div class="small">QRS: ${r.qrsA}</div>
+    <div class="small">RISK: ${r.risk}</div>
+    <div class="small">PAYMENT: ₦${r.amount}</div>
+  `;
+
+  transaction.pdf = pdf;
+
+  goTo('result');
 }
 
-})(); // END BOOT WRAPPER
+// ================= STEP 7: PDF =================
+function downloadPDF() {
+
+  const blob = new Blob([transaction.pdf], {type:"text/plain"});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "COMET_OS_TRANSACTION.pdf.txt";
+  a.click();
+}
 
 </script>
 
