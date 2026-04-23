@@ -6,256 +6,258 @@
 <title>FSTL COMET OS</title>
 
 <style>
-body { margin:0; font-family: Arial, sans-serif; background:#0b0f14; color:#fff; }
-.header { padding:18px; text-align:center; background:#111826; font-weight:bold; }
-.sub { text-align:center; font-size:14px; opacity:0.8; padding:0 16px 12px; }
+body { margin:0; font-family:Arial; background:#0b0f14; color:#fff; }
 
-.section { padding:16px; }
-.card {
-  background:#111826; padding:16px; border-radius:10px; margin-bottom:12px;
-}
-h2,h3 { margin:6px 0; }
-p { font-size:14px; opacity:0.85; }
-
-.button {
-  width:100%; padding:12px; margin-top:10px;
-  background:#1f6feb; color:#fff; border:none; border-radius:8px;
+.header {
+  padding:16px;
+  text-align:center;
+  background:#111826;
   font-weight:bold;
 }
 
-.small { font-size:12px; opacity:0.7; margin-top:6px; }
+.page {
+  display:none;
+  padding:18px;
+}
 
-.screen { display:none; }
 .active { display:block; }
 
-.progress {
-  font-size:13px; margin-bottom:10px; opacity:0.8;
+.title {
+  font-size:20px;
+  margin-bottom:6px;
 }
+
+.desc {
+  font-size:14px;
+  opacity:0.8;
+  margin-bottom:16px;
+}
+
+.card {
+  background:#111826;
+  padding:14px;
+  border-radius:10px;
+  margin-bottom:12px;
+}
+
+input, select {
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border:none;
+  border-radius:6px;
+}
+
+button {
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  background:#1f6feb;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+.small { font-size:12px; opacity:0.7; }
+.center { text-align:center; }
 </style>
 </head>
 
 <body>
 
 <div class="header">FSTL COMET OS</div>
-<div class="sub">
-Property Verification & Title Confirmation System
-</div>
 
 <!-- HOME -->
-<div id="home" class="screen active section">
+<div id="home" class="page active">
 
-  <div class="card">
-    <h2>Welcome</h2>
-    <p>
-      Use this system to submit a property claim, verify ownership integrity,
-      and generate a structured verification record.
-    </p>
-  </div>
+<div class="title">Property Verification System</div>
+<div class="desc">
+Structure your identity and property into a verified record.
+</div>
 
-  <div class="card">
-    <h3>Begin</h3>
-    <p>Start a new property verification request.</p>
-    <button class="button" onclick="go('verify_intro')">
-      Begin Property Verification
-    </button>
-  </div>
-
-  <div class="card">
-    <h3>Check Status</h3>
-    <p>Review an existing transaction using your reference ID.</p>
-    <button class="button" onclick="go('status')">
-      Check Transaction Status
-    </button>
-  </div>
-
-  <div class="card">
-    <h3>Payment Instructions</h3>
-    <p>View bank transfer details and how to complete payment correctly.</p>
-    <button class="button" onclick="go('bank')">
-      View Payment Instructions
-    </button>
-  </div>
+<div class="card">
+<div><b>Begin</b></div>
+<div class="small">Start identity recognition</div>
+<button onclick="go('identity')">Begin Verification</button>
+</div>
 
 </div>
 
-<!-- VERIFY INTRO -->
-<div id="verify_intro" class="screen section">
+<!-- IDENTITY -->
+<div id="identity" class="page">
 
-  <div class="card">
-    <div class="progress">Step 1 of 3</div>
-    <h3>Prepare Your Request</h3>
-    <p>
-      You are about to submit a property verification request.
-      You will be guided through a short process and given a payment reference.
-    </p>
+<div class="title">Identity Recognition</div>
+<div class="desc">
+Establish your presence within COMET OS.
+</div>
 
-    <button class="button" onclick="go('verify_process')">
-      Continue
-    </button>
+<div class="card">
+<label>Name</label>
+<input id="name"/>
 
-    <button class="button" onclick="go('home')">
-      Back
-    </button>
-  </div>
+<label>Role</label>
+<select id="role">
+<option>Owner</option>
+<option>Buyer</option>
+<option>Agent</option>
+<option>Other</option>
+</select>
+</div>
+
+<button onclick="createID()">Continue</button>
+<button onclick="go('home')">Back</button>
 
 </div>
 
-<!-- VERIFY PROCESS -->
-<div id="verify_process" class="screen section">
+<!-- ID OUTPUT -->
+<div id="id_done" class="page">
 
-  <div class="card">
-    <div class="progress">Step 2 of 3</div>
-    <h3>Verification in Progress</h3>
-    <p id="processText">
-      Preparing your verification request...
-    </p>
+<div class="title">Identity Structured</div>
+<div class="desc">
+Your identity has been recorded.
+</div>
 
-    <button class="button" onclick="nextProcess()">
-      Continue
-    </button>
+<div class="card center">
+<div><b id="cid"></b></div>
+<div class="small">Status: Recognized</div>
+</div>
 
-    <button class="button" onclick="go('home')">
-      Cancel
-    </button>
-  </div>
+<button onclick="go('property')">Proceed to Property</button>
+
+</div>
+
+<!-- PROPERTY -->
+<div id="property" class="page">
+
+<div class="title">Property Entry</div>
+<div class="desc">
+Provide basic property details for verification.
+</div>
+
+<div class="card">
+<label>Description</label>
+<input id="prop"/>
+
+<label>Location</label>
+<input id="loc"/>
+</div>
+
+<button onclick="processProperty()">Continue</button>
+
+</div>
+
+<!-- PROCESS -->
+<div id="process" class="page">
+
+<div class="title">Processing</div>
+<div class="desc">
+Your request is being structured.
+</div>
+
+<div class="card center">
+<div id="stepText">Preparing...</div>
+</div>
+
+<button onclick="nextStep()">Continue</button>
 
 </div>
 
 <!-- PAYMENT -->
-<div id="payment" class="screen section">
+<div id="payment" class="page">
 
-  <div class="card">
-    <div class="progress">Step 3 of 3</div>
-    <h3>Complete Payment</h3>
+<div class="title">Payment Instruction</div>
+<div class="desc">
+Complete transfer using your reference.
+</div>
 
-    <p>
-      To proceed, complete a bank transfer using the details below.
-      Ensure your transaction reference is entered exactly.
-    </p>
+<div class="card">
+<div>Bank: First Bank Nigeria</div>
+<div>Account: 2025222557</div>
+<div>Name: First Standard Title Limited</div>
+<br/>
+<div><b id="tx"></b></div>
+</div>
 
-    <div class="small">
-      Bank: First Bank Nigeria<br>
-      Account: 2025222557<br>
-      Name: First Standard Title Limited<br><br>
-      Reference: <b id="txRef"></b>
-    </div>
-
-    <button class="button" onclick="confirmPayment()">
-      I Have Completed Payment
-    </button>
-
-    <button class="button" onclick="go('home')">
-      Back
-    </button>
-  </div>
+<button onclick="confirmPay()">Payment Completed</button>
 
 </div>
 
 <!-- RESULT -->
-<div id="result" class="screen section">
+<div id="result" class="page">
 
-  <div class="card">
-    <h3>Verification Complete</h3>
-
-    <p>
-      Your request has been processed. A structured verification record has been generated.
-    </p>
-
-    <div class="small" id="resultText"></div>
-
-    <button class="button" onclick="downloadPDF()">
-      Download Verification Record
-    </button>
-
-    <button class="button" onclick="go('home')">
-      Return Home
-    </button>
-  </div>
-
+<div class="title">Verification Complete</div>
+<div class="desc">
+Your record has been structured successfully.
 </div>
 
-<!-- STATUS -->
-<div id="status" class="screen section">
-  <div class="card">
-    <h3>Transaction Status</h3>
-    <p>
-      Enter your transaction reference to view the current status.
-    </p>
-
-    <button class="button" onclick="go('home')">Back</button>
-  </div>
+<div class="card center">
+<div><b id="finalRef"></b></div>
+<div class="small">Status: Verified</div>
 </div>
 
-<!-- BANK -->
-<div id="bank" class="screen section">
-  <div class="card">
-    <h3>Payment Instructions</h3>
-    <p>
-      All transactions must be completed via bank transfer using your assigned reference.
-    </p>
+<button onclick="download()">Download Record</button>
+<button onclick="go('home')">Finish</button>
 
-    <div class="small">
-      Bank: First Bank Nigeria<br>
-      Account: 2025222557<br>
-      Name: First Standard Title Limited
-    </div>
-
-    <button class="button" onclick="go('home')">Back</button>
-  </div>
 </div>
 
 <script>
 
-// NAVIGATION
-function go(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+function go(p){
+document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+document.getElementById(p).classList.add('active');
 }
 
-// FLOW STATE
-let stage = 0;
-let txID = "TX-" + Date.now();
+let cid, tx, step=0;
 
-function nextProcess(){
+function createID(){
+const name = document.getElementById("name").value;
+if(!name) return;
 
-  const text = document.getElementById("processText");
+cid = "CID-" + Date.now();
+document.getElementById("cid").innerText = cid;
 
-  stage++;
-
-  if(stage === 1){
-    text.innerText = "Generating your transaction reference...";
-  }
-  else if(stage === 2){
-    text.innerText = "Preparing payment instruction...";
-  }
-  else{
-    document.getElementById("txRef").innerText = txID;
-    go('payment');
-  }
+go('id_done');
 }
 
-function confirmPayment(){
-  go('result');
-
-  document.getElementById("resultText").innerText =
-    "Reference: " + txID + " | Status: Verified";
+function processProperty(){
+tx = "TX-" + Date.now();
+step=0;
+go('process');
 }
 
-function downloadPDF(){
-  const content =
-`COMET OS VERIFICATION RECORD
+function nextStep(){
+step++;
+const t = document.getElementById("stepText");
 
-REFERENCE: ${txID}
-STATUS: VERIFIED
-`;
+if(step===1) t.innerText="Generating reference...";
+else if(step===2) t.innerText="Preparing transaction...";
+else {
+document.getElementById("tx").innerText = tx;
+go('payment');
+}
+}
 
-  const blob = new Blob([content], {type:"text/plain"});
-  const url = URL.createObjectURL(blob);
+function confirmPay(){
+document.getElementById("finalRef").innerText = tx;
+go('result');
+}
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "COMET_RECORD.txt";
-  a.click();
+function download(){
+const content =
+`FSTL COMET OS RECORD
+
+ID: ${cid}
+TX: ${tx}
+STATUS: VERIFIED`;
+
+const blob = new Blob([content], {type:"text/plain"});
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement("a");
+a.href = url;
+a.download = "COMET_RECORD.txt";
+a.click();
 }
 
 </script>
