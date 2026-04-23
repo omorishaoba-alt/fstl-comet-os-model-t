@@ -3,19 +3,60 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FSTL COMET OS</title>
+<title>COMET OS</title>
 
 <style>
-body { font-family: Arial; margin:0; background:#0b0f14; color:#fff; }
-
-.screen { display:none; padding:16px; }
-.active { display:block; }
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0b0f14;
+  color:#fff;
+}
 
 .header {
   padding:18px;
+  text-align:center;
   background:#111826;
   font-weight:bold;
+}
+
+.hero {
+  padding:24px;
   text-align:center;
+}
+
+.hero p {
+  opacity:0.8;
+  font-size:14px;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:16px;
+}
+
+.card {
+  background:#111826;
+  padding:16px;
+  border-radius:10px;
+  text-align:center;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.card:hover {
+  background:#1f6feb;
+}
+
+.panel {
+  display:none;
+  padding:16px;
+}
+
+.active {
+  display:block;
 }
 
 button {
@@ -25,263 +66,178 @@ button {
   background:#1f6feb;
   color:#fff;
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   font-weight:bold;
 }
 
-input, textarea, select {
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:6px;
-  border:none;
+.status {
+  margin-top:10px;
+  font-size:13px;
+  opacity:0.8;
 }
-
-.card {
-  background:#111826;
-  padding:12px;
-  margin-top:12px;
-  border-radius:8px;
-}
-
-.small { font-size:12px; opacity:0.8; }
-.status { font-weight:bold; margin-top:10px; }
-
 </style>
 </head>
 
 <body>
 
-<!-- ================= FRONT COVER ================= -->
-<div id="front" class="screen active">
-  <div class="header">FSTL COMET OS</div>
+<div class="header">COMET OS</div>
 
-  <div class="card">
-    <h3>PROPERTY VERIFICATION SYSTEM</h3>
-    <p class="small">
-      Structured Property Certification & Risk-Control Engine
-    </p>
+<!-- FRONT -->
+<div id="home" class="panel active">
 
-    <button onclick="goTo('form')">ENTER SYSTEM</button>
+  <div class="hero">
+    <h2>Property Trust Infrastructure</h2>
+    <p>Verification • Risk Control • Certification</p>
   </div>
+
+  <div class="grid">
+
+    <div class="card" onclick="startFlow('VERIFY')">
+      START VERIFICATION
+    </div>
+
+    <div class="card" onclick="startFlow('STATUS')">
+      CHECK STATUS
+    </div>
+
+    <div class="card" onclick="startFlow('BANK')">
+      BANK DETAILS
+    </div>
+
+    <div class="card" onclick="startFlow('REGISTRY')">
+      REGISTRY
+    </div>
+
+  </div>
+
 </div>
 
-<!-- ================= SPCR FORM ================= -->
-<div id="form" class="screen">
-  <div class="header">SPCR SUBMISSION</div>
+<!-- FLOW SCREEN -->
+<div id="flow" class="panel">
 
-  <input id="declarant" placeholder="Declarant ID (DID-COMET)" />
-  <input id="property" placeholder="Property Description" />
-  <input id="location" placeholder="Location" />
+  <h3 id="flowTitle"></h3>
 
-  <select id="claim">
-    <option value="OWNERSHIP">Ownership Claim</option>
-    <option value="VERIFICATION">Verification Request</option>
-    <option value="TRANSFER">Transfer Intent</option>
-  </select>
+  <div class="status" id="flowStatus"></div>
 
-  <textarea id="evidence" placeholder="Supporting Notes"></textarea>
+  <button onclick="nextStep()">CONTINUE</button>
+  <button onclick="backHome()">BACK</button>
 
-  <button onclick="submitSPCR()">SUBMIT TRANSACTION</button>
-</div>
-
-<!-- ================= PAYMENT SCREEN ================= -->
-<div id="payment" class="screen">
-  <div class="header">PAYMENT REQUIRED</div>
-
-  <div class="card" id="paymentInfo"></div>
-
-  <button onclick="confirmPayment()">CONFIRM BANK TRANSFER</button>
-</div>
-
-<!-- ================= RESULT ================= -->
-<div id="result" class="screen">
-  <div class="header">TRANSACTION RESULT</div>
-
-  <div class="card" id="output"></div>
-
-  <button onclick="downloadPDF()">DOWNLOAD PDF</button>
 </div>
 
 <script>
 
-// ================= STATE =================
-let transaction = null;
+// ===============================
+// HIDDEN SYSTEM CONTROLLER
+// ===============================
+let currentFlow = null;
+let flowStage = 0;
 
-const BANK = {
-  name: "First Bank Nigeria",
-  account: "2025222557",
-  holder: "First Standard Title Limited"
-};
+function startFlow(type) {
 
-// ================= NAV =================
-function goTo(screen) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(screen).classList.add('active');
-}
+  currentFlow = type;
+  flowStage = 0;
 
-// ================= QRS ENGINE =================
-function qrsScore(property, location, evidence) {
-  let score = 20;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('flow').classList.add('active');
 
-  if (!property || property.length < 5) score += 30;
-  if (!location || location.length < 3) score += 25;
-  if (evidence && evidence.length > 50) score -= 10;
-
-  score += Math.floor(Math.random() * 20);
-
-  return Math.min(score, 100);
-}
-
-// ================= STEP 1: SUBMIT =================
-function submitSPCR() {
-
-  const declarant = document.getElementById("declarant").value;
-  const property = document.getElementById("property").value;
-  const location = document.getElementById("location").value;
-  const claim = document.getElementById("claim").value;
-  const evidence = document.getElementById("evidence").value;
-
-  if (!declarant || !property || !location) {
-    alert("SPCR INCOMPLETE");
-    return;
+  if (type === 'VERIFY') {
+    document.getElementById('flowTitle').innerText = "Verification Initiated";
   }
 
-  const txID = "TX-" + Date.now();
-  const risk = qrsScore(property, location, evidence);
-
-  transaction = {
-    txID,
-    declarant,
-    property,
-    location,
-    claim,
-    evidence,
-    risk,
-    timestamp: new Date().toISOString()
-  };
-
-  showPayment();
-}
-
-// ================= STEP 2: PAYMENT =================
-function showPayment() {
-
-  const baseFee = 5000;
-  let multiplier = 1;
-
-  if (transaction.risk > 60) multiplier = 2;
-  if (transaction.risk > 85) multiplier = 3;
-
-  const amount = baseFee * multiplier;
-
-  transaction.amount = amount;
-
-  document.getElementById("paymentInfo").innerHTML = `
-    <div><b>BANK:</b> ${BANK.name}</div>
-    <div><b>ACCOUNT:</b> ${BANK.account}</div>
-    <div><b>NAME:</b> ${BANK.holder}</div>
-    <br/>
-    <div><b>AMOUNT:</b> ₦${amount}</div>
-    <div><b>REFERENCE:</b> ${transaction.txID}</div>
-    <br/>
-    <div class="small">Transfer must include reference exactly.</div>
-  `;
-
-  goTo('payment');
-}
-
-// ================= STEP 3: CONFIRM PAYMENT =================
-function confirmPayment() {
-
-  transaction.payment = {
-    method: "BANK_TRANSFER",
-    amount: transaction.amount,
-    reference: transaction.txID,
-    status: "CONFIRMED"
-  };
-
-  runQRS();
-}
-
-// ================= STEP 4: QRS =================
-function runQRS() {
-
-  let status = "VERIFIED";
-  let qrsA = "ISSUED";
-
-  if (transaction.risk > 60) {
-    status = "FLAGGED";
-    qrsA = "PENDING";
+  if (type === 'STATUS') {
+    document.getElementById('flowTitle').innerText = "Transaction Lookup";
   }
 
-  if (transaction.risk > 85) {
-    status = "BLOCKED";
-    qrsA = "DENIED";
+  if (type === 'BANK') {
+    document.getElementById('flowTitle').innerText = "Bank Payment Instructions";
   }
 
-  transaction.finalStatus = status;
-  transaction.qrsA = qrsA;
+  if (type === 'REGISTRY') {
+    document.getElementById('flowTitle').innerText = "Registry Access";
+  }
 
-  saveRegistry();
+  updateFlow();
 }
 
-// ================= STEP 5: REGISTRY =================
-function saveRegistry() {
+// ===============================
+// FLOW ENGINE (HIDDEN LOGIC)
+// ===============================
+function updateFlow() {
 
-  let reg = JSON.parse(localStorage.getItem("COMET_REGISTRY") || "[]");
-  reg.push(transaction);
-  localStorage.setItem("COMET_REGISTRY", JSON.stringify(reg));
+  const status = document.getElementById('flowStatus');
 
-  showResult();
+  if (currentFlow === 'VERIFY') {
+
+    if (flowStage === 0) {
+      status.innerText = "Initializing SPCR transaction...";
+    }
+
+    if (flowStage === 1) {
+      status.innerText = "Generating TX-ID and risk profile...";
+    }
+
+    if (flowStage === 2) {
+      status.innerText = "Payment instruction prepared (bank transfer mode)";
+    }
+
+    if (flowStage === 3) {
+      status.innerText = "Awaiting bank confirmation (reference matching)";
+    }
+
+  }
+
+  if (currentFlow === 'STATUS') {
+
+    if (flowStage === 0) {
+      status.innerText = "Scanning registry ledger...";
+    }
+
+    if (flowStage === 1) {
+      status.innerText = "Matching transaction records...";
+    }
+
+  }
+
+  if (currentFlow === 'BANK') {
+
+    status.innerHTML =
+      "Bank: First Bank Nigeria<br>" +
+      "Account: 2025222557<br>" +
+      "Name: First Standard Title Limited<br><br>" +
+      "Use TX-ID as payment reference";
+
+  }
+
+  if (currentFlow === 'REGISTRY') {
+
+    if (flowStage === 0) {
+      status.innerText = "Accessing verified transaction ledger...";
+    }
+
+    if (flowStage === 1) {
+      status.innerText = "Filtering certified records...";
+    }
+  }
 }
 
-// ================= STEP 6: OUTPUT =================
-function showResult() {
+// ===============================
+// STEP PROGRESSION
+// ===============================
+function nextStep() {
 
-  const r = transaction;
+  flowStage++;
 
-  const pdf = `
-FSTL COMET OS REPORT
+  if (flowStage > 3) flowStage = 3;
 
-TX: ${r.txID}
-DECLARANT: ${r.declarant}
-PROPERTY: ${r.property}
-LOCATION: ${r.location}
-CLAIM: ${r.claim}
-
-PAYMENT: ₦${r.amount} (${r.payment.status})
-REFERENCE: ${r.payment.reference}
-
-QRS-A: ${r.qrsA}
-RISK: ${r.risk}
-STATUS: ${r.finalStatus}
-TIME: ${r.timestamp}
-`;
-
-  document.getElementById("output").innerHTML = `
-    <div><b>TRANSACTION COMPLETE</b></div>
-    <div class="status">${r.finalStatus}</div>
-    <div class="small">QRS: ${r.qrsA}</div>
-    <div class="small">RISK: ${r.risk}</div>
-    <div class="small">PAYMENT: ₦${r.amount}</div>
-  `;
-
-  transaction.pdf = pdf;
-
-  goTo('result');
+  updateFlow();
 }
 
-// ================= STEP 7: PDF =================
-function downloadPDF() {
-
-  const blob = new Blob([transaction.pdf], {type:"text/plain"});
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "COMET_OS_TRANSACTION.pdf.txt";
-  a.click();
+// ===============================
+// NAV BACK
+// ===============================
+function backHome() {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('home').classList.add('active');
 }
 
 </script>
