@@ -1,364 +1,167 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
 <title>FSTL COMET OS</title>
-
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#08111f;
-color:#fff;
-}
-
-.app{
-max-width:430px;
-margin:0 auto;
-height:100vh;
-display:flex;
-flex-direction:column;
-}
-
-.header{
-background:#101b2e;
-padding:12px;
-text-align:center;
-}
-
-.title{font-size:16px;font-weight:700}
-.sub{font-size:12px;color:#9fb3c8}
-
-.mode{
-text-align:center;
-padding:8px;
-background:#0d1626;
-font-size:12px;
-}
-
-.screen{
-flex:1;
-padding:14px;
-overflow-y:auto;
-}
-
-.card{
-background:#101b2e;
-padding:14px;
-border-radius:12px;
-margin-bottom:12px;
-}
-
-input,select{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:none;
-background:#16243b;
-color:#fff;
-box-sizing:border-box;
-}
-
-button{
-width:100%;
-padding:14px;
-margin-top:10px;
-border:none;
-border-radius:10px;
-background:#1e88e5;
-color:#fff;
-}
-
-.row{
-display:flex;
-gap:10px;
-}
-
+body{margin:0;font-family:Arial;background:#0b1220;color:#fff}
+.wrap{max-width:420px;margin:0 auto;padding:20px}
+.card{background:#111c2e;padding:16px;border-radius:12px;margin-bottom:12px}
+button,select,input{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:none}
+button{background:#1e88e5;color:#fff}
+.row{display:flex;gap:10px}
 .row button{flex:1}
-
-.badge{
-padding:6px 10px;
-border-radius:8px;
-font-weight:bold;
-display:inline-block;
-}
-
-.green{background:#2e7d32}
-.orange{background:#f9a825}
-.red{background:#c62828}
-
-.section{
-margin-top:10px;
-padding:10px;
-background:#16243b;
-border-radius:10px;
-font-size:13px;
-}
-
-pre{
-white-space:pre-wrap;
-font-size:11px;
-background:#000;
-padding:10px;
-border-radius:8px;
-}
-
 </style>
 </head>
 
 <body>
 
-<div class="app">
-
-<div class="header">
-<div class="title">FIRST STANDARD TITLE LIMITED</div>
-<div class="sub">COMET OS · ENGINE CORE</div>
+<div class="wrap" id="app">
+<!-- BOOT CONTENT (ALWAYS VISIBLE) -->
+<div class="card">
+<b>FSTL COMET OS</b><br><br>
+Loading system...
 </div>
-
-<div class="mode" id="mode">BOOTING...</div>
-
-<div class="screen" id="screen"></div>
-
 </div>
 
 <script>
 
-# =========================
-# HARD BOOT STATE (NO FAILURE MODE)
-# =========================
+/* HARD SAFE BOOT */
+(function(){
 
-var OS = null;
+var app = document.getElementById("app");
 
-function BOOT(){
-
-OS = {
-mode:"front",
-step:0,
-intent:null,
-
-participants:{},
-property:{},
-
-risk:{score:0,flags:[],level:"INIT"},
-service:null
-};
-
-document.getElementById("mode").innerText="MODE: FRONT GATE";
-
-RENDER();
-}
-
-# =========================
-# INTENTS
-# =========================
-
-var INTENTS=[
-"Property Verification",
-"Sale / Purchase",
-"Ownership / Probate",
-"Risk Assessment"
-];
-
-# =========================
-# FLOW
-# =========================
-
-var FLOW=[
-{key:"role",label:"Role",type:"select",options:["Owner","Buyer","Seller","Agent","Tenant","Institution"]},
-{key:"id_type",label:"ID Type",type:"select",options:["NIN","Passport","Voter","Driver"]},
-{key:"id_number",label:"ID Number",type:"text"},
-{key:"phone",label:"Phone",type:"text"},
-
-{key:"type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
-{key:"location",label:"Location",type:"text"},
-{key:"ref",label:"Property Ref",type:"text"},
-
-{key:"control",label:"Ownership Control",type:"select",options:["Owner","Agent","Family","Unknown"]},
-{key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","OWNER OCCUPIED","UNKNOWN"]},
-{key:"rent",label:"Rent Status",type:"select",options:["PAYING","NOT PAYING","UNKNOWN"]}
-];
-
-# =========================
-# ENGINE
-# =========================
-
-function ENGINE(){
-
-var score=0;
-var flags=[];
-
-if(!OS.participants.id_number){score+=4;flags.push("Missing ID");}
-if(!OS.participants.phone){score+=2;flags.push("Missing Phone");}
-
-if(!OS.property.ref){score+=4;flags.push("Missing Property Ref");}
-if(OS.property.control==="Unknown"){score+=2;flags.push("Ownership Unclear");}
-
-if(OS.property.occupancy==="TENANTED" &&
-OS.property.rent==="NOT PAYING"){
-score+=3;
-flags.push("Tenant Conflict");
-}
-
-var level="CLEAN";
-if(score>=8)level="HIGH RISK";
-else if(score>=4)level="WATCH";
-
-return {score:score,flags:flags,level:level};
-}
-
-# =========================
-# ROUTER
-# =========================
-
-function ROUTER(r){
-
-if(r.level==="HIGH RISK")return"RISK MANAGEMENT";
-if(OS.intent==="Ownership / Probate")return"PROBATE STRUCTURING";
-if(OS.intent==="Property Verification")return"ASSET VERIFICATION";
-return"STANDARD TRANSACTION";
-}
-
-# =========================
-# FLOW CONTROL
-# =========================
-
-function START(){
-OS.intent = document.getElementById("intent").value;
-OS.mode="flow";
-RENDER();
-}
-
-function NEXT(){
-
-var v=document.getElementById("input").value;
-var k=FLOW[OS.step].key;
-
-if(!OS.participants)OS.participants={};
-if(!OS.property)OS.property={};
-
-if(OS.participants[k]!==undefined || k==="role" || k==="id_type" || k==="id_number" || k==="phone"){
-OS.participants[k]=v;
-}else{
-OS.property[k]=v;
-}
-
-OS.step++;
-RENDER();
-}
-
-function BACK(){
-if(OS.step>0)OS.step--;
-RENDER();
-}
-
-# =========================
-# EXECUTION
-# =========================
-
-function RUN(){
-
-var r=ENGINE();
-
-OS.risk=r;
-OS.service=ROUTER(r);
-
-OS.mode="output";
-
-RENDER();
-}
-
-# =========================
-# RENDER ENGINE (HARD SAFE)
-# =========================
-
-function RENDER(){
-
-var screen=document.getElementById("screen");
-screen.innerHTML="";
-
-if(OS.mode==="front"){
-
-screen.innerHTML=
+/* FORCE FRONT RENDER IMMEDIATELY */
+app.innerHTML =
 "<div class='card'>"+
 "<b>COMET OS ENTRY</b><br><br>"+
-"Select Intent<br>"+
+"Select Intent"+
 "<select id='intent'>"+
-INTENTS.map(function(i){return "<option>"+i+"</option>";}).join("")+
+"<option>Property Verification</option>"+
+"<option>Sale / Purchase</option>"+
+"<option>Ownership / Probate</option>"+
+"<option>Risk Assessment</option>"+
 "</select>"+
-"<button onclick='START()'>ENTER SYSTEM</button>"+
+"<button id='startBtn'>ENTER SYSTEM</button>"+
 "</div>";
 
-return;
+/* ENGINE STATE */
+var OS = {
+step:0,
+intent:null,
+data:{},
+mode:"flow"
+};
+
+/* FLOW */
+var FLOW = [
+{key:"role",label:"Role",options:["Owner","Buyer","Seller","Agent","Tenant"]},
+{key:"id_number",label:"ID Number"},
+{key:"phone",label:"Phone"},
+{key:"location",label:"Property Location"},
+{key:"ref",label:"Property Ref"},
+{key:"control",label:"Control",options:["Owner","Agent","Family","Unknown"]},
+{key:"occupancy",label:"Occupancy",options:["VACANT","TENANTED"]},
+{key:"rent",label:"Rent",options:["PAYING","NOT PAYING"]}
+];
+
+/* START BUTTON */
+document.getElementById("startBtn").onclick = function(){
+OS.intent = document.getElementById("intent").value;
+renderStep();
+};
+
+/* RENDER STEP */
+function renderStep(){
+
+if(OS.step >= FLOW.length){
+return renderResult();
 }
 
-if(OS.mode==="flow"){
+var f = FLOW[OS.step];
 
-if(OS.step>=FLOW.length){
-RUN();
-return;
-}
+var html = "<div class='card'><b>"+f.label+"</b>";
 
-var f=FLOW[OS.step];
-
-var html="<div class='card'><b>"+f.label+"</b>";
-
-if(f.type==="select"){
-html+="<select id='input'>";
+if(f.options){
+html += "<select id='input'>";
 for(var i=0;i<f.options.length;i++){
-html+="<option>"+f.options[i]+"</option>";
+html += "<option>"+f.options[i]+"</option>";
 }
-html+="</select>";
+html += "</select>";
 }else{
-html+="<input id='input' />";
+html += "<input id='input'/>";
 }
 
-html+=
-"<div class='row'>"+
-(OS.step>0?"<button onclick='BACK()'>Back</button>":"")+
-"<button onclick='NEXT()'>Next</button>"+
-"</div></div>";
+html += "<div class='row'>";
+if(OS.step>0) html += "<button id='back'>Back</button>";
+html += "<button id='next'>Next</button>";
+html += "</div></div>";
 
-screen.innerHTML=html;
+app.innerHTML = html;
 
-return;
+/* BUTTON BIND */
+if(document.getElementById("next")){
+document.getElementById("next").onclick = next;
+}
+if(document.getElementById("back")){
+document.getElementById("back").onclick = back;
 }
 
-if(OS.mode==="output"){
+}
 
-var r=OS.risk;
+/* NEXT */
+function next(){
+var val = document.getElementById("input").value;
+OS.data[FLOW[OS.step].key] = val;
+OS.step++;
+renderStep();
+}
 
-var color="green";
-if(r.level==="WATCH")color="orange";
-if(r.level==="HIGH RISK")color="red";
+/* BACK */
+function back(){
+if(OS.step>0) OS.step--;
+renderStep();
+}
 
-screen.innerHTML=
+/* ENGINE */
+function engine(){
+
+var score = 0;
+
+if(!OS.data.id_number) score+=4;
+if(!OS.data.phone) score+=2;
+if(!OS.data.ref) score+=4;
+
+if(OS.data.control==="Unknown") score+=2;
+
+if(OS.data.occupancy==="TENANTED" && OS.data.rent==="NOT PAYING"){
+score+=3;
+}
+
+var level = "CLEAN";
+if(score>=8) level="HIGH RISK";
+else if(score>=4) level="WATCH";
+
+return {score:score, level:level};
+}
+
+/* RESULT */
+function renderResult(){
+
+var r = engine();
+
+app.innerHTML =
 "<div class='card'>"+
 "<b>CASE COMPLETE</b><br><br>"+
 "Intent: "+OS.intent+"<br>"+
-"Service: "+OS.service+"<br><br>"+
-"<span class='badge "+color+"'>"+r.level+"</span><br><br>"+
-"Score: "+r.score+"<br><br>"+
-"<b>Flags</b><br>"+
-(r.flags.length?r.flags.join("<br>"):"None")+
-"<div class='section'>"+
-"<b>CASE FILE</b>"+
-"<pre>"+JSON.stringify(OS,null,2)+"</pre>"+
-"</div></div>"+
+"Risk: "+r.level+"<br>"+
+"Score: "+r.score+
+"</div>"+
 "<button onclick='location.reload()'>NEW CASE</button>";
 
-return;
-}
 }
 
-# =========================
-# HARD BOOT LOCK
-# =========================
-
-window.onload = function(){
-BOOT();
-};
+})(); // END BOOT WRAPPER
 
 </script>
 
