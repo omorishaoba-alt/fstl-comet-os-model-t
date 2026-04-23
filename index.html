@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>FSTL COMET OS</title>
 
 <style>
 html,body{
 margin:0;
 padding:0;
-background:#0b1220;
+background:#08111f;
 color:#fff;
 font-family:Arial;
-overflow-x:hidden;
 }
 
 .app{
-max-width:430px;
+max-width:440px;
 margin:0 auto;
 height:100vh;
 display:flex;
@@ -24,21 +23,13 @@ flex-direction:column;
 }
 
 .header{
-background:#111c2e;
-text-align:center;
+background:#101b2e;
 padding:12px;
+text-align:center;
 }
 
-.title{
-font-size:16px;
-font-weight:700;
-}
-
-.sub{
-font-size:12px;
-color:#9fb3c8;
-margin-top:4px;
-}
+.title{font-size:16px;font-weight:700}
+.sub{font-size:12px;color:#9fb3c8}
 
 .screen{
 flex:1;
@@ -47,7 +38,7 @@ overflow-y:auto;
 }
 
 .card{
-background:#111c2e;
+background:#101b2e;
 padding:14px;
 border-radius:12px;
 margin-bottom:12px;
@@ -59,9 +50,8 @@ padding:12px;
 margin-top:10px;
 border-radius:8px;
 border:none;
-background:#152238;
+background:#16243b;
 color:#fff;
-box-sizing:border-box;
 }
 
 button{
@@ -79,9 +69,7 @@ display:flex;
 gap:10px;
 }
 
-.row button{
-flex:1;
-}
+.row button{flex:1}
 
 .badge{
 padding:6px 10px;
@@ -95,9 +83,9 @@ display:inline-block;
 .red{background:#c62828}
 
 .section{
-margin-top:12px;
+margin-top:10px;
 padding:10px;
-background:#152238;
+background:#16243b;
 border-radius:10px;
 font-size:13px;
 }
@@ -119,7 +107,7 @@ border-radius:8px;
 
 <div class="header">
 <div class="title">FIRST STANDARD TITLE LIMITED</div>
-<div class="sub">COMET OS · Property Transaction Engine</div>
+<div class="sub">COMET OS · Transaction Authority Engine</div>
 </div>
 
 <div class="screen" id="app"></div>
@@ -128,31 +116,24 @@ border-radius:8px;
 
 <script>
 
-/* =========================
-   STATE ENGINE
-========================= */
+# =========================
+# 1. CORE AUTHORITY ENGINE
+# =========================
 
-const OS = {
+const COMET = {
 case_id:"CASE-"+Date.now(),
-mode:"front",
-step:0,
+
 intent:null,
 
 participants:{
-role:null,
-id_type:null,
-id_number:null,
-phone:null
+owner:{},
+buyer:{},
+seller:{},
+agent:{},
+tenant:{}
 },
 
-property:{
-type:null,
-location:null,
-ref:null,
-control:null,
-occupancy:null,
-rent:null
-},
+property:{},
 
 risk:{
 score:0,
@@ -160,130 +141,161 @@ flags:[],
 level:"INIT"
 },
 
+decision:{
 service:null,
-paid:false
+authority:"UNVERIFIED"
+}
 };
 
-/* =========================
-   FRONT COVER
-========================= */
+# =========================
+# 2. INTENT GATE
+# =========================
 
-const FRONT = {
-options:[
+const INTENTS=[
 "Property Verification",
 "Sale / Purchase",
 "Ownership / Probate",
 "Risk Assessment"
-]
-};
+];
 
-/* =========================
-   FLOW
-========================= */
+# =========================
+# 3. DATA FLOW
+# =========================
 
 const FLOW=[
-{key:"role",label:"Role",type:"select",options:["Owner","Buyer","Seller","Agent","Institution","Tenant"]},
-{key:"id_type",label:"ID Type",type:"select",options:["NIN","Passport","Voter Card","Driver License"]},
+{key:"role",label:"Active Role",type:"select",options:["Owner","Buyer","Seller","Agent","Tenant","Institution"]},
+
+{key:"id_type",label:"ID Type",type:"select",options:["NIN","Passport","Voter","Driver"]},
 {key:"id_number",label:"ID Number",type:"text"},
 {key:"phone",label:"Phone",type:"text"},
 
-{key:"type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
+{key:"property_type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
 {key:"location",label:"Location",type:"text"},
-{key:"ref",label:"Property Ref",type:"text"},
+{key:"ref",label:"Property Reference",type:"text"},
 
-{key:"control",label:"Control",type:"select",options:["Owner","Agent","Family","Unknown"]},
+{key:"control",label:"Ownership Control",type:"select",options:["Owner","Agent","Family","Disputed"]},
 {key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","OWNER OCCUPIED","UNKNOWN"]},
 {key:"rent",label:"Rent Status",type:"select",options:["PAYING","NOT PAYING","UNKNOWN"]}
 ];
 
+let step=0;
+let mode="front";
+
 /* =========================
-   ENGINE CORE
+   4. AUTHORITY ENGINE (CORE TRUTH SYSTEM)
 ========================= */
 
-function ENGINE(){
+function AUTH_ENGINE(){
 
 let score=0;
 let flags=[];
 
-/* ID */
-if(!OS.participants.id_number){score+=3;flags.push("Missing ID");}
-if(!OS.participants.phone){score+=2;flags.push("Missing Phone");}
-
-/* PROPERTY */
-if(!OS.property.ref){score+=3;flags.push("Missing Property Ref");}
-if(OS.property.control==="Unknown"){score+=2;flags.push("Ownership Unclear");}
-
-/* TENANT RISK */
-if(OS.property.occupancy==="TENANTED" &&
-OS.property.rent==="NOT PAYING"){
-score+=3;
-flags.push("Tenant Conflict");
+/* IDENTITY AUTHORITY */
+if(!COMET.participants.id_number){
+score+=4;
+flags.push("Identity Unverified");
 }
 
-let level="CLEAN";
-if(score>=7)level="HIGH RISK";
-else if(score>=4)level="WATCH";
+if(!COMET.participants.phone){
+score+=2;
+flags.push("Contact Missing");
+}
+
+/* PROPERTY AUTHORITY */
+if(!COMET.property.ref){
+score+=4;
+flags.push("Property Not Registered");
+}
+
+if(COMET.property.control==="Disputed"){
+score+=3;
+flags.push("Ownership Dispute Flag");
+}
+
+/* OCCUPANCY AUTHORITY */
+if(COMET.property.occupancy==="TENANTED" &&
+COMET.property.rent==="NOT PAYING"){
+score+=3;
+flags.push("Tenant Default Conflict");
+}
+
+/* CLASSIFICATION */
+let level="CLEARED";
+
+if(score>=8)level="HIGH RISK AUTHORITY LOCK";
+else if(score>=4)level="RESTRICTED VALIDATION";
 
 return{score,flags,level};
 }
 
-/* =========================
-   ROUTING ENGINE
-========================= */
+# =========================
+# 5. SERVICE AUTHORITY ROUTER
+# =========================
 
-function ROUTE(risk){
+function ROUTE_ENGINE(risk){
 
-if(risk.level==="HIGH RISK")return"RISK MANAGEMENT SERVICE";
-if(OS.intent==="Ownership / Probate")return"PROBATE STRUCTURING";
-if(OS.intent==="Property Verification")return"ASSET VERIFICATION";
-return"TRANSACTION PROCESSING";
+if(risk.level.includes("HIGH")){
+return "RISK MANAGEMENT AUTHORITY";
 }
 
-/* =========================
-   EXECUTION
-========================= */
+if(COMET.intent==="Ownership / Probate"){
+return "PROBATE AUTHORIZATION ENGINE";
+}
 
-function RUN(){
+if(COMET.intent==="Property Verification"){
+return "ASSET VERIFICATION AUTHORITY";
+}
 
-let risk=ENGINE();
+return "STANDARD TRANSACTION CLEARANCE";
+}
 
-OS.risk=risk;
-OS.service=ROUTE(risk);
+# =========================
+# 6. EXECUTION ENGINE
+# =========================
+
+function EXECUTE(){
+
+let risk=AUTH_ENGINE();
+
+COMET.risk=risk;
+COMET.decision.service=ROUTE_ENGINE(risk);
+COMET.decision.authority="ASSESSED";
 
 renderResult();
 }
 
-/* =========================
-   RENDER UI
-========================= */
+# =========================
+# 7. UI RENDER ENGINE
+# =========================
 
 function render(){
 
 let app=document.getElementById("app");
 app.innerHTML="";
 
-/* FRONT */
-if(OS.mode==="front"){
+if(mode==="front"){
 
 app.innerHTML=`
 <div class="card">
-<b>Select Intent</b>
+<b>Select Intent Authority</b>
+
 <select id="input">
-${FRONT.options.map(o=>`<option>${o}</option>`).join("")}
+${INTENTS.map(i=>`<option>${i}</option>`).join("")}
 </select>
-<button onclick="start()">Proceed</button>
+
+<button onclick="start()">Enter System</button>
 </div>`;
+
 return;
 }
 
-/* FLOW */
-if(OS.step>=FLOW.length){
-RUN();
+if(step>=FLOW.length){
+EXECUTE();
 return;
 }
 
-let f=FLOW[OS.step];
-let val=OS.participants[f.key]||OS.property[f.key]||"";
+let f=FLOW[step];
+let val=COMET.participants[f.key]||COMET.property[f.key]||"";
 
 let html=`<div class="card"><b>${f.label}</b>`;
 
@@ -299,7 +311,7 @@ html+=`<input id="input" value="${val}"/>`;
 
 html+=`
 <div class="row">
-${OS.step>0?`<button onclick="back()">Back</button>`:""}
+${step>0?`<button onclick="back()">Back</button>`:""}
 <button onclick="next()">Next</button>
 </div>
 </div>`;
@@ -307,80 +319,82 @@ ${OS.step>0?`<button onclick="back()">Back</button>`:""}
 app.innerHTML=html;
 }
 
-/* =========================
-   NAVIGATION
-========================= */
+# =========================
+# 8. FLOW CONTROL
+# =========================
 
 function start(){
-OS.intent=document.getElementById("input").value;
-OS.mode="flow";
+COMET.intent=document.getElementById("input").value;
+mode="flow";
 render();
 }
 
 function next(){
 let v=document.getElementById("input").value;
+let k=FLOW[step].key;
 
-let k=FLOW[OS.step].key;
+if(k in COMET.participants){
+COMET.participants[k]=v;
+}else{
+COMET.property[k]=v;
+}
 
-if(k in OS.participants)OS.participants[k]=v;
-else OS.property[k]=v;
-
-OS.step++;
+step++;
 render();
 }
 
 function back(){
-if(OS.step>0)OS.step--;
+if(step>0)step--;
 render();
 }
 
-/* =========================
-   RESULT
-========================= */
+# =========================
+# 9. FINAL OUTPUT AUTHORITY FILE
+# =========================
 
 function renderResult(){
 
 let app=document.getElementById("app");
-let r=OS.risk;
+let r=COMET.risk;
 
-let color=r.level==="HIGH RISK"?"red":
-r.level==="WATCH"?"orange":"green";
+let color=r.level.includes("HIGH")?"red":
+r.level.includes("RESTRICTED")?"orange":"green";
 
 app.innerHTML=`
 
 <div class="card">
 
-<b>CASE COMPLETE</b><br><br>
+<b>COMET OS CASE CLOSED</b><br><br>
 
-ID: ${OS.case_id}<br>
-Intent: ${OS.intent}<br><br>
+Case ID: ${COMET.case_id}<br>
+Intent: ${COMET.intent}<br><br>
 
 <span class="badge ${color}">${r.level}</span><br><br>
 
 Score: ${r.score}<br>
-Service: ${OS.service}<br><br>
+Service: ${COMET.decision.service}<br><br>
 
 <b>Flags</b><br>
 ${r.flags.length?r.flags.join("<br>"):"None"}
 
 <div class="section">
-<b>CASE JSON</b>
-<pre>${JSON.stringify(OS,null,2)}</pre>
+<b>AUTHORITY CASE FILE</b>
+<pre>${JSON.stringify(COMET,null,2)}</pre>
 </div>
 
 <div class="section">
-<b>PAYMENT</b><br><br>
-₦25,000<br>
+<b>FSTL SERVICE GATE</b><br><br>
+₦25,000 Processing Fee<br>
 First Bank Nigeria<br>
 2025222557<br><br>
 
-<input id="pay" placeholder="Reference"/>
-<button onclick="alert('Payment Logged')">Confirm Payment</button>
+<input id="ref" placeholder="Payment Reference"/>
+<button onclick="alert('AUTHORITY LOGGED')">Confirm Authority Payment</button>
 </div>
 
 </div>
 
-<button onclick="location.reload()">New Case</button>
+<button onclick="location.reload()">New Authority Case</button>
 `;
 }
 
