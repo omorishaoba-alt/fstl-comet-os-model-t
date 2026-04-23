@@ -6,9 +6,8 @@
 <title>FSTL COMET OS</title>
 
 <style>
-html,body{
+body{
 margin:0;
-padding:0;
 font-family:Arial;
 background:#08111f;
 color:#fff;
@@ -32,9 +31,9 @@ text-align:center;
 .sub{font-size:12px;color:#9fb3c8}
 
 .mode{
-background:#0d1626;
 text-align:center;
 padding:8px;
+background:#0d1626;
 font-size:12px;
 }
 
@@ -115,58 +114,47 @@ border-radius:8px;
 
 <div class="header">
 <div class="title">FIRST STANDARD TITLE LIMITED</div>
-<div class="sub">COMET OS · Transaction Engine</div>
+<div class="sub">COMET OS · ENGINE CORE</div>
 </div>
 
-<div class="mode" id="mode">MODE: INITIALIZING</div>
+<div class="mode" id="mode">BOOTING...</div>
 
-<div class="screen" id="app"></div>
+<div class="screen" id="screen"></div>
 
 </div>
 
 <script>
 
 # =========================
-# SAFE STATE ENGINE (FIXED INIT BUG)
+# HARD BOOT STATE (NO FAILURE MODE)
 # =========================
 
-const OS = {
-ready:true,   // 🔴 FIX: ensures front page always renders
+var OS = null;
+
+function BOOT(){
+
+OS = {
 mode:"front",
 step:0,
-
 intent:null,
 
-participants:{
-role:null,
-id_type:null,
-id_number:null,
-phone:null
-},
+participants:{},
+property:{},
 
-property:{
-type:null,
-location:null,
-ref:null,
-control:null,
-occupancy:null,
-rent:null
-},
-
-risk:{
-score:0,
-flags:[],
-level:"INIT"
-},
-
+risk:{score:0,flags:[],level:"INIT"},
 service:null
 };
 
+document.getElementById("mode").innerText="MODE: FRONT GATE";
+
+RENDER();
+}
+
 # =========================
-# INTENT GATE (FRONT PAGE)
+# INTENTS
 # =========================
 
-const INTENTS=[
+var INTENTS=[
 "Property Verification",
 "Sale / Purchase",
 "Ownership / Probate",
@@ -177,7 +165,7 @@ const INTENTS=[
 # FLOW
 # =========================
 
-const FLOW=[
+var FLOW=[
 {key:"role",label:"Role",type:"select",options:["Owner","Buyer","Seller","Agent","Tenant","Institution"]},
 {key:"id_type",label:"ID Type",type:"select",options:["NIN","Passport","Voter","Driver"]},
 {key:"id_number",label:"ID Number",type:"text"},
@@ -185,7 +173,7 @@ const FLOW=[
 
 {key:"type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
 {key:"location",label:"Location",type:"text"},
-{key:"ref",label:"Property Reference",type:"text"},
+{key:"ref",label:"Property Ref",type:"text"},
 
 {key:"control",label:"Ownership Control",type:"select",options:["Owner","Agent","Family","Unknown"]},
 {key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","OWNER OCCUPIED","UNKNOWN"]},
@@ -198,8 +186,8 @@ const FLOW=[
 
 function ENGINE(){
 
-let score=0;
-let flags=[];
+var score=0;
+var flags=[];
 
 if(!OS.participants.id_number){score+=4;flags.push("Missing ID");}
 if(!OS.participants.phone){score+=2;flags.push("Missing Phone");}
@@ -213,23 +201,56 @@ score+=3;
 flags.push("Tenant Conflict");
 }
 
-let level="CLEAN";
+var level="CLEAN";
 if(score>=8)level="HIGH RISK";
 else if(score>=4)level="WATCH";
 
-return{score,flags,level};
+return {score:score,flags:flags,level:level};
 }
 
 # =========================
 # ROUTER
 # =========================
 
-function ROUTE(risk){
+function ROUTER(r){
 
-if(risk.level==="HIGH RISK")return"RISK MANAGEMENT";
+if(r.level==="HIGH RISK")return"RISK MANAGEMENT";
 if(OS.intent==="Ownership / Probate")return"PROBATE STRUCTURING";
 if(OS.intent==="Property Verification")return"ASSET VERIFICATION";
 return"STANDARD TRANSACTION";
+}
+
+# =========================
+# FLOW CONTROL
+# =========================
+
+function START(){
+OS.intent = document.getElementById("intent").value;
+OS.mode="flow";
+RENDER();
+}
+
+function NEXT(){
+
+var v=document.getElementById("input").value;
+var k=FLOW[OS.step].key;
+
+if(!OS.participants)OS.participants={};
+if(!OS.property)OS.property={};
+
+if(OS.participants[k]!==undefined || k==="role" || k==="id_type" || k==="id_number" || k==="phone"){
+OS.participants[k]=v;
+}else{
+OS.property[k]=v;
+}
+
+OS.step++;
+RENDER();
+}
+
+function BACK(){
+if(OS.step>0)OS.step--;
+RENDER();
 }
 
 # =========================
@@ -238,47 +259,40 @@ return"STANDARD TRANSACTION";
 
 function RUN(){
 
-let risk=ENGINE();
+var r=ENGINE();
 
-OS.risk=risk;
-OS.service=ROUTE(risk);
+OS.risk=r;
+OS.service=ROUTER(r);
 
 OS.mode="output";
 
-render();
+RENDER();
 }
 
 # =========================
-# RENDER ENGINE (FIXED FRONT GATE)
+# RENDER ENGINE (HARD SAFE)
 # =========================
 
-function render(){
+function RENDER(){
 
-document.getElementById("mode").innerText="MODE: "+OS.mode.toUpperCase();
+var screen=document.getElementById("screen");
+screen.innerHTML="";
 
-let app=document.getElementById("app");
-app.innerHTML="";
-
-/* FRONT COVER FIXED */
 if(OS.mode==="front"){
 
-app.innerHTML=`
-<div class="card">
+screen.innerHTML=
+"<div class='card'>"+
+"<b>COMET OS ENTRY</b><br><br>"+
+"Select Intent<br>"+
+"<select id='intent'>"+
+INTENTS.map(function(i){return "<option>"+i+"</option>";}).join("")+
+"</select>"+
+"<button onclick='START()'>ENTER SYSTEM</button>"+
+"</div>";
 
-<b>Welcome to COMET OS</b><br><br>
-Select Transaction Intent:
-
-<select id="input">
-${INTENTS.map(i=>`<option>${i}</option>`).join("")}
-</select>
-
-<button onclick="start()">Enter System</button>
-
-</div>`;
 return;
 }
 
-/* FLOW MODE */
 if(OS.mode==="flow"){
 
 if(OS.step>=FLOW.length){
@@ -286,102 +300,64 @@ RUN();
 return;
 }
 
-let f=FLOW[OS.step];
-let val=OS.participants[f.key]||OS.property[f.key]||"";
+var f=FLOW[OS.step];
 
-let html=`<div class="card"><b>${f.label}</b>`;
+var html="<div class='card'><b>"+f.label+"</b>";
 
 if(f.type==="select"){
-html+=`<select id="input">`;
-f.options.forEach(o=>{
-html+=`<option ${o===val?"selected":""}>${o}</option>`;
-});
-html+=`</select>`;
+html+="<select id='input'>";
+for(var i=0;i<f.options.length;i++){
+html+="<option>"+f.options[i]+"</option>";
+}
+html+="</select>";
 }else{
-html+=`<input id="input" value="${val}"/>`;
+html+="<input id='input' />";
 }
 
-html+=`
-<div class="row">
-${OS.step>0?`<button onclick="back()">Back</button>`:""}
-<button onclick="next()">Next</button>
-</div>
-</div>`;
+html+=
+"<div class='row'>"+
+(OS.step>0?"<button onclick='BACK()'>Back</button>":"")+
+"<button onclick='NEXT()'>Next</button>"+
+"</div></div>";
 
-app.innerHTML=html;
+screen.innerHTML=html;
+
 return;
 }
 
-/* OUTPUT MODE */
 if(OS.mode==="output"){
 
-let r=OS.risk;
+var r=OS.risk;
 
-let color=r.level==="HIGH RISK"?"red":
-r.level==="WATCH"?"orange":"green";
+var color="green";
+if(r.level==="WATCH")color="orange";
+if(r.level==="HIGH RISK")color="red";
 
-app.innerHTML=`
+screen.innerHTML=
+"<div class='card'>"+
+"<b>CASE COMPLETE</b><br><br>"+
+"Intent: "+OS.intent+"<br>"+
+"Service: "+OS.service+"<br><br>"+
+"<span class='badge "+color+"'>"+r.level+"</span><br><br>"+
+"Score: "+r.score+"<br><br>"+
+"<b>Flags</b><br>"+
+(r.flags.length?r.flags.join("<br>"):"None")+
+"<div class='section'>"+
+"<b>CASE FILE</b>"+
+"<pre>"+JSON.stringify(OS,null,2)+"</pre>"+
+"</div></div>"+
+"<button onclick='location.reload()'>NEW CASE</button>";
 
-<div class="card">
-
-<b>CASE COMPLETED</b><br><br>
-
-ID: ${Date.now()}<br>
-Intent: ${OS.intent}<br><br>
-
-<span class="badge ${color}">${r.level}</span><br><br>
-
-Score: ${r.score}<br>
-Service: ${OS.service}<br><br>
-
-<b>Flags</b><br>
-${r.flags.length?r.flags.join("<br>"):"None"}
-
-<div class="section">
-<b>CASE FILE</b>
-<pre>${JSON.stringify(OS,null,2)}</pre>
-</div>
-
-</div>
-
-<button onclick="location.reload()">New Case</button>
-`;
+return;
 }
 }
 
 # =========================
-# NAVIGATION
+# HARD BOOT LOCK
 # =========================
 
-function start(){
-OS.intent=document.getElementById("input").value;
-OS.mode="flow";
-render();
-}
-
-function next(){
-let v=document.getElementById("input").value;
-let k=FLOW[OS.step].key;
-
-if(k in OS.participants){
-OS.participants[k]=v;
-}else{
-OS.property[k]=v;
-}
-
-OS.step++;
-render();
-}
-
-function back(){
-if(OS.step>0)OS.step--;
-render();
-}
-
-/* INIT — GUARANTEED FRONT PAGE */
 window.onload = function(){
-OS.mode="front";
-render();
+BOOT();
 };
 
 </script>
