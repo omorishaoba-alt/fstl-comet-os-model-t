@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FSTL COMET OS</title>
 
 <style>
 html,body{
 margin:0;
 padding:0;
+font-family:Arial;
 background:#08111f;
 color:#fff;
-font-family:Arial;
+overflow-x:hidden;
 }
 
 .app{
-max-width:440px;
+max-width:430px;
 margin:0 auto;
 height:100vh;
 display:flex;
@@ -30,6 +31,13 @@ text-align:center;
 
 .title{font-size:16px;font-weight:700}
 .sub{font-size:12px;color:#9fb3c8}
+
+.modebar{
+padding:8px;
+font-size:12px;
+text-align:center;
+background:#0d1626;
+}
 
 .screen{
 flex:1;
@@ -107,7 +115,11 @@ border-radius:8px;
 
 <div class="header">
 <div class="title">FIRST STANDARD TITLE LIMITED</div>
-<div class="sub">COMET OS · Transaction Authority Engine</div>
+<div class="sub">COMET OS · Transaction Intelligence System</div>
+</div>
+
+<div class="modebar" id="modebar">
+MODE: FRONT GATE
 </div>
 
 <div class="screen" id="app"></div>
@@ -117,23 +129,31 @@ border-radius:8px;
 <script>
 
 # =========================
-# 1. CORE AUTHORITY ENGINE
+# SYSTEM STATE
 # =========================
 
-const COMET = {
+const OS = {
 case_id:"CASE-"+Date.now(),
+mode:"front",
+step:0,
 
 intent:null,
 
 participants:{
-owner:{},
-buyer:{},
-seller:{},
-agent:{},
-tenant:{}
+role:null,
+id_type:null,
+id_number:null,
+phone:null
 },
 
-property:{},
+property:{
+type:null,
+location:null,
+ref:null,
+control:null,
+occupancy:null,
+rent:null
+},
 
 risk:{
 score:0,
@@ -141,14 +161,11 @@ flags:[],
 level:"INIT"
 },
 
-decision:{
-service:null,
-authority:"UNVERIFIED"
-}
+service:null
 };
 
 # =========================
-# 2. INTENT GATE
+# INTENT GATE
 # =========================
 
 const INTENTS=[
@@ -159,113 +176,91 @@ const INTENTS=[
 ];
 
 # =========================
-# 3. DATA FLOW
+# FLOW
 # =========================
 
 const FLOW=[
-{key:"role",label:"Active Role",type:"select",options:["Owner","Buyer","Seller","Agent","Tenant","Institution"]},
-
+{key:"role",label:"Role",type:"select",options:["Owner","Buyer","Seller","Agent","Tenant","Institution"]},
 {key:"id_type",label:"ID Type",type:"select",options:["NIN","Passport","Voter","Driver"]},
 {key:"id_number",label:"ID Number",type:"text"},
 {key:"phone",label:"Phone",type:"text"},
 
-{key:"property_type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
+{key:"type",label:"Property Type",type:"select",options:["Land","Building","Commercial"]},
 {key:"location",label:"Location",type:"text"},
 {key:"ref",label:"Property Reference",type:"text"},
 
-{key:"control",label:"Ownership Control",type:"select",options:["Owner","Agent","Family","Disputed"]},
+{key:"control",label:"Ownership Control",type:"select",options:["Owner","Agent","Family","Unknown"]},
 {key:"occupancy",label:"Occupancy",type:"select",options:["VACANT","TENANTED","OWNER OCCUPIED","UNKNOWN"]},
 {key:"rent",label:"Rent Status",type:"select",options:["PAYING","NOT PAYING","UNKNOWN"]}
 ];
 
-let step=0;
-let mode="front";
+# =========================
+# ENGINE
+# =========================
 
-/* =========================
-   4. AUTHORITY ENGINE (CORE TRUTH SYSTEM)
-========================= */
-
-function AUTH_ENGINE(){
+function ENGINE(){
 
 let score=0;
 let flags=[];
 
-/* IDENTITY AUTHORITY */
-if(!COMET.participants.id_number){
-score+=4;
-flags.push("Identity Unverified");
-}
+if(!OS.participants.id_number){score+=4;flags.push("Missing ID");}
+if(!OS.participants.phone){score+=2;flags.push("Missing Phone");}
 
-if(!COMET.participants.phone){
-score+=2;
-flags.push("Contact Missing");
-}
+if(!OS.property.ref){score+=4;flags.push("Missing Property Reference");}
+if(OS.property.control==="Unknown"){score+=2;flags.push("Ownership Unclear");}
 
-/* PROPERTY AUTHORITY */
-if(!COMET.property.ref){
-score+=4;
-flags.push("Property Not Registered");
-}
-
-if(COMET.property.control==="Disputed"){
+if(OS.property.occupancy==="TENANTED" &&
+OS.property.rent==="NOT PAYING"){
 score+=3;
-flags.push("Ownership Dispute Flag");
+flags.push("Tenant Conflict");
 }
 
-/* OCCUPANCY AUTHORITY */
-if(COMET.property.occupancy==="TENANTED" &&
-COMET.property.rent==="NOT PAYING"){
-score+=3;
-flags.push("Tenant Default Conflict");
-}
+let level="CLEAN";
 
-/* CLASSIFICATION */
-let level="CLEARED";
-
-if(score>=8)level="HIGH RISK AUTHORITY LOCK";
-else if(score>=4)level="RESTRICTED VALIDATION";
+if(score>=8)level="HIGH RISK";
+else if(score>=4)level="WATCH";
 
 return{score,flags,level};
 }
 
 # =========================
-# 5. SERVICE AUTHORITY ROUTER
+# ROUTER
 # =========================
 
-function ROUTE_ENGINE(risk){
+function ROUTE(risk){
 
-if(risk.level.includes("HIGH")){
-return "RISK MANAGEMENT AUTHORITY";
-}
-
-if(COMET.intent==="Ownership / Probate"){
-return "PROBATE AUTHORIZATION ENGINE";
-}
-
-if(COMET.intent==="Property Verification"){
-return "ASSET VERIFICATION AUTHORITY";
-}
-
-return "STANDARD TRANSACTION CLEARANCE";
+if(risk.level==="HIGH RISK")return"RISK MANAGEMENT";
+if(OS.intent==="Ownership / Probate")return"PROBATE STRUCTURING";
+if(OS.intent==="Property Verification")return"ASSET VERIFICATION";
+return"STANDARD TRANSACTION";
 }
 
 # =========================
-# 6. EXECUTION ENGINE
+# EXECUTION
 # =========================
 
-function EXECUTE(){
+function RUN(){
 
-let risk=AUTH_ENGINE();
+let risk=ENGINE();
 
-COMET.risk=risk;
-COMET.decision.service=ROUTE_ENGINE(risk);
-COMET.decision.authority="ASSESSED";
+OS.risk=risk;
+OS.service=ROUTE(risk);
 
-renderResult();
+OS.mode="output";
+
+render();
 }
 
 # =========================
-# 7. UI RENDER ENGINE
+# UI MODE INDICATOR
+# =========================
+
+function setMode(text){
+document.getElementById("modebar").innerText="MODE: "+text;
+}
+
+# =========================
+# RENDER
 # =========================
 
 function render(){
@@ -273,29 +268,34 @@ function render(){
 let app=document.getElementById("app");
 app.innerHTML="";
 
-if(mode==="front"){
+if(OS.mode==="front"){
+setMode("FRONT GATE");
 
 app.innerHTML=`
 <div class="card">
-<b>Select Intent Authority</b>
+
+<b>Select Intent</b>
 
 <select id="input">
 ${INTENTS.map(i=>`<option>${i}</option>`).join("")}
 </select>
 
-<button onclick="start()">Enter System</button>
+<button onclick="start()">Enter OS</button>
+
 </div>`;
-
 return;
 }
 
-if(step>=FLOW.length){
-EXECUTE();
+if(OS.mode==="flow"){
+setMode("ACTIVE PROCESSING");
+
+if(OS.step>=FLOW.length){
+RUN();
 return;
 }
 
-let f=FLOW[step];
-let val=COMET.participants[f.key]||COMET.property[f.key]||"";
+let f=FLOW[OS.step];
+let val=OS.participants[f.key]||OS.property[f.key]||"";
 
 let html=`<div class="card"><b>${f.label}</b>`;
 
@@ -311,91 +311,81 @@ html+=`<input id="input" value="${val}"/>`;
 
 html+=`
 <div class="row">
-${step>0?`<button onclick="back()">Back</button>`:""}
+${OS.step>0?`<button onclick="back()">Back</button>`:""}
 <button onclick="next()">Next</button>
 </div>
 </div>`;
 
 app.innerHTML=html;
+return;
 }
 
-# =========================
-# 8. FLOW CONTROL
-# =========================
+if(OS.mode==="output"){
 
-function start(){
-COMET.intent=document.getElementById("input").value;
-mode="flow";
-render();
-}
+let r=OS.risk;
 
-function next(){
-let v=document.getElementById("input").value;
-let k=FLOW[step].key;
+let color=r.level==="HIGH RISK"?"red":
+r.level==="WATCH"?"orange":"green";
 
-if(k in COMET.participants){
-COMET.participants[k]=v;
-}else{
-COMET.property[k]=v;
-}
-
-step++;
-render();
-}
-
-function back(){
-if(step>0)step--;
-render();
-}
-
-# =========================
-# 9. FINAL OUTPUT AUTHORITY FILE
-# =========================
-
-function renderResult(){
-
-let app=document.getElementById("app");
-let r=COMET.risk;
-
-let color=r.level.includes("HIGH")?"red":
-r.level.includes("RESTRICTED")?"orange":"green";
+setMode("CASE FINALIZED");
 
 app.innerHTML=`
 
 <div class="card">
 
-<b>COMET OS CASE CLOSED</b><br><br>
+<b>CASE COMPLETE</b><br><br>
 
-Case ID: ${COMET.case_id}<br>
-Intent: ${COMET.intent}<br><br>
+ID: ${OS.case_id}<br>
+Intent: ${OS.intent}<br><br>
 
 <span class="badge ${color}">${r.level}</span><br><br>
 
 Score: ${r.score}<br>
-Service: ${COMET.decision.service}<br><br>
+Service: ${OS.service}<br><br>
 
 <b>Flags</b><br>
 ${r.flags.length?r.flags.join("<br>"):"None"}
 
 <div class="section">
-<b>AUTHORITY CASE FILE</b>
-<pre>${JSON.stringify(COMET,null,2)}</pre>
-</div>
-
-<div class="section">
-<b>FSTL SERVICE GATE</b><br><br>
-₦25,000 Processing Fee<br>
-First Bank Nigeria<br>
-2025222557<br><br>
-
-<input id="ref" placeholder="Payment Reference"/>
-<button onclick="alert('AUTHORITY LOGGED')">Confirm Authority Payment</button>
+<b>CASE FILE</b>
+<pre>${JSON.stringify(OS,null,2)}</pre>
 </div>
 
 </div>
 
-<button onclick="location.reload()">New Authority Case</button>
+<button onclick="location.reload()">New Case</button>
+
 `;
+}
+}
+
+# =========================
+# NAVIGATION
+# =========================
+
+function start(){
+OS.intent=document.getElementById("input").value;
+OS.mode="flow";
+render();
+}
+
+function next(){
+let v=document.getElementById("input").value;
+let k=FLOW[OS.step].key;
+
+if(k in OS.participants){
+OS.participants[k]=v;
+}else{
+OS.property[k]=v;
+}
+
+OS.step++;
+render();
+}
+
+function back(){
+if(OS.step>0)OS.step--;
+render();
 }
 
 /* INIT */
