@@ -12,7 +12,6 @@ padding:0;
 font-family:Arial;
 background:#08111f;
 color:#fff;
-overflow-x:hidden;
 }
 
 .app{
@@ -32,11 +31,11 @@ text-align:center;
 .title{font-size:16px;font-weight:700}
 .sub{font-size:12px;color:#9fb3c8}
 
-.modebar{
+.mode{
+background:#0d1626;
+text-align:center;
 padding:8px;
 font-size:12px;
-text-align:center;
-background:#0d1626;
 }
 
 .screen{
@@ -60,6 +59,7 @@ border-radius:8px;
 border:none;
 background:#16243b;
 color:#fff;
+box-sizing:border-box;
 }
 
 button{
@@ -115,12 +115,10 @@ border-radius:8px;
 
 <div class="header">
 <div class="title">FIRST STANDARD TITLE LIMITED</div>
-<div class="sub">COMET OS · Transaction Intelligence System</div>
+<div class="sub">COMET OS · Transaction Engine</div>
 </div>
 
-<div class="modebar" id="modebar">
-MODE: FRONT GATE
-</div>
+<div class="mode" id="mode">MODE: INITIALIZING</div>
 
 <div class="screen" id="app"></div>
 
@@ -129,11 +127,11 @@ MODE: FRONT GATE
 <script>
 
 # =========================
-# SYSTEM STATE
+# SAFE STATE ENGINE (FIXED INIT BUG)
 # =========================
 
 const OS = {
-case_id:"CASE-"+Date.now(),
+ready:true,   // 🔴 FIX: ensures front page always renders
 mode:"front",
 step:0,
 
@@ -165,7 +163,7 @@ service:null
 };
 
 # =========================
-# INTENT GATE
+# INTENT GATE (FRONT PAGE)
 # =========================
 
 const INTENTS=[
@@ -206,7 +204,7 @@ let flags=[];
 if(!OS.participants.id_number){score+=4;flags.push("Missing ID");}
 if(!OS.participants.phone){score+=2;flags.push("Missing Phone");}
 
-if(!OS.property.ref){score+=4;flags.push("Missing Property Reference");}
+if(!OS.property.ref){score+=4;flags.push("Missing Property Ref");}
 if(OS.property.control==="Unknown"){score+=2;flags.push("Ownership Unclear");}
 
 if(OS.property.occupancy==="TENANTED" &&
@@ -216,7 +214,6 @@ flags.push("Tenant Conflict");
 }
 
 let level="CLEAN";
-
 if(score>=8)level="HIGH RISK";
 else if(score>=4)level="WATCH";
 
@@ -252,42 +249,37 @@ render();
 }
 
 # =========================
-# UI MODE INDICATOR
-# =========================
-
-function setMode(text){
-document.getElementById("modebar").innerText="MODE: "+text;
-}
-
-# =========================
-# RENDER
+# RENDER ENGINE (FIXED FRONT GATE)
 # =========================
 
 function render(){
 
+document.getElementById("mode").innerText="MODE: "+OS.mode.toUpperCase();
+
 let app=document.getElementById("app");
 app.innerHTML="";
 
+/* FRONT COVER FIXED */
 if(OS.mode==="front"){
-setMode("FRONT GATE");
 
 app.innerHTML=`
 <div class="card">
 
-<b>Select Intent</b>
+<b>Welcome to COMET OS</b><br><br>
+Select Transaction Intent:
 
 <select id="input">
 ${INTENTS.map(i=>`<option>${i}</option>`).join("")}
 </select>
 
-<button onclick="start()">Enter OS</button>
+<button onclick="start()">Enter System</button>
 
 </div>`;
 return;
 }
 
+/* FLOW MODE */
 if(OS.mode==="flow"){
-setMode("ACTIVE PROCESSING");
 
 if(OS.step>=FLOW.length){
 RUN();
@@ -320,6 +312,7 @@ app.innerHTML=html;
 return;
 }
 
+/* OUTPUT MODE */
 if(OS.mode==="output"){
 
 let r=OS.risk;
@@ -327,15 +320,13 @@ let r=OS.risk;
 let color=r.level==="HIGH RISK"?"red":
 r.level==="WATCH"?"orange":"green";
 
-setMode("CASE FINALIZED");
-
 app.innerHTML=`
 
 <div class="card">
 
-<b>CASE COMPLETE</b><br><br>
+<b>CASE COMPLETED</b><br><br>
 
-ID: ${OS.case_id}<br>
+ID: ${Date.now()}<br>
 Intent: ${OS.intent}<br><br>
 
 <span class="badge ${color}">${r.level}</span><br><br>
@@ -354,7 +345,6 @@ ${r.flags.length?r.flags.join("<br>"):"None"}
 </div>
 
 <button onclick="location.reload()">New Case</button>
-
 `;
 }
 }
@@ -388,8 +378,11 @@ if(OS.step>0)OS.step--;
 render();
 }
 
-/* INIT */
+/* INIT — GUARANTEED FRONT PAGE */
+window.onload = function(){
+OS.mode="front";
 render();
+};
 
 </script>
 
