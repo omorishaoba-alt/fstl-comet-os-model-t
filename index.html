@@ -1,266 +1,175 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FSTL COMET OS</title>
-
-<style>
-body { margin:0; font-family:Arial; background:#0b0f14; color:#fff; }
-
-.header {
-  padding:16px;
-  text-align:center;
-  background:#111826;
-  font-weight:bold;
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>COMET OS v1</title><style>
+:root{
+  --bg:#05070d;
+  --card:#0f1424;
+  --accent:#00f0ff;
+  --text:#eaf2ff;
+  --muted:#7f8da3;
 }
 
-.page {
-  display:none;
-  padding:18px;
+*{box-sizing:border-box;font-family:system-ui;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);} 
+header{padding:18px;border-bottom:1px solid #1b233a;}
+h1{font-size:18px;}
+.container{padding:16px;display:flex;flex-direction:column;gap:16px;}
+.card{background:var(--card);border-radius:16px;padding:16px;border:1px solid #1b233a;}
+input, select{
+  width:100%;padding:14px;border-radius:12px;border:1px solid #243052;
+  background:#0a0f1f;color:var(--text);margin-bottom:10px;
 }
-
-.active { display:block; }
-
-.title {
-  font-size:20px;
-  margin-bottom:6px;
+button{
+  width:100%;padding:14px;border:none;border-radius:12px;
+  background:var(--accent);color:#001018;font-weight:700;cursor:pointer;
 }
+.result{font-size:22px;font-weight:700;color:var(--accent);} 
+.small{font-size:12px;color:var(--muted);} 
+.mode{display:flex;gap:10px;}
+.mode button{flex:1;background:#1b233a;color:var(--text);} 
+.mode .active{background:var(--accent);color:#001018;}
 
-.desc {
-  font-size:14px;
-  opacity:0.8;
-  margin-bottom:16px;
-}
-
-.card {
-  background:#111826;
-  padding:14px;
-  border-radius:10px;
-  margin-bottom:12px;
-}
-
-input, select {
-  width:100%;
+.status-box{
   padding:10px;
-  margin-top:6px;
-  border:none;
-  border-radius:6px;
+  border-radius:10px;
+  background:#0a0f1f;
+  border:1px solid #243052;
+  margin-top:8px;
 }
 
-button {
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  background:#1f6feb;
-  color:#fff;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
+</style></head>
+<body><header>
+  <h1>COMET OS v1</h1>
+</header><div class="container">  <!-- MODE -->  <div class="card">
+    <div class="small">Mode</div>
+    <div class="mode">
+      <button id="privateBtn" class="active">PRIVATE</button>
+      <button id="publicBtn">PUBLIC</button>
+    </div>
+    <div class="status-box small" id="modeStatus">Mode: PRIVATE</div>
+  </div>  <!-- VERIFY -->  <div class="card">
+    <div class="small">Step 1: Identity</div>
+    <input id="name" placeholder="Full Name" />
+    <input id="id" placeholder="ID / BVN" />
+    <input id="phone" placeholder="Phone" />
+    <select id="attest">
+      <option value="DECLARED">Declared</option>
+      <option value="STRUCTURED">Structured</option>
+      <option value="ATTESTED">Attested (Agent)</option>
+    </select>
+    <button id="verifyBtn">VERIFY</button>
+    <div class="status-box small" id="verifyStatus">Status: NOT VERIFIED</div>
+  </div>  <!-- ASSET -->  <div class="card">
+    <div class="small">Step 2: Asset</div>
+    <select id="assetType">
+      <option>Land</option>
+      <option>Building</option>
+      <option>Mortgage</option>
+      <option>Other</option>
+    </select>
+    <input id="location" placeholder="Location" />
+    <input id="assetValue" type="number" placeholder="Value (₦)" />
+    <button id="generateBtn">GENERATE VALUE</button>
+  </div>  <!-- OUTPUT -->  <div class="card">
+    <div class="small">Output</div>
+    <div id="output" class="result">₦0</div>
+    <div id="tier" class="small"></div>
+    <div id="risk" class="small"></div>
+    <div id="finalStatus" class="small"></div>
+  </div></div><script>
+
+const state = {
+  mode: 'PRIVATE',
+  verified: false,
+  verificationLevel: 'DECLARED'
+};
+
+// MODE SWITCH
+const privateBtn = document.getElementById('privateBtn');
+const publicBtn = document.getElementById('publicBtn');
+const modeStatus = document.getElementById('modeStatus');
+
+privateBtn.onclick = () => setMode('PRIVATE');
+publicBtn.onclick = () => setMode('PUBLIC');
+
+function setMode(mode){
+  state.mode = mode;
+
+  privateBtn.classList.remove('active');
+  publicBtn.classList.remove('active');
+
+  if(mode === 'PRIVATE') privateBtn.classList.add('active');
+  else publicBtn.classList.add('active');
+
+  modeStatus.innerText = "Mode: " + mode;
 }
 
-.small { font-size:12px; opacity:0.7; }
-.center { text-align:center; }
-</style>
-</head>
+// VERIFY
+const verifyBtn = document.getElementById('verifyBtn');
+const verifyStatus = document.getElementById('verifyStatus');
 
-<body>
+verifyBtn.onclick = () => {
+  const name = document.getElementById('name').value.trim();
+  const id = document.getElementById('id').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const attest = document.getElementById('attest').value;
 
-<div class="header">FSTL COMET OS</div>
+  if(!name || !id || !phone){
+    verifyStatus.innerText = "Status: INCOMPLETE";
+    state.verified = false;
+    return;
+  }
 
-<!-- HOME -->
-<div id="home" class="page active">
+  state.verified = true;
+  state.verificationLevel = attest;
 
-<div class="title">Property Verification System</div>
-<div class="desc">
-Structure your identity and property into a verified record.
-</div>
+  verifyStatus.innerText = "Status: VERIFIED (" + attest + ")";
+};
 
-<div class="card">
-<div><b>Begin</b></div>
-<div class="small">Start identity recognition</div>
-<button onclick="go('identity')">Begin Verification</button>
-</div>
+// GENERATE
+const generateBtn = document.getElementById('generateBtn');
 
-</div>
+const output = document.getElementById('output');
+const tier = document.getElementById('tier');
+const risk = document.getElementById('risk');
+const finalStatus = document.getElementById('finalStatus');
 
-<!-- IDENTITY -->
-<div id="identity" class="page">
+generateBtn.onclick = () => {
+  if(!state.verified){
+    alert('VERIFY FIRST');
+    return;
+  }
 
-<div class="title">Identity Recognition</div>
-<div class="desc">
-Establish your presence within COMET OS.
-</div>
+  const val = Number(document.getElementById('assetValue').value);
+  const location = document.getElementById('location').value.trim();
 
-<div class="card">
-<label>Name</label>
-<input id="name"/>
+  if(!val || !location){
+    finalStatus.innerText = "Missing asset data";
+    return;
+  }
 
-<label>Role</label>
-<select id="role">
-<option>Owner</option>
-<option>Buyer</option>
-<option>Agent</option>
-<option>Other</option>
-</select>
-</div>
+  const liquidity = Math.floor(val * 0.65);
 
-<button onclick="createID()">Continue</button>
-<button onclick="go('home')">Back</button>
+  output.innerText = "₦" + liquidity.toLocaleString();
 
-</div>
+  let tierLevel = liquidity > 20000000 ? "Tier A (Institutional)" :
+                  liquidity > 5000000 ? "Tier B (Structured)" :
+                  "Tier C (Entry)";
 
-<!-- ID OUTPUT -->
-<div id="id_done" class="page">
+  tier.innerText = tierLevel;
 
-<div class="title">Identity Structured</div>
-<div class="desc">
-Your identity has been recorded.
-</div>
+  let riskLevel = state.verificationLevel === 'ATTESTED'
+    ? "LOW RISK"
+    : state.verificationLevel === 'STRUCTURED'
+    ? "MODERATE RISK"
+    : "HIGH RISK";
 
-<div class="card center">
-<div><b id="cid"></b></div>
-<div class="small">Status: Recognized</div>
-</div>
+  risk.innerText = "Risk: " + riskLevel;
 
-<button onclick="go('property')">Proceed to Property</button>
+  finalStatus.innerText = "Processed in " + state.mode + " mode";
+};
 
-</div>
-
-<!-- PROPERTY -->
-<div id="property" class="page">
-
-<div class="title">Property Entry</div>
-<div class="desc">
-Provide basic property details for verification.
-</div>
-
-<div class="card">
-<label>Description</label>
-<input id="prop"/>
-
-<label>Location</label>
-<input id="loc"/>
-</div>
-
-<button onclick="processProperty()">Continue</button>
-
-</div>
-
-<!-- PROCESS -->
-<div id="process" class="page">
-
-<div class="title">Processing</div>
-<div class="desc">
-Your request is being structured.
-</div>
-
-<div class="card center">
-<div id="stepText">Preparing...</div>
-</div>
-
-<button onclick="nextStep()">Continue</button>
-
-</div>
-
-<!-- PAYMENT -->
-<div id="payment" class="page">
-
-<div class="title">Payment Instruction</div>
-<div class="desc">
-Complete transfer using your reference.
-</div>
-
-<div class="card">
-<div>Bank: First Bank Nigeria</div>
-<div>Account: 2025222557</div>
-<div>Name: First Standard Title Limited</div>
-<br/>
-<div><b id="tx"></b></div>
-</div>
-
-<button onclick="confirmPay()">Payment Completed</button>
-
-</div>
-
-<!-- RESULT -->
-<div id="result" class="page">
-
-<div class="title">Verification Complete</div>
-<div class="desc">
-Your record has been structured successfully.
-</div>
-
-<div class="card center">
-<div><b id="finalRef"></b></div>
-<div class="small">Status: Verified</div>
-</div>
-
-<button onclick="download()">Download Record</button>
-<button onclick="go('home')">Finish</button>
-
-</div>
-
-<script>
-
-function go(p){
-document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-document.getElementById(p).classList.add('active');
-}
-
-let cid, tx, step=0;
-
-function createID(){
-const name = document.getElementById("name").value;
-if(!name) return;
-
-cid = "CID-" + Date.now();
-document.getElementById("cid").innerText = cid;
-
-go('id_done');
-}
-
-function processProperty(){
-tx = "TX-" + Date.now();
-step=0;
-go('process');
-}
-
-function nextStep(){
-step++;
-const t = document.getElementById("stepText");
-
-if(step===1) t.innerText="Generating reference...";
-else if(step===2) t.innerText="Preparing transaction...";
-else {
-document.getElementById("tx").innerText = tx;
-go('payment');
-}
-}
-
-function confirmPay(){
-document.getElementById("finalRef").innerText = tx;
-go('result');
-}
-
-function download(){
-const content =
-`FSTL COMET OS RECORD
-
-ID: ${cid}
-TX: ${tx}
-STATUS: VERIFIED`;
-
-const blob = new Blob([content], {type:"text/plain"});
-const url = URL.createObjectURL(blob);
-
-const a = document.createElement("a");
-a.href = url;
-a.download = "COMET_RECORD.txt";
-a.click();
-}
-
-</script>
-
-</body>
+</script></body>
 </html>
