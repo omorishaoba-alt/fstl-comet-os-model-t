@@ -1,20 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS v1</title>
-
 <style>
 :root{
-  --bg:#05070d;
-  --card:#0f1424;
-  --accent:#00f0ff;
-  --text:#eaf2ff;
-  --muted:#7f8da3;
+  --bg:#000000;
+  --card:#0a0a0a;
+  --accent:#00e6ff;
+  --text:#ffffff;
+  --muted:#bbbbbb;
+  --border:#333333;
 }
 
-*{box-sizing:border-box;font-family:system-ui;}
+*{
+  box-sizing:border-box;
+  font-family:system-ui;
+}
 
 body{
   margin:0;
@@ -23,242 +20,81 @@ body{
 }
 
 header{
-  padding:16px;
-  border-bottom:1px solid #1b233a;
+  padding:20px;
+  border-bottom:2px solid var(--border);
+}
+
+h2{
+  margin:0;
+  font-size:20px;
 }
 
 .container{
-  padding:16px;
+  padding:20px;
   display:flex;
   flex-direction:column;
-  gap:16px;
+  gap:20px;
 }
 
 .card{
   background:var(--card);
-  padding:16px;
-  border-radius:12px;
-  border:1px solid #1b233a;
+  padding:20px;
+  border-radius:14px;
+  border:2px solid var(--border);
 }
 
 input, select{
   width:100%;
-  padding:12px;
-  margin-top:8px;
-  border-radius:8px;
-  border:1px solid #243052;
-  background:#0a0f1f;
-  color:var(--text);
+  padding:16px;
+  margin-top:12px;
+  border-radius:10px;
+  border:2px solid var(--border);
+  background:#111;
+  color:#fff;
+  font-size:16px;
+}
+
+input::placeholder{
+  color:#888;
 }
 
 button{
   width:100%;
-  margin-top:10px;
-  padding:12px;
+  margin-top:16px;
+  padding:16px;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   background:var(--accent);
-  color:#001018;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.result{
-  font-size:22px;
-  font-weight:700;
-  color:var(--accent);
-}
-
-.small{
-  font-size:12px;
-  color:var(--muted);
+  color:#000;
+  font-weight:800;
+  font-size:16px;
 }
 
 .mode{
   display:flex;
-  gap:10px;
+  gap:12px;
 }
 
 .mode button{
-  background:#1b233a;
-  color:white;
+  background:#222;
+  color:#fff;
 }
 
 .mode .active{
   background:var(--accent);
-  color:#001018;
+  color:#000;
+}
+
+.result{
+  font-size:26px;
+  font-weight:800;
+  color:var(--accent);
+  margin-top:10px;
+}
+
+.small{
+  font-size:14px;
+  color:var(--muted);
+  margin-top:6px;
 }
 </style>
-</head>
-
-<body>
-
-<header>
-  <h2>COMET OS v1</h2>
-</header>
-
-<div class="container">
-
-  <!-- MODE -->
-  <div class="card">
-    <div class="small">MODE</div>
-    <div class="mode">
-      <button id="privateBtn" class="active">PRIVATE</button>
-      <button id="publicBtn">PUBLIC</button>
-    </div>
-    <div id="modeStatus" class="small">Mode: PRIVATE</div>
-  </div>
-
-  <!-- IDENTITY -->
-  <div class="card">
-    <div class="small">IDENTITY VERIFICATION</div>
-
-    <input id="name" placeholder="Full Name">
-    <input id="id" placeholder="ID / BVN">
-    <input id="phone" placeholder="Phone">
-
-    <select id="level">
-      <option value="DECLARED">Declared</option>
-      <option value="STRUCTURED">Structured</option>
-      <option value="ATTESTED">Attested (Agent)</option>
-    </select>
-
-    <button id="verifyBtn">VERIFY</button>
-    <div id="verifyStatus" class="small">NOT VERIFIED</div>
-  </div>
-
-  <!-- ASSET -->
-  <div class="card">
-    <div class="small">ASSET INPUT</div>
-
-    <select id="assetType">
-      <option>Land</option>
-      <option>Building</option>
-      <option>Mortgage</option>
-      <option>Other</option>
-    </select>
-
-    <input id="location" placeholder="Location">
-    <input id="value" type="number" placeholder="Value (₦)">
-
-    <button id="runBtn">GENERATE VALUE</button>
-  </div>
-
-  <!-- OUTPUT -->
-  <div class="card">
-    <div class="small">OUTPUT</div>
-
-    <div id="liquidity" class="result">₦0</div>
-    <div id="tier" class="small"></div>
-    <div id="risk" class="small"></div>
-    <div id="status" class="small"></div>
-
-  </div>
-
-</div>
-
-<script>
-
-/* =========================
-   STATE (single source)
-========================= */
-
-const state = {
-  mode: "PRIVATE",
-  verified: false,
-  level: "DECLARED"
-};
-
-/* =========================
-   MODE SWITCH
-========================= */
-
-const privateBtn = document.getElementById("privateBtn");
-const publicBtn = document.getElementById("publicBtn");
-const modeStatus = document.getElementById("modeStatus");
-
-privateBtn.onclick = () => setMode("PRIVATE");
-publicBtn.onclick = () => setMode("PUBLIC");
-
-function setMode(m){
-  state.mode = m;
-
-  privateBtn.classList.remove("active");
-  publicBtn.classList.remove("active");
-
-  if(m === "PRIVATE") privateBtn.classList.add("active");
-  else publicBtn.classList.add("active");
-
-  modeStatus.innerText = "Mode: " + m;
-}
-
-/* =========================
-   VERIFY
-========================= */
-
-const verifyBtn = document.getElementById("verifyBtn");
-const verifyStatus = document.getElementById("verifyStatus");
-
-verifyBtn.onclick = () => {
-
-  const name = document.getElementById("name").value.trim();
-  const id = document.getElementById("id").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const level = document.getElementById("level").value;
-
-  if(!name || !id || !phone){
-    verifyStatus.innerText = "INCOMPLETE";
-    state.verified = false;
-    return;
-  }
-
-  state.verified = true;
-  state.level = level;
-
-  verifyStatus.innerText = "VERIFIED: " + level;
-};
-
-/* =========================
-   PROCESS ASSET
-========================= */
-
-const runBtn = document.getElementById("runBtn");
-
-runBtn.onclick = () => {
-
-  if(!state.verified){
-    alert("VERIFY FIRST");
-    return;
-  }
-
-  const value = Number(document.getElementById("value").value);
-  const location = document.getElementById("location").value.trim();
-
-  if(!value || !location){
-    return;
-  }
-
-  const liquidity = Math.floor(value * 0.65);
-
-  document.getElementById("liquidity").innerText =
-    "₦" + liquidity.toLocaleString();
-
-  let tier =
-    liquidity > 20000000 ? "Tier A" :
-    liquidity > 5000000 ? "Tier B" :
-    "Tier C";
-
-  let risk =
-    state.level === "ATTESTED" ? "LOW RISK" :
-    state.level === "STRUCTURED" ? "MEDIUM RISK" :
-    "HIGH RISK";
-
-  document.getElementById("tier").innerText = "Tier: " + tier;
-  document.getElementById("risk").innerText = "Risk: " + risk;
-  document.getElementById("status").innerText = "Mode: " + state.mode;
-};
-
-</script>
-
-</body>
-</html>
