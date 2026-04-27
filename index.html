@@ -5,70 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FSTL COMET OS</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
 <style>
-body{margin:0;font-family:'Inter',sans-serif;background:#0a0f1f;color:#e5e7eb}
+body{margin:0;font-family:Arial;background:#0b0f1a;color:#fff}
 .screen{display:none;max-width:420px;margin:auto;padding:20px}
 .active{display:block}
+
 h1{font-size:20px}
 p{font-size:13px;color:#9ca3af}
 
 input{
-  width:100%;padding:14px;margin-top:10px;
-  border:none;border-radius:10px;background:#111827;color:#fff
+  width:100%;padding:12px;margin-top:8px;
+  border:none;border-radius:8px;background:#0b1220;color:#fff
 }
 
 button{
-  width:100%;padding:14px;margin-top:14px;
-  border:none;border-radius:12px;
-  background:linear-gradient(135deg,#2563eb,#1d4ed8);
-  color:#fff;font-weight:600
+  width:100%;padding:14px;margin-top:12px;
+  border:none;border-radius:10px;background:#2563eb;color:#fff;font-weight:600
 }
 
-.result{
-  margin-top:16px;padding:16px;border-radius:12px;background:#111827
-}
+.card{background:#111827;padding:14px;border-radius:10px;margin-top:12px}
+
+.result{margin-top:16px;padding:16px;border-radius:10px;background:#0b1220}
 
 .accept{color:#22c55e}
 .review{color:#f59e0b}
 .reject{color:#ef4444}
+
+.bar{height:8px;background:#1f2937;border-radius:6px;margin-top:6px}
+.fill{height:100%;background:#22c55e;width:0%}
+
+.small{font-size:12px;color:#9ca3af}
+
+.list-item{
+  padding:10px;border-bottom:1px solid #1f2937;
+}
 </style>
 </head>
 
 <body>
 
-<!-- COVER -->
-<div id="cover" class="screen active">
+<!-- SCREEN 1 -->
+<div id="s1" class="screen active">
   <h1>FSTL COMET OS</h1>
-  <p>Global Asset Trust Decision System</p>
-  <button onclick="go('person')">Start</button>
+  <p>Global Person ↔ Property Trust Engine</p>
+  <button onclick="go('s2')">Start Verification</button>
+  <button onclick="loadLedger()">View History</button>
 </div>
 
-<!-- PERSON -->
-<div id="person" class="screen">
-  <h1>Person Details</h1>
+<!-- SCREEN 2 -->
+<div id="s2" class="screen">
+  <h1>Person</h1>
+
   <input id="name" placeholder="Full Name">
   <input id="pid" placeholder="Participant ID">
+
   <input id="identity" type="number" placeholder="Identity Strength (0–100)">
-  <input id="integrity" type="number" placeholder="Document Integrity (0–100)">
-  <button onclick="go('property')">Continue</button>
+  <div class="bar"><div id="b1" class="fill"></div></div>
+
+  <input id="doc" type="number" placeholder="Document Integrity (0–100)">
+  <div class="bar"><div id="b2" class="fill"></div></div>
+
+  <button onclick="go('s3')">Continue</button>
 </div>
 
-<!-- PROPERTY -->
-<div id="property" class="screen">
-  <h1>Property Details</h1>
-  <input id="prop" placeholder="Property ID">
+<!-- SCREEN 3 -->
+<div id="s3" class="screen">
+  <h1>Property</h1>
+
+  <input id="property" placeholder="Property ID">
+
   <input id="title" type="number" placeholder="Title Strength (0–100)">
-  <input id="clarity" type="number" placeholder="Ownership Clarity (0–100)">
+  <div class="bar"><div id="b3" class="fill"></div></div>
+
+  <input id="own" type="number" placeholder="Ownership Clarity (0–100)">
+  <div class="bar"><div id="b4" class="fill"></div></div>
+
   <button onclick="run()">Run Correlation</button>
 </div>
 
-<!-- RESULT -->
-<div id="resultScreen" class="screen">
+<!-- SCREEN 4 -->
+<div id="s4" class="screen">
   <h1>Decision</h1>
-  <div id="out" class="result"></div>
-  <button onclick="pdf()">Generate Report</button>
+
+  <div id="result" class="result"></div>
+
+  <div class="card">
+    <b>Breakdown</b><br><br>
+    <div id="break"></div>
+  </div>
+
+  <button onclick="save()">Save Case</button>
+  <button onclick="report()">Generate Report</button>
+  <button onclick="go('s1')">New Case</button>
+</div>
+
+<!-- SCREEN 5 -->
+<div id="s5" class="screen">
+  <h1>History</h1>
+  <div id="history"></div>
+  <button onclick="go('s1')">Back</button>
 </div>
 
 <script>
@@ -80,65 +115,127 @@ function go(id){
   document.getElementById(id).classList.add('active');
 }
 
+function val(id){return Number(document.getElementById(id).value)}
+function txt(id){return document.getElementById(id).value.trim()}
+
+function valid(v){return !(isNaN(v)||v<0||v>100)}
+
+function updateBars(){
+  ["identity","doc","title","own"].forEach((id,i)=>{
+    let v=document.getElementById(id).value||0;
+    document.getElementById("b"+(i+1)).style.width=v+"%";
+  });
+}
+setInterval(updateBars,200);
+
 function run(){
 
-  let identity=+document.getElementById('identity').value;
-  let integrity=+document.getElementById('integrity').value;
-  let title=+document.getElementById('title').value;
-  let clarity=+document.getElementById('clarity').value;
+  let name=txt("name");
+  let pid=txt("pid");
+  let property=txt("property");
 
-  if([identity,integrity,title,clarity].some(v=>isNaN(v))){
-    alert("Complete all fields");
+  let identity=val("identity");
+  let doc=val("doc");
+  let title=val("title");
+  let own=val("own");
+
+  if(!name||!pid||!property||!valid(identity)||!valid(doc)||!valid(title)||!valid(own)){
+    alert("Complete all fields correctly");
     return;
   }
 
-  let score=
-  (identity*0.3)+
-  (integrity*0.2)+
-  (title*0.3)+
-  (clarity*0.2);
+  let score=(identity*0.3)+(doc*0.2)+(title*0.3)+(own*0.2);
+  score=Math.round(score);
 
-  let status,cls;
+  let decision,cls,risk,explain;
 
-  if(score>=80){status="TRUSTED";cls="accept"}
-  else if(score>=50){status="CONDITIONAL";cls="review"}
-  else{status="HIGH RISK";cls="reject"}
+  if(score>=80){
+    decision="TRUSTED";cls="accept";risk="LOW RISK";
+    explain="Strong alignment between person and property.";
+  }else if(score>=50){
+    decision="CONDITIONAL";cls="review";risk="MEDIUM RISK";
+    explain="Partial inconsistencies detected.";
+  }else{
+    decision="HIGH RISK";cls="reject";risk="HIGH RISK";
+    explain="Weak correlation between person and property.";
+  }
 
-  let id="COMET-"+Date.now();
+  let ref="COMET-"+Date.now();
   let time=new Date().toLocaleString();
 
-  R={score,status,id,time};
+  R={name,pid,property,identity,doc,title,own,score,decision,risk,explain,ref,time};
 
-  document.getElementById("out").className="result "+cls;
-  document.getElementById("out").innerHTML=
-  `<b>${status}</b><br>
-   Score: ${score.toFixed(2)}<br>
-   Ref: ${id}<br>
-   ${time}`;
+  document.getElementById("result").className="result "+cls;
+  document.getElementById("result").innerHTML=`
+    <h2>${decision}</h2>
+    ${risk}<br><br>
+    ${explain}<br><br>
+    <div class="small">Score: ${score}</div>
+    <div class="small">Ref: ${ref}</div>
+  `;
 
-  go('resultScreen');
+  document.getElementById("break").innerHTML=`
+    Identity: ${(identity*0.3).toFixed(1)}<br>
+    Documents: ${(doc*0.2).toFixed(1)}<br>
+    Title: ${(title*0.3).toFixed(1)}<br>
+    Ownership: ${(own*0.2).toFixed(1)}
+  `;
+
+  go('s4');
 }
 
-function pdf(){
+function save(){
+  let data=JSON.parse(localStorage.getItem("comet")||"[]");
+  data.unshift(R);
+  localStorage.setItem("comet",JSON.stringify(data));
+  alert("Saved");
+}
 
-  if(!R){alert("Run first");return;}
+function loadLedger(){
+  let data=JSON.parse(localStorage.getItem("comet")||"[]");
+  let html="";
+  data.forEach(d=>{
+    html+=`
+      <div class="list-item">
+        <b>${d.decision}</b> (${d.risk})<br>
+        ${d.property}<br>
+        <span class="small">${d.ref}</span>
+      </div>
+    `;
+  });
+  document.getElementById("history").innerHTML=html||"No records";
+  go('s5');
+}
+
+function report(){
+  if(!R)return;
 
   let w=window.open();
-
   w.document.write(`
-  <h1>FIRST STANDARD TITLE LIMITED</h1>
-  <h2>COMET OS GLOBAL REPORT</h2>
-  <p>Reference: ${R.id}</p>
-  <p>Date: ${R.time}</p>
-  <h3>Decision</h3>
-  <p>${R.status}</p>
-  <h3>Score</h3>
-  <p>${R.score}</p>
-  <br><br>
-  <p>FSTL</p>
-  <p>__________________</p>
-  `);
+<h1>FIRST STANDARD TITLE LIMITED</h1>
+<h2>COMET OS REPORT</h2>
 
+Ref: ${R.ref}<br>
+Date: ${R.time}<br><br>
+
+<h3>Person</h3>
+${R.name} (${R.pid})<br><br>
+
+<h3>Property</h3>
+${R.property}<br><br>
+
+<h3>Decision</h3>
+${R.decision} (${R.risk})<br><br>
+
+<h3>Score</h3>
+${R.score}<br><br>
+
+<h3>Explanation</h3>
+${R.explain}<br><br>
+
+FIRST STANDARD TITLE LIMITED<br><br>
+____________________
+  `);
   w.print();
 }
 
