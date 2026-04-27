@@ -3,254 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS v1</title>
+<title>FSTL COMET OS</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:#ffffff;
-  color:#000000;
+body{margin:0;font-family:'Inter',sans-serif;background:#0a0f1f;color:#e5e7eb}
+.screen{display:none;max-width:420px;margin:auto;padding:20px}
+.active{display:block}
+h1{font-size:20px}
+p{font-size:13px;color:#9ca3af}
+
+input{
+  width:100%;padding:14px;margin-top:10px;
+  border:none;border-radius:10px;background:#111827;color:#fff
 }
 
-header{
-  padding:16px;
-  border-bottom:2px solid #000;
-}
-
-h2{
-  margin:0;
-}
-
-.container{
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  gap:20px;
-}
-
-/* CARDS */
-.card{
-  border:2px solid #000;
-  padding:16px;
-  border-radius:10px;
-  background:#f9f9f9;
-}
-
-/* LABEL */
-.label{
-  font-size:14px;
-  font-weight:bold;
-  margin-bottom:6px;
-}
-
-/* INPUTS — VERY CLEAR */
-input, select{
-  width:100%;
-  padding:18px;
-  margin-bottom:12px;
-  font-size:18px;
-  border:3px solid #000;
-  border-radius:8px;
-  background:#fff;
-  color:#000;
-}
-
-/* BUTTONS */
 button{
-  width:100%;
-  padding:18px;
-  font-size:18px;
-  font-weight:bold;
-  border:none;
-  border-radius:8px;
-  background:#000;
-  color:#fff;
+  width:100%;padding:14px;margin-top:14px;
+  border:none;border-radius:12px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  color:#fff;font-weight:600
 }
 
-/* MODE */
-.mode{
-  display:flex;
-  gap:10px;
-}
-
-.mode button{
-  background:#ccc;
-  color:#000;
-}
-
-.mode .active{
-  background:#000;
-  color:#fff;
-}
-
-/* OUTPUT */
 .result{
-  font-size:28px;
-  font-weight:bold;
-  margin-top:10px;
+  margin-top:16px;padding:16px;border-radius:12px;background:#111827
 }
 
-.info{
-  font-size:14px;
-  margin-top:6px;
-}
+.accept{color:#22c55e}
+.review{color:#f59e0b}
+.reject{color:#ef4444}
 </style>
 </head>
 
 <body>
 
-<header>
-  <h2>COMET OS v1</h2>
-</header>
+<!-- COVER -->
+<div id="cover" class="screen active">
+  <h1>FSTL COMET OS</h1>
+  <p>Global Asset Trust Decision System</p>
+  <button onclick="go('person')">Start</button>
+</div>
 
-<div class="container">
+<!-- PERSON -->
+<div id="person" class="screen">
+  <h1>Person Details</h1>
+  <input id="name" placeholder="Full Name">
+  <input id="pid" placeholder="Participant ID">
+  <input id="identity" type="number" placeholder="Identity Strength (0–100)">
+  <input id="integrity" type="number" placeholder="Document Integrity (0–100)">
+  <button onclick="go('property')">Continue</button>
+</div>
 
-  <!-- MODE -->
-  <div class="card">
-    <div class="label">MODE</div>
-    <div class="mode">
-      <button id="privateBtn" class="active">PRIVATE</button>
-      <button id="publicBtn">PUBLIC</button>
-    </div>
-    <div id="modeStatus" class="info">Mode: PRIVATE</div>
-  </div>
+<!-- PROPERTY -->
+<div id="property" class="screen">
+  <h1>Property Details</h1>
+  <input id="prop" placeholder="Property ID">
+  <input id="title" type="number" placeholder="Title Strength (0–100)">
+  <input id="clarity" type="number" placeholder="Ownership Clarity (0–100)">
+  <button onclick="run()">Run Correlation</button>
+</div>
 
-  <!-- IDENTITY -->
-  <div class="card">
-    <div class="label">IDENTITY</div>
-
-    <input id="name" placeholder="Full Name">
-    <input id="id" placeholder="ID / BVN">
-    <input id="phone" placeholder="Phone Number">
-
-    <select id="level">
-      <option value="DECLARED">Declared</option>
-      <option value="STRUCTURED">Structured</option>
-      <option value="ATTESTED">Attested (Agent)</option>
-    </select>
-
-    <button id="verifyBtn">VERIFY</button>
-    <div id="verifyStatus" class="info">Status: NOT VERIFIED</div>
-  </div>
-
-  <!-- ASSET -->
-  <div class="card">
-    <div class="label">ASSET</div>
-
-    <select id="assetType">
-      <option>Land</option>
-      <option>Building</option>
-      <option>Mortgage</option>
-      <option>Other</option>
-    </select>
-
-    <input id="location" placeholder="Location">
-    <input id="value" type="number" placeholder="Value (₦)">
-
-    <button id="generateBtn">GENERATE VALUE</button>
-  </div>
-
-  <!-- OUTPUT -->
-  <div class="card">
-    <div class="label">OUTPUT</div>
-
-    <div id="liquidity" class="result">₦0</div>
-    <div id="tier" class="info"></div>
-    <div id="risk" class="info"></div>
-    <div id="status" class="info"></div>
-  </div>
-
+<!-- RESULT -->
+<div id="resultScreen" class="screen">
+  <h1>Decision</h1>
+  <div id="out" class="result"></div>
+  <button onclick="pdf()">Generate Report</button>
 </div>
 
 <script>
 
-const state = {
-  mode: "PRIVATE",
-  verified: false,
-  level: "DECLARED"
-};
+let R=null;
 
-/* MODE */
-const privateBtn = document.getElementById("privateBtn");
-const publicBtn = document.getElementById("publicBtn");
-const modeStatus = document.getElementById("modeStatus");
-
-privateBtn.onclick = () => setMode("PRIVATE");
-publicBtn.onclick = () => setMode("PUBLIC");
-
-function setMode(mode){
-  state.mode = mode;
-
-  privateBtn.classList.remove("active");
-  publicBtn.classList.remove("active");
-
-  if(mode === "PRIVATE") privateBtn.classList.add("active");
-  else publicBtn.classList.add("active");
-
-  modeStatus.innerText = "Mode: " + mode;
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
-/* VERIFY */
-const verifyBtn = document.getElementById("verifyBtn");
-const verifyStatus = document.getElementById("verifyStatus");
+function run(){
 
-verifyBtn.onclick = function(){
+  let identity=+document.getElementById('identity').value;
+  let integrity=+document.getElementById('integrity').value;
+  let title=+document.getElementById('title').value;
+  let clarity=+document.getElementById('clarity').value;
 
-  const name = document.getElementById("name").value.trim();
-  const id = document.getElementById("id").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const level = document.getElementById("level").value;
-
-  if(!name || !id || !phone){
-    verifyStatus.innerText = "Status: INCOMPLETE";
-    state.verified = false;
+  if([identity,integrity,title,clarity].some(v=>isNaN(v))){
+    alert("Complete all fields");
     return;
   }
 
-  state.verified = true;
-  state.level = level;
+  let score=
+  (identity*0.3)+
+  (integrity*0.2)+
+  (title*0.3)+
+  (clarity*0.2);
 
-  verifyStatus.innerText = "Status: VERIFIED (" + level + ")";
-};
+  let status,cls;
 
-/* GENERATE */
-const generateBtn = document.getElementById("generateBtn");
+  if(score>=80){status="TRUSTED";cls="accept"}
+  else if(score>=50){status="CONDITIONAL";cls="review"}
+  else{status="HIGH RISK";cls="reject"}
 
-generateBtn.onclick = function(){
+  let id="COMET-"+Date.now();
+  let time=new Date().toLocaleString();
 
-  if(!state.verified){
-    alert("VERIFY FIRST");
-    return;
-  }
+  R={score,status,id,time};
 
-  const value = Number(document.getElementById("value").value);
-  const location = document.getElementById("location").value.trim();
+  document.getElementById("out").className="result "+cls;
+  document.getElementById("out").innerHTML=
+  `<b>${status}</b><br>
+   Score: ${score.toFixed(2)}<br>
+   Ref: ${id}<br>
+   ${time}`;
 
-  if(!value || !location){
-    alert("Enter asset value and location");
-    return;
-  }
+  go('resultScreen');
+}
 
-  const liquidity = Math.floor(value * 0.65);
+function pdf(){
 
-  document.getElementById("liquidity").innerText =
-    "₦" + liquidity.toLocaleString();
+  if(!R){alert("Run first");return;}
 
-  let tier =
-    liquidity > 20000000 ? "Tier A (Institutional)" :
-    liquidity > 5000000 ? "Tier B (Structured)" :
-    "Tier C (Entry)";
+  let w=window.open();
 
-  let risk =
-    state.level === "ATTESTED" ? "LOW RISK" :
-    state.level === "STRUCTURED" ? "MEDIUM RISK" :
-    "HIGH RISK";
+  w.document.write(`
+  <h1>FIRST STANDARD TITLE LIMITED</h1>
+  <h2>COMET OS GLOBAL REPORT</h2>
+  <p>Reference: ${R.id}</p>
+  <p>Date: ${R.time}</p>
+  <h3>Decision</h3>
+  <p>${R.status}</p>
+  <h3>Score</h3>
+  <p>${R.score}</p>
+  <br><br>
+  <p>FSTL</p>
+  <p>__________________</p>
+  `);
 
-  document.getElementById("tier").innerText = "Tier: " + tier;
-  document.getElementById("risk").innerText = "Risk: " + risk;
-  document.getElementById("status").innerText = "Mode: " + state.mode;
-};
+  w.print();
+}
 
 </script>
 
