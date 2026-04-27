@@ -1,243 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FSTL COMET OS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>COMET OS</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b0f1a;color:#fff}
-.screen{display:none;max-width:420px;margin:auto;padding:20px}
-.active{display:block}
-
-h1{font-size:20px}
-p{font-size:13px;color:#9ca3af}
-
-input{
-  width:100%;padding:12px;margin-top:8px;
-  border:none;border-radius:8px;background:#0b1220;color:#fff
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0b0f19;
+  color: white;
 }
 
-button{
-  width:100%;padding:14px;margin-top:12px;
-  border:none;border-radius:10px;background:#2563eb;color:#fff;font-weight:600
+.screen { padding: 18px; }
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  color: white;
 }
 
-.card{background:#111827;padding:14px;border-radius:10px;margin-top:12px}
-
-.result{margin-top:16px;padding:16px;border-radius:10px;background:#0b1220}
-
-.accept{color:#22c55e}
-.review{color:#f59e0b}
-.reject{color:#ef4444}
-
-.bar{height:8px;background:#1f2937;border-radius:6px;margin-top:6px}
-.fill{height:100%;background:#22c55e;width:0%}
-
-.small{font-size:12px;color:#9ca3af}
-
-.list-item{
-  padding:10px;border-bottom:1px solid #1f2937;
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  border: none;
 }
 </style>
 </head>
 
 <body>
 
-<!-- SCREEN 1 -->
-<div id="s1" class="screen active">
-  <h1>FSTL COMET OS</h1>
-  <p>Global Person ↔ Property Trust Engine</p>
-  <button onclick="go('s2')">Start Verification</button>
-  <button onclick="loadLedger()">View History</button>
-</div>
-
-<!-- SCREEN 2 -->
-<div id="s2" class="screen">
-  <h1>Person</h1>
-
-  <input id="name" placeholder="Full Name">
-  <input id="pid" placeholder="Participant ID">
-
-  <input id="identity" type="number" placeholder="Identity Strength (0–100)">
-  <div class="bar"><div id="b1" class="fill"></div></div>
-
-  <input id="doc" type="number" placeholder="Document Integrity (0–100)">
-  <div class="bar"><div id="b2" class="fill"></div></div>
-
-  <button onclick="go('s3')">Continue</button>
-</div>
-
-<!-- SCREEN 3 -->
-<div id="s3" class="screen">
-  <h1>Property</h1>
-
-  <input id="property" placeholder="Property ID">
-
-  <input id="title" type="number" placeholder="Title Strength (0–100)">
-  <div class="bar"><div id="b3" class="fill"></div></div>
-
-  <input id="own" type="number" placeholder="Ownership Clarity (0–100)">
-  <div class="bar"><div id="b4" class="fill"></div></div>
-
-  <button onclick="run()">Run Correlation</button>
-</div>
-
-<!-- SCREEN 4 -->
-<div id="s4" class="screen">
-  <h1>Decision</h1>
-
-  <div id="result" class="result"></div>
-
-  <div class="card">
-    <b>Breakdown</b><br><br>
-    <div id="break"></div>
-  </div>
-
-  <button onclick="save()">Save Case</button>
-  <button onclick="report()">Generate Report</button>
-  <button onclick="go('s1')">New Case</button>
-</div>
-
-<!-- SCREEN 5 -->
-<div id="s5" class="screen">
-  <h1>History</h1>
-  <div id="history"></div>
-  <button onclick="go('s1')">Back</button>
-</div>
+<div id="app"></div>
 
 <script>
+/* =========================
+   COMET OS SINGLE FILE CORE
+========================= */
 
-let R=null;
-
-function go(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function val(id){return Number(document.getElementById(id).value)}
-function txt(id){return document.getElementById(id).value.trim()}
-
-function valid(v){return !(isNaN(v)||v<0||v>100)}
-
-function updateBars(){
-  ["identity","doc","title","own"].forEach((id,i)=>{
-    let v=document.getElementById(id).value||0;
-    document.getElementById("b"+(i+1)).style.width=v+"%";
-  });
-}
-setInterval(updateBars,200);
-
-function run(){
-
-  let name=txt("name");
-  let pid=txt("pid");
-  let property=txt("property");
-
-  let identity=val("identity");
-  let doc=val("doc");
-  let title=val("title");
-  let own=val("own");
-
-  if(!name||!pid||!property||!valid(identity)||!valid(doc)||!valid(title)||!valid(own)){
-    alert("Complete all fields correctly");
-    return;
+class CometOS {
+  constructor() {
+    this.state = { memory: [] };
   }
 
-  let score=(identity*0.3)+(doc*0.2)+(title*0.3)+(own*0.2);
-  score=Math.round(score);
-
-  let decision,cls,risk,explain;
-
-  if(score>=80){
-    decision="TRUSTED";cls="accept";risk="LOW RISK";
-    explain="Strong alignment between person and property.";
-  }else if(score>=50){
-    decision="CONDITIONAL";cls="review";risk="MEDIUM RISK";
-    explain="Partial inconsistencies detected.";
-  }else{
-    decision="HIGH RISK";cls="reject";risk="HIGH RISK";
-    explain="Weak correlation between person and property.";
+  boot() {
+    this.root = document.getElementById("app");
+    this.home();
   }
 
-  let ref="COMET-"+Date.now();
-  let time=new Date().toLocaleString();
+  /* =========================
+     HOME UI
+  ========================== */
+  home() {
+    this.root.innerHTML = `
+      <div class="screen">
+        <h2>COMET OS</h2>
 
-  R={name,pid,property,identity,doc,title,own,score,decision,risk,explain,ref,time};
+        <button onclick="os.openKYC()">
+          Start KYC Flow
+        </button>
 
-  document.getElementById("result").className="result "+cls;
-  document.getElementById("result").innerHTML=`
-    <h2>${decision}</h2>
-    ${risk}<br><br>
-    ${explain}<br><br>
-    <div class="small">Score: ${score}</div>
-    <div class="small">Ref: ${ref}</div>
-  `;
-
-  document.getElementById("break").innerHTML=`
-    Identity: ${(identity*0.3).toFixed(1)}<br>
-    Documents: ${(doc*0.2).toFixed(1)}<br>
-    Title: ${(title*0.3).toFixed(1)}<br>
-    Ownership: ${(own*0.2).toFixed(1)}
-  `;
-
-  go('s4');
-}
-
-function save(){
-  let data=JSON.parse(localStorage.getItem("comet")||"[]");
-  data.unshift(R);
-  localStorage.setItem("comet",JSON.stringify(data));
-  alert("Saved");
-}
-
-function loadLedger(){
-  let data=JSON.parse(localStorage.getItem("comet")||"[]");
-  let html="";
-  data.forEach(d=>{
-    html+=`
-      <div class="list-item">
-        <b>${d.decision}</b> (${d.risk})<br>
-        ${d.property}<br>
-        <span class="small">${d.ref}</span>
+        <button onclick="os.testFlow()">
+          Run Value Engine Test
+        </button>
       </div>
     `;
-  });
-  document.getElementById("history").innerHTML=html||"No records";
-  go('s5');
+  }
+
+  /* =========================
+     VALUE ENGINE
+  ========================== */
+  execute(input, metrics) {
+    const intent = this.classify(input);
+    const action = this.route(intent);
+    const value = this.score(metrics);
+
+    const result = {
+      intent,
+      action,
+      valueScore: value,
+      success: value > 0.5,
+      time: Date.now()
+    };
+
+    this.state.memory.push(result);
+    return result;
+  }
+
+  classify(input) {
+    if (input.verify) return "IDENTITY";
+    if (input.action === "submit") return "TRANSACTIONAL";
+    if (input.action === "query") return "INFORMATIONAL";
+    return "GENERAL";
+  }
+
+  route(intent) {
+    if (intent === "IDENTITY") return "KYC_FLOW";
+    if (intent === "TRANSACTIONAL") return "EXEC_FLOW";
+    return "DEFAULT";
+  }
+
+  score(m) {
+    return (m.completion * 0.4) +
+           (m.quality * 0.4) +
+           ((1 - m.friction) * 0.2);
+  }
+
+  /* =========================
+     KYC FLOW
+  ========================== */
+  openKYC() {
+    this.root.innerHTML = `
+      <div class="screen">
+        <h3>KYC Verification</h3>
+
+        <input id="name" placeholder="Full Name"/>
+        <input id="phone" placeholder="Phone"/>
+
+        <button onclick="os.submitKYC()">
+          Submit
+        </button>
+      </div>
+    `;
+  }
+
+  submitKYC() {
+    const name = document.getElementById("name").value;
+    const phone = document.getElementById("phone").value;
+
+    const result = this.execute(
+      { verify: true, name, phone },
+      { completion: 0.95, quality: 0.9, friction: 0.2 }
+    );
+
+    this.renderResult(result);
+  }
+
+  /* =========================
+     TEST FLOW
+  ========================== */
+  testFlow() {
+    const result = this.execute(
+      { action: "submit" },
+      { completion: 0.8, quality: 0.7, friction: 0.3 }
+    );
+
+    this.renderResult(result);
+  }
+
+  /* =========================
+     RESULT SCREEN
+  ========================== */
+  renderResult(result) {
+    this.root.innerHTML = `
+      <div class="screen">
+        <h3>Result</h3>
+
+        <pre>${JSON.stringify(result, null, 2)}</pre>
+
+        <button onclick="os.home()">
+          Back Home
+        </button>
+      </div>
+    `;
+  }
 }
 
-function report(){
-  if(!R)return;
-
-  let w=window.open();
-  w.document.write(`
-<h1>FIRST STANDARD TITLE LIMITED</h1>
-<h2>COMET OS REPORT</h2>
-
-Ref: ${R.ref}<br>
-Date: ${R.time}<br><br>
-
-<h3>Person</h3>
-${R.name} (${R.pid})<br><br>
-
-<h3>Property</h3>
-${R.property}<br><br>
-
-<h3>Decision</h3>
-${R.decision} (${R.risk})<br><br>
-
-<h3>Score</h3>
-${R.score}<br><br>
-
-<h3>Explanation</h3>
-${R.explain}<br><br>
-
-FIRST STANDARD TITLE LIMITED<br><br>
-____________________
-  `);
-  w.print();
-}
+/* =========================
+   BOOT STRAP
+========================= */
+const os = new CometOS();
+os.boot();
 
 </script>
 
