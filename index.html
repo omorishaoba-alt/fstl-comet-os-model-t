@@ -1,35 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>COMET OS</title>
+
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body {
   margin: 0;
   font-family: Arial;
-  background: #0b0f19;
-  color: white;
+  background: #000;
+  color: #fff;
 }
 
-.screen { padding: 18px; }
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 50px;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.screen {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.card {
+  background: #1f2937;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: none;
+}
 
 button {
   width: 100%;
-  padding: 14px;
-  margin-top: 10px;
-  background: #3b82f6;
-  border: none;
-  border-radius: 8px;
-  color: white;
-}
-
-input {
-  width: 100%;
   padding: 12px;
   margin-top: 10px;
-  border-radius: 6px;
   border: none;
+  border-radius: 8px;
+  background: #1f2937;
+  color: white;
 }
 </style>
 </head>
@@ -39,143 +70,319 @@ input {
 <div id="app"></div>
 
 <script>
+
 /* =========================
-   COMET OS SINGLE FILE CORE
+   STATE
 ========================= */
 
-class CometOS {
-  constructor() {
-    this.state = { memory: [] };
+let state = {
+  step: 0,
+
+  role: { type: "", mode: "" },
+
+  purpose: "",
+  identity: "",
+  residence: "",
+  assetType: "",
+  assetAddress: "",
+
+  status: "DRAFT",
+  qrData: ""
+};
+
+/* =========================
+   NAVIGATION
+========================= */
+
+function next(){ state.step++; render(); }
+function back(){ if(state.step>0) state.step--; render(); }
+function reset(){ state.step=0; render(); }
+
+/* =========================
+   STEP 1 INTRO
+========================= */
+
+function stepIntro(){
+  return `
+    <h2>COMET OS</h2>
+    <div class="card">
+      Structured Transaction System<br>
+      Identity + Asset + Agreement Flow
+    </div>
+    <button onclick="next()">Start</button>
+  `;
+}
+
+/* =========================
+   STEP 2 ROLE
+========================= */
+
+function stepRole(){
+  return `
+    <h3>Role Selection</h3>
+
+    <select id="roleType">
+      <option value="">Select Role</option>
+      <option>Seller / Landlord</option>
+      <option>Buyer / Tenant</option>
+      <option>Agent</option>
+    </select>
+
+    <select id="roleMode">
+      <option value="">Transaction Mode</option>
+      <option>Direct Transaction</option>
+      <option>Agent Managed Transaction</option>
+    </select>
+
+    <button onclick="
+      state.role.type = roleType.value;
+      state.role.mode = roleMode.value;
+      if(state.role.type && state.role.mode) next();
+    ">Continue</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 3 PURPOSE
+========================= */
+
+function stepPurpose(){
+  return `
+    <h3>Purpose</h3>
+
+    <select id="purpose">
+      <option value="">Select</option>
+      <option>Property Sale</option>
+      <option>Rental</option>
+      <option>Transfer</option>
+      <option>Agreement Record</option>
+    </select>
+
+    <button onclick="
+      state.purpose = purpose.value;
+      if(state.purpose) next();
+    ">Continue</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 4 IDENTITY (DECLARATION ONLY)
+========================= */
+
+function stepIdentity(){
+  return `
+    <h3>Identity</h3>
+    <input id="identity" placeholder="Enter name / identifier"/>
+
+    <button onclick="
+      state.identity = identity.value;
+      if(state.identity) next();
+    ">Continue</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 5 RESIDENCE
+========================= */
+
+function stepResidence(){
+  return `
+    <h3>Residence</h3>
+    <input id="residence" placeholder="Enter residence address"/>
+
+    <button onclick="
+      state.residence = residence.value || 'SKIPPED';
+      next();
+    ">Continue</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 6 ASSET
+========================= */
+
+function stepAsset(){
+  return `
+    <h3>Asset Details</h3>
+
+    <select id="assetType">
+      <option value="">Asset Type</option>
+      <option>Property</option>
+      <option>Farm</option>
+      <option>Equipment</option>
+    </select>
+
+    <input id="assetAddress" placeholder="Asset Address"/>
+
+    <button onclick="
+      state.assetType = assetType.value;
+      state.assetAddress = assetAddress.value;
+      if(state.assetType && state.assetAddress) next();
+    ">Continue</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 7 REVIEW
+========================= */
+
+function stepReview(){
+  return `
+    <h3>Review</h3>
+
+    <div class="card">
+      Role: ${state.role.type}<br>
+      Mode: ${state.role.mode}<br>
+      Purpose: ${state.purpose}<br>
+      Identity: ${state.identity}<br>
+      Residence: ${state.residence}<br>
+      Asset: ${state.assetType}<br>
+      Address: ${state.assetAddress}
+    </div>
+
+    <button onclick="next()">Agree & Continue</button>
+    <button onclick="back()">Edit</button>
+  `;
+}
+
+/* =========================
+   STEP 8 LOCK
+========================= */
+
+function stepLock(){
+  return `
+    <h3>Lock Transaction</h3>
+
+    <div class="card">
+      Confirm to lock agreement.
+    </div>
+
+    <button onclick="
+      state.status = 'LOCKED';
+      next();
+    ">Lock</button>
+
+    <button onclick="back()">Back</button>
+  `;
+}
+
+/* =========================
+   STEP 9 COMPLETE + QR + PDF
+========================= */
+
+function stepComplete(){
+
+  setTimeout(()=>generateQR(),200);
+
+  return `
+    <h3>Completed</h3>
+
+    <div class="card">
+      Status: LOCKED<br>
+      Transaction Record Created
+    </div>
+
+    <canvas id="qr"></canvas>
+
+    <button onclick="downloadPDF()">Download PDF</button>
+    <button onclick="reset()">New Transaction</button>
+  `;
+}
+
+/* =========================
+   QR GENERATION
+========================= */
+
+function generateQR(){
+
+  state.qrData = JSON.stringify({
+    role: state.role,
+    purpose: state.purpose,
+    identity: state.identity,
+    residence: state.residence,
+    asset: state.assetType,
+    address: state.assetAddress,
+    status: state.status,
+    time: Date.now()
+  });
+
+  QRCode.toCanvas(document.getElementById("qr"), state.qrData);
+}
+
+/* =========================
+   PDF GENERATION
+========================= */
+
+function downloadPDF(){
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let y = 10;
+
+  doc.text("COMET OS TRANSACTION RECORD",10,y);
+  y+=10;
+
+  const data = {
+    Role: state.role.type,
+    Mode: state.role.mode,
+    Purpose: state.purpose,
+    Identity: state.identity,
+    Residence: state.residence,
+    Asset: state.assetType,
+    Address: state.assetAddress,
+    Status: state.status
+  };
+
+  for(let k in data){
+    doc.text(`${k}: ${data[k]}`,10,y);
+    y+=8;
   }
 
-  boot() {
-    this.root = document.getElementById("app");
-    this.home();
-  }
+  doc.save("COMET_OS.pdf");
+}
 
-  /* =========================
-     HOME UI
-  ========================== */
-  home() {
-    this.root.innerHTML = `
-      <div class="screen">
-        <h2>COMET OS</h2>
+/* =========================
+   ROUTER
+========================= */
 
-        <button onclick="os.openKYC()">
-          Start KYC Flow
-        </button>
-
-        <button onclick="os.testFlow()">
-          Run Value Engine Test
-        </button>
-      </div>
-    `;
-  }
-
-  /* =========================
-     VALUE ENGINE
-  ========================== */
-  execute(input, metrics) {
-    const intent = this.classify(input);
-    const action = this.route(intent);
-    const value = this.score(metrics);
-
-    const result = {
-      intent,
-      action,
-      valueScore: value,
-      success: value > 0.5,
-      time: Date.now()
-    };
-
-    this.state.memory.push(result);
-    return result;
-  }
-
-  classify(input) {
-    if (input.verify) return "IDENTITY";
-    if (input.action === "submit") return "TRANSACTIONAL";
-    if (input.action === "query") return "INFORMATIONAL";
-    return "GENERAL";
-  }
-
-  route(intent) {
-    if (intent === "IDENTITY") return "KYC_FLOW";
-    if (intent === "TRANSACTIONAL") return "EXEC_FLOW";
-    return "DEFAULT";
-  }
-
-  score(m) {
-    return (m.completion * 0.4) +
-           (m.quality * 0.4) +
-           ((1 - m.friction) * 0.2);
-  }
-
-  /* =========================
-     KYC FLOW
-  ========================== */
-  openKYC() {
-    this.root.innerHTML = `
-      <div class="screen">
-        <h3>KYC Verification</h3>
-
-        <input id="name" placeholder="Full Name"/>
-        <input id="phone" placeholder="Phone"/>
-
-        <button onclick="os.submitKYC()">
-          Submit
-        </button>
-      </div>
-    `;
-  }
-
-  submitKYC() {
-    const name = document.getElementById("name").value;
-    const phone = document.getElementById("phone").value;
-
-    const result = this.execute(
-      { verify: true, name, phone },
-      { completion: 0.95, quality: 0.9, friction: 0.2 }
-    );
-
-    this.renderResult(result);
-  }
-
-  /* =========================
-     TEST FLOW
-  ========================== */
-  testFlow() {
-    const result = this.execute(
-      { action: "submit" },
-      { completion: 0.8, quality: 0.7, friction: 0.3 }
-    );
-
-    this.renderResult(result);
-  }
-
-  /* =========================
-     RESULT SCREEN
-  ========================== */
-  renderResult(result) {
-    this.root.innerHTML = `
-      <div class="screen">
-        <h3>Result</h3>
-
-        <pre>${JSON.stringify(result, null, 2)}</pre>
-
-        <button onclick="os.home()">
-          Back Home
-        </button>
-      </div>
-    `;
+function view(){
+  switch(state.step){
+    case 0: return stepIntro();
+    case 1: return stepRole();
+    case 2: return stepPurpose();
+    case 3: return stepIdentity();
+    case 4: return stepResidence();
+    case 5: return stepAsset();
+    case 6: return stepReview();
+    case 7: return stepLock();
+    case 8: return stepComplete();
+    default: return stepIntro();
   }
 }
 
 /* =========================
-   BOOT STRAP
+   RENDER
 ========================= */
-const os = new CometOS();
-os.boot();
+
+function render(){
+  document.getElementById("app").innerHTML = `
+    <div class="topbar">COMET OS</div>
+    <div class="screen">${view()}</div>
+  `;
+}
+
+render();
 
 </script>
 
