@@ -36,11 +36,32 @@ function save(){
   localStorage.setItem("COMET_OS", JSON.stringify(system));
 }
 
-function active(){
-  return system.transactions.find(t => t.id === system.activeId);
+/* ================= BOOT GUARANTEE (FIX FOR BLANK PAGE) ================= */
+
+function ensureSystemReady(){
+
+  if(!system.transactions.length){
+    createTransaction();
+  }
+
+  if(!system.activeId){
+    system.activeId = system.transactions[0].id;
+  }
+
+  save();
 }
 
+/* ================= ACTIVE TRANSACTION ================= */
+
+function active(){
+  if(!system.activeId) return null;
+  return system.transactions.find(t => t.id === system.activeId) || null;
+}
+
+/* ================= TRANSACTION FACTORY ================= */
+
 function createTransaction(){
+
   let trx = {
     id:"TRX-"+Date.now(),
     step:0,
@@ -79,6 +100,7 @@ function createTransaction(){
 
   system.transactions.push(trx);
   system.activeId = trx.id;
+
   save();
 }
 
@@ -86,6 +108,8 @@ function createTransaction(){
 
 function next(){
   let t = active();
+  if(!t) return;
+
   t.step++;
   save();
   render();
@@ -111,7 +135,7 @@ render();
 `;
 }
 
-/* ================= USER FLOW ================= */
+/* ================= FRONT PAGE ================= */
 
 function intro(){
 return `
@@ -121,18 +145,22 @@ return `
 Transaction Intelligence Ledger System
 </div>
 
-<button onclick="next()">Start</button>
+<button onclick="next()">Start Transaction</button>
 `;
 }
+
+/* ================= TRANSACTION FLOW ================= */
 
 function role(){
 return `
 <h3>Role</h3>
+
 <select id="r">
 <option>Seller / Landlord</option>
 <option>Buyer / Tenant</option>
 <option>Agent</option>
 </select>
+
 <button onclick="
 active().role.type=r.value;
 next();
@@ -143,11 +171,13 @@ next();
 function purpose(){
 return `
 <h3>Purpose</h3>
+
 <select id="p">
 <option>Property Sale</option>
 <option>Rental</option>
 <option>Transfer</option>
 </select>
+
 <button onclick="
 active().purpose=p.value;
 next();
@@ -217,7 +247,12 @@ next();
 }
 
 function escrow(){
-if(active().paymentMode!=="ESCROW"){
+
+let t=active();
+
+if(!t) return `<div class="card">Loading...</div>`;
+
+if(t.paymentMode!=="ESCROW"){
   return engine();
 }
 
@@ -243,6 +278,7 @@ next();
 function engine(){
 
 let t = active();
+if(!t) return "";
 
 let s=0;
 
@@ -281,7 +317,9 @@ return review();
 /* ================= REVIEW ================= */
 
 function review(){
+
 let t=active();
+if(!t) return "";
 
 return `
 <h3>REVIEW</h3>
@@ -300,7 +338,9 @@ Liquidity: ${t.liquidity.systemIndex.toFixed(2)}
 /* ================= COMPLETE ================= */
 
 function complete(){
+
 let t=active();
+if(!t) return "";
 
 setTimeout(()=>{
 QRCode.toCanvas(document.getElementById("q"),JSON.stringify(t));
@@ -317,7 +357,10 @@ return `
 /* ================= PDF ================= */
 
 function pdf(){
+
 let t=active();
+if(!t) return;
+
 const {jsPDF}=window.jspdf;
 let d=new jsPDF();
 let y=10;
@@ -335,14 +378,13 @@ d.save("COMET_OS.pdf");
 
 function userDashboard(){
 let t=active();
-
 return `
 <h3>USER DASHBOARD</h3>
 
 <div class="card">
-TRX: ${t.id}<br>
-Risk: ${t.risk?.level || "N/A"}<br>
-Pool: ${t.pool?.level || "N/A"}
+TRX: ${t?.id || "None"}<br>
+Risk: ${t?.risk?.level || "N/A"}<br>
+Pool: ${t?.pool?.level || "N/A"}
 </div>
 
 <button onclick="next()">Continue</button>
@@ -351,19 +393,17 @@ Pool: ${t.pool?.level || "N/A"}
 
 function agentDashboard(){
 let t=active();
-
 return `
 <h3>AGENT DASHBOARD</h3>
 
 <div class="card">
-TRX: ${t.id}<br>
-Escrow: ${t.escrow?.status || "NONE"}
+TRX: ${t?.id || "None"}<br>
+Escrow: ${t?.escrow?.status || "NONE"}
 </div>
 `;
 }
 
 function institutionDashboard(){
-
 return `
 <h3>INSTITUTION VIEW</h3>
 
@@ -386,22 +426,26 @@ Liquidity:${t.liquidity?.systemIndex?.toFixed?.(2)||0}
 
 function view(){
 
+ensureSystemReady();
+
 if(system.uiRole==="USER"){
+  let t = active();
 
-let t = active();
+  if(!t){
+    return `<div class="card">Initializing...</div>`;
+  }
 
-switch(t.step){
-case 0:return intro();
-case 1:return role();
-case 2:return purpose();
-case 3:return kyc();
-case 4:return asset();
-case 5:return paymentMode();
-case 6:return escrow();
-case 7:return engine();
-case 8:return complete();
-}
-
+  switch(t.step){
+    case 0:return intro();
+    case 1:return role();
+    case 2:return purpose();
+    case 3:return kyc();
+    case 4:return asset();
+    case 5:return paymentMode();
+    case 6:return escrow();
+    case 7:return engine();
+    case 8:return complete();
+  }
 }
 
 if(system.uiRole==="AGENT")return agentDashboard();
@@ -413,6 +457,8 @@ return roleSelect();
 /* ================= RENDER ================= */
 
 function render(){
+ensureSystemReady();
+
 document.getElementById("app").innerHTML=`
 <div class="topbar">COMET OS</div>
 <div class="screen">${view()}</div>
@@ -423,4 +469,4 @@ render();
 
 </script>
 </body>
-</html>6
+</html>
