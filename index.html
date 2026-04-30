@@ -5,386 +5,378 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>COMET OS</title>
 
-<!-- External Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial;
-  background: #000;
-  color: #fff;
-}
-
-#app {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.topbar {
-  height: 50px;
-  background: #0f172a;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-
-.screen {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-}
-
-.card {
-  background: #1f2937;
-  padding: 12px;
-  border-radius: 10px;
-  margin-top: 10px;
-}
-
-input, select {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  border-radius: 8px;
-  border: none;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  border: none;
-  border-radius: 8px;
-  background: #1f2937;
-  color: white;
-}
+body{margin:0;font-family:Arial;background:#000;color:#fff;font-size:18px;}
+#app{height:100vh;display:flex;flex-direction:column;}
+.topbar{padding:14px;text-align:center;background:#0f172a;font-weight:bold;}
+.screen{flex:1;padding:16px;overflow-y:auto;}
+.card{background:#1f2937;padding:14px;border-radius:10px;margin-top:10px;}
+input,select{width:100%;padding:14px;margin-top:10px;font-size:18px;border-radius:8px;border:none;background:#111827;color:#fff;}
+button{width:100%;padding:16px;margin-top:12px;background:#2563eb;border:none;color:#fff;font-size:18px;border-radius:10px;}
 </style>
 </head>
 
 <body>
-
 <div id="app"></div>
 
 <script>
 
-/* =========================
-   STATE
-========================= */
+/* ================= STATE ================= */
 
 let state = {
-  step: 0,
 
-  role: { type: "", mode: "" },
+transactionId: "",
+step: 0,
 
-  purpose: "",
-  identity: "",
-  residence: "",
-  assetType: "",
-  assetAddress: "",
+uiRole: "USER", // USER | AGENT | INSTITUTION
 
-  status: "DRAFT",
-  qrData: ""
+role:{},
+purpose:"",
+kyc:{},
+agent:{},
+asset:{},
+
+paymentMode:"DIRECT",
+payment:{},
+
+escrow:{
+status:"NOT_INITIATED",
+releaseCondition:"",
+confirmations:{landlord:false,tenant:false,agent:false}
+},
+
+risk:{},
+pool:{},
+
+poolLedger:{
+LOW:{total:0,success:0,dispute:0,fail:0,score:100},
+MEDIUM:{total:0,success:0,dispute:0,fail:0,score:100},
+HIGH:{total:0,success:0,dispute:0,fail:0,score:100}
+},
+
+poolPricing:{},
+
+capital:{
+LOW:{totalWeight:0,transactions:0},
+MEDIUM:{totalWeight:0,transactions:0},
+HIGH:{totalWeight:0,transactions:0}
+},
+
+liquidity:{
+LOW:{flow:0,stress:0,capacity:100,score:100},
+MEDIUM:{flow:0,stress:0,capacity:100,score:100},
+HIGH:{flow:0,stress:0,capacity:100,score:100},
+systemIndex:100
+}
+
 };
 
-/* =========================
-   NAVIGATION
-========================= */
+/* ================= HELPERS ================= */
 
-function next(){ state.step++; render(); }
-function back(){ if(state.step>0) state.step--; render(); }
-function reset(){ state.step=0; render(); }
+function next(){state.step++;render();}
 
-/* =========================
-   STEP 1 INTRO
-========================= */
-
-function stepIntro(){
-  return `
-    <h2>COMET OS</h2>
-    <div class="card">
-      Structured Transaction System<br>
-      Identity + Asset + Agreement Flow
-    </div>
-    <button onclick="next()">Start</button>
-  `;
+function generateTransactionId(){
+return "TRX-"+Date.now()+"-"+Math.floor(Math.random()*999);
 }
 
-/* =========================
-   STEP 2 ROLE
-========================= */
+/* ================= ROLE SELECT ================= */
 
-function stepRole(){
-  return `
-    <h3>Role Selection</h3>
+function roleSelect(){
+return `
+<h3>Select Dashboard</h3>
 
-    <select id="roleType">
-      <option value="">Select Role</option>
-      <option>Seller / Landlord</option>
-      <option>Buyer / Tenant</option>
-      <option>Agent</option>
-    </select>
+<select id="r">
+<option value="USER">User</option>
+<option value="AGENT">Agent</option>
+<option value="INSTITUTION">Institution</option>
+</select>
 
-    <select id="roleMode">
-      <option value="">Transaction Mode</option>
-      <option>Direct Transaction</option>
-      <option>Agent Managed Transaction</option>
-    </select>
-
-    <button onclick="
-      state.role.type = roleType.value;
-      state.role.mode = roleMode.value;
-      if(state.role.type && state.role.mode) next();
-    ">Continue</button>
-
-    <button onclick="back()">Back</button>
-  `;
+<button onclick="
+state.uiRole=r.value;
+state.transactionId=generateTransactionId();
+next();
+">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 3 PURPOSE
-========================= */
+/* ================= USER FLOW ================= */
 
-function stepPurpose(){
-  return `
-    <h3>Purpose</h3>
+function intro(){
+return `
+<h3>COMET OS</h3>
 
-    <select id="purpose">
-      <option value="">Select</option>
-      <option>Property Sale</option>
-      <option>Rental</option>
-      <option>Transfer</option>
-      <option>Agreement Record</option>
-    </select>
+<div class="card">
+Structured Transaction Intelligence System
+</div>
 
-    <button onclick="
-      state.purpose = purpose.value;
-      if(state.purpose) next();
-    ">Continue</button>
+<div class="card">
+FSTL SYSTEM ENTRY POINT
+</div>
 
-    <button onclick="back()">Back</button>
-  `;
+<button onclick="next()">Start</button>
+`;
 }
 
-/* =========================
-   STEP 4 IDENTITY (DECLARATION ONLY)
-========================= */
-
-function stepIdentity(){
-  return `
-    <h3>Identity</h3>
-    <input id="identity" placeholder="Enter name / identifier"/>
-
-    <button onclick="
-      state.identity = identity.value;
-      if(state.identity) next();
-    ">Continue</button>
-
-    <button onclick="back()">Back</button>
-  `;
+function role(){
+return `
+<h3>Role</h3>
+<select id="r">
+<option>Seller / Landlord</option>
+<option>Buyer / Tenant</option>
+<option>Agent</option>
+</select>
+<button onclick="state.role.type=r.value;next()">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 5 RESIDENCE
-========================= */
-
-function stepResidence(){
-  return `
-    <h3>Residence</h3>
-    <input id="residence" placeholder="Enter residence address"/>
-
-    <button onclick="
-      state.residence = residence.value || 'SKIPPED';
-      next();
-    ">Continue</button>
-
-    <button onclick="back()">Back</button>
-  `;
+function purpose(){
+return `
+<h3>Purpose</h3>
+<select id="p">
+<option>Property Sale</option>
+<option>Rental</option>
+<option>Transfer</option>
+</select>
+<button onclick="state.purpose=p.value;next()">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 6 ASSET
-========================= */
+function kyc(){
+return `
+<h3>KYC</h3>
+<input id="n" placeholder="Name"/>
+<input id="ph" placeholder="Phone/WhatsApp"/>
+<input id="nin" placeholder="NIN"/>
+<input id="bvn" placeholder="BVN"/>
+<input id="ad" placeholder="Address"/>
 
-function stepAsset(){
-  return `
-    <h3>Asset Details</h3>
-
-    <select id="assetType">
-      <option value="">Asset Type</option>
-      <option>Property</option>
-      <option>Farm</option>
-      <option>Equipment</option>
-    </select>
-
-    <input id="assetAddress" placeholder="Asset Address"/>
-
-    <button onclick="
-      state.assetType = assetType.value;
-      state.assetAddress = assetAddress.value;
-      if(state.assetType && state.assetAddress) next();
-    ">Continue</button>
-
-    <button onclick="back()">Back</button>
-  `;
+<button onclick="
+state.kyc={name:n.value,phone:ph.value,nin:nin.value,bvn:bvn.value,address:ad.value};
+next();
+">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 7 REVIEW
-========================= */
+function asset(){
+return `
+<h3>Asset</h3>
 
-function stepReview(){
-  return `
-    <h3>Review</h3>
+<select id="t">
+<option>Property</option>
+<option>Farm</option>
+<option>Equipment</option>
+</select>
 
-    <div class="card">
-      Role: ${state.role.type}<br>
-      Mode: ${state.role.mode}<br>
-      Purpose: ${state.purpose}<br>
-      Identity: ${state.identity}<br>
-      Residence: ${state.residence}<br>
-      Asset: ${state.assetType}<br>
-      Address: ${state.assetAddress}
-    </div>
+<select id="pt">
+<option>Residential</option>
+<option>Commercial</option>
+<option>Land</option>
+</select>
 
-    <button onclick="next()">Agree & Continue</button>
-    <button onclick="back()">Edit</button>
-  `;
+<input id="r" placeholder="Rooms"/>
+<input id="a" placeholder="Asset Address"/>
+
+<button onclick="
+state.asset={type:t.value,ptype:pt.value,rooms:r.value,address:a.value};
+next();
+">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 8 LOCK
-========================= */
+function paymentMode(){
+return `
+<h3>Payment Mode</h3>
+<select id="m">
+<option value="DIRECT">Direct</option>
+<option value="ESCROW">Escrow</option>
+</select>
 
-function stepLock(){
-  return `
-    <h3>Lock Transaction</h3>
-
-    <div class="card">
-      Confirm to lock agreement.
-    </div>
-
-    <button onclick="
-      state.status = 'LOCKED';
-      next();
-    ">Lock</button>
-
-    <button onclick="back()">Back</button>
-  `;
+<button onclick="state.paymentMode=m.value;next()">Continue</button>
+`;
 }
 
-/* =========================
-   STEP 9 COMPLETE + QR + PDF
-========================= */
+function escrow(){
+if(state.paymentMode!=="ESCROW"){next();return"";}
 
-function stepComplete(){
+return `
+<h3>Escrow</h3>
 
-  setTimeout(()=>generateQR(),200);
+<select id="c">
+<option>Handover Confirmed</option>
+<option>Inspection Approved</option>
+<option>Tenant Occupied</option>
+</select>
 
-  return `
-    <h3>Completed</h3>
-
-    <div class="card">
-      Status: LOCKED<br>
-      Transaction Record Created
-    </div>
-
-    <canvas id="qr"></canvas>
-
-    <button onclick="downloadPDF()">Download PDF</button>
-    <button onclick="reset()">New Transaction</button>
-  `;
+<button onclick="
+state.escrow.releaseCondition=c.value;
+state.escrow.status='HELD';
+next();
+">Continue</button>
+`;
 }
 
-/* =========================
-   QR GENERATION
-========================= */
+/* ================= CORE ENGINE ================= */
 
-function generateQR(){
+function engine(){
 
-  state.qrData = JSON.stringify({
-    role: state.role,
-    purpose: state.purpose,
-    identity: state.identity,
-    residence: state.residence,
-    asset: state.assetType,
-    address: state.assetAddress,
-    status: state.status,
-    time: Date.now()
-  });
+// RISK
+let s=0;
+if(state.purpose==="Property Sale")s+=3;
+if(state.asset.ptype==="Commercial")s+=3;
+if(state.paymentMode==="DIRECT")s+=2;
 
-  QRCode.toCanvas(document.getElementById("qr"), state.qrData);
+state.risk.score=s;
+state.risk.level=s<=2?"LOW":s<=5?"MEDIUM":"HIGH";
+state.pool.level=state.risk.level;
+
+// POOL UPDATE
+let p=state.poolLedger[state.pool.level];
+p.total++;p.success++;
+
+// CAPITAL
+let w=state.pool.level==="LOW"?1:state.pool.level==="MEDIUM"?3:5;
+state.capital[state.pool.level].totalWeight+=w;
+
+// LIQUIDITY
+let l=state.liquidity[state.pool.level];
+l.flow++;l.stress+=w;
+l.capacity=Math.max(0,100-l.stress*5);
+l.score=(l.capacity*100)/(l.stress+1);
+
+state.liquidity.systemIndex=
+(state.liquidity.LOW.score+
+state.liquidity.MEDIUM.score+
+state.liquidity.HIGH.score)/3;
+
+return review();
 }
 
-/* =========================
-   PDF GENERATION
-========================= */
+/* ================= REVIEW ================= */
 
-function downloadPDF(){
+function review(){
+return `
+<h3>REVIEW</h3>
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+<div class="card">
+TRX: ${state.transactionId}<br>
+Risk: ${state.risk.level}<br>
+Pool: ${state.pool.level}<br>
+Liquidity: ${state.liquidity.systemIndex.toFixed(2)}
+</div>
 
-  let y = 10;
-
-  doc.text("COMET OS TRANSACTION RECORD",10,y);
-  y+=10;
-
-  const data = {
-    Role: state.role.type,
-    Mode: state.role.mode,
-    Purpose: state.purpose,
-    Identity: state.identity,
-    Residence: state.residence,
-    Asset: state.assetType,
-    Address: state.assetAddress,
-    Status: state.status
-  };
-
-  for(let k in data){
-    doc.text(`${k}: ${data[k]}`,10,y);
-    y+=8;
-  }
-
-  doc.save("COMET_OS.pdf");
+<button onclick="next()">LOCK</button>
+`;
 }
 
-/* =========================
-   ROUTER
-========================= */
+/* ================= COMPLETE ================= */
+
+function complete(){
+setTimeout(()=>{
+QRCode.toCanvas(document.getElementById("q"),JSON.stringify(state));
+},300);
+
+return `
+<h3>COMPLETE</h3>
+<canvas id="q"></canvas>
+
+<button onclick="pdf()">PDF</button>
+`;
+}
+
+/* ================= PDF ================= */
+
+function pdf(){
+const {jsPDF}=window.jspdf;
+const d=new jsPDF();
+let y=10;
+
+d.text("COMET OS RECORD",10,y);y+=8;
+
+d.text("TRX:"+state.transactionId,10,y);y+=6;
+d.text("RISK:"+state.risk.level,10,y);y+=6;
+d.text("POOL:"+state.pool.level,10,y);y+=6;
+d.text("LIQUIDITY:"+state.liquidity.systemIndex.toFixed(2),10,y);
+
+d.save("COMET_OS.pdf");
+}
+
+/* ================= DASHBOARDS ================= */
+
+function userDashboard(){
+return `
+<h3>USER DASHBOARD</h3>
+
+<div class="card">
+TRX:${state.transactionId}<br>
+Risk:${state.risk.level}<br>
+Pool:${state.pool.level}
+</div>
+
+<button onclick="next()">Continue</button>
+`;
+}
+
+function agentDashboard(){
+return `
+<h3>AGENT DASHBOARD</h3>
+
+<div class="card">
+TRX:${state.transactionId}<br>
+Escrow:${state.escrow.status}
+</div>
+`;
+}
+
+function institutionDashboard(){
+return `
+<h3>INSTITUTION VIEW</h3>
+
+<div class="card">
+POOL PERFORMANCE + CAPITAL + LIQUIDITY SYSTEM ACTIVE
+</div>
+`;
+}
+
+/* ================= ROUTER ================= */
 
 function view(){
-  switch(state.step){
-    case 0: return stepIntro();
-    case 1: return stepRole();
-    case 2: return stepPurpose();
-    case 3: return stepIdentity();
-    case 4: return stepResidence();
-    case 5: return stepAsset();
-    case 6: return stepReview();
-    case 7: return stepLock();
-    case 8: return stepComplete();
-    default: return stepIntro();
-  }
+
+if(state.uiRole==="USER"){
+
+switch(state.step){
+case 0:return intro();
+case 1:return role();
+case 2:return purpose();
+case 3:return kyc();
+case 4:return asset();
+case 5:return paymentMode();
+case 6:return escrow();
+case 7:return engine();
+case 8:return complete();
 }
 
-/* =========================
-   RENDER
-========================= */
+}
+
+if(state.uiRole==="AGENT")return agentDashboard();
+if(state.uiRole==="INSTITUTION")return institutionDashboard();
+
+return roleSelect();
+}
+
+/* ================= RENDER ================= */
 
 function render(){
-  document.getElementById("app").innerHTML = `
-    <div class="topbar">COMET OS</div>
-    <div class="screen">${view()}</div>
-  `;
+document.getElementById("app").innerHTML=`
+<div class="topbar">COMET OS</div>
+<div class="screen">${view()}</div>
+`;
 }
 
 render();
 
 </script>
-
 </body>
 </html>
