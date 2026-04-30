@@ -24,62 +24,71 @@ button{width:100%;padding:16px;margin-top:12px;background:#2563eb;border:none;co
 
 <script>
 
-/* ================= STATE ================= */
+/* ================= PERSISTENT SYSTEM ================= */
 
-let state = {
-
-transactionId: "",
-step: 0,
-
-uiRole: "USER", // USER | AGENT | INSTITUTION
-
-role:{},
-purpose:"",
-kyc:{},
-agent:{},
-asset:{},
-
-paymentMode:"DIRECT",
-payment:{},
-
-escrow:{
-status:"NOT_INITIATED",
-releaseCondition:"",
-confirmations:{landlord:false,tenant:false,agent:false}
-},
-
-risk:{},
-pool:{},
-
-poolLedger:{
-LOW:{total:0,success:0,dispute:0,fail:0,score:100},
-MEDIUM:{total:0,success:0,dispute:0,fail:0,score:100},
-HIGH:{total:0,success:0,dispute:0,fail:0,score:100}
-},
-
-poolPricing:{},
-
-capital:{
-LOW:{totalWeight:0,transactions:0},
-MEDIUM:{totalWeight:0,transactions:0},
-HIGH:{totalWeight:0,transactions:0}
-},
-
-liquidity:{
-LOW:{flow:0,stress:0,capacity:100,score:100},
-MEDIUM:{flow:0,stress:0,capacity:100,score:100},
-HIGH:{flow:0,stress:0,capacity:100,score:100},
-systemIndex:100
-}
-
+let system = JSON.parse(localStorage.getItem("COMET_OS")) || {
+  transactions: [],
+  activeId: null,
+  uiRole: "USER"
 };
 
-/* ================= HELPERS ================= */
+function save(){
+  localStorage.setItem("COMET_OS", JSON.stringify(system));
+}
 
-function next(){state.step++;render();}
+function active(){
+  return system.transactions.find(t => t.id === system.activeId);
+}
 
-function generateTransactionId(){
-return "TRX-"+Date.now()+"-"+Math.floor(Math.random()*999);
+function createTransaction(){
+  let trx = {
+    id:"TRX-"+Date.now(),
+    step:0,
+
+    role:{},
+    purpose:"",
+    kyc:{},
+    agent:{},
+    asset:{},
+
+    paymentMode:"DIRECT",
+    escrow:{status:"NONE"},
+
+    risk:{},
+    pool:{},
+
+    poolLedger:{
+      LOW:{total:0,success:0,dispute:0,fail:0,score:100},
+      MEDIUM:{total:0,success:0,dispute:0,fail:0,score:100},
+      HIGH:{total:0,success:0,dispute:0,fail:0,score:100}
+    },
+
+    capital:{
+      LOW:{totalWeight:0},
+      MEDIUM:{totalWeight:0},
+      HIGH:{totalWeight:0}
+    },
+
+    liquidity:{
+      LOW:{flow:0,stress:0,capacity:100,score:100},
+      MEDIUM:{flow:0,stress:0,capacity:100,score:100},
+      HIGH:{flow:0,stress:0,capacity:100,score:100},
+      systemIndex:100
+    }
+  };
+
+  system.transactions.push(trx);
+  system.activeId = trx.id;
+  save();
+}
+
+/* ================= FLOW CONTROL ================= */
+
+function next(){
+  let t = active();
+  t.step++;
+  save();
+  render();
 }
 
 /* ================= ROLE SELECT ================= */
@@ -95,9 +104,9 @@ return `
 </select>
 
 <button onclick="
-state.uiRole=r.value;
-state.transactionId=generateTransactionId();
-next();
+system.uiRole=r.value;
+createTransaction();
+render();
 ">Continue</button>
 `;
 }
@@ -109,11 +118,7 @@ return `
 <h3>COMET OS</h3>
 
 <div class="card">
-Structured Transaction Intelligence System
-</div>
-
-<div class="card">
-FSTL SYSTEM ENTRY POINT
+Transaction Intelligence Ledger System
 </div>
 
 <button onclick="next()">Start</button>
@@ -128,7 +133,10 @@ return `
 <option>Buyer / Tenant</option>
 <option>Agent</option>
 </select>
-<button onclick="state.role.type=r.value;next()">Continue</button>
+<button onclick="
+active().role.type=r.value;
+next();
+">Continue</button>
 `;
 }
 
@@ -140,13 +148,17 @@ return `
 <option>Rental</option>
 <option>Transfer</option>
 </select>
-<button onclick="state.purpose=p.value;next()">Continue</button>
+<button onclick="
+active().purpose=p.value;
+next();
+">Continue</button>
 `;
 }
 
 function kyc(){
 return `
 <h3>KYC</h3>
+
 <input id="n" placeholder="Name"/>
 <input id="ph" placeholder="Phone/WhatsApp"/>
 <input id="nin" placeholder="NIN"/>
@@ -154,7 +166,8 @@ return `
 <input id="ad" placeholder="Address"/>
 
 <button onclick="
-state.kyc={name:n.value,phone:ph.value,nin:nin.value,bvn:bvn.value,address:ad.value};
+let t=active();
+t.kyc={name:n.value,phone:ph.value,nin:nin.value,bvn:bvn.value,address:ad.value};
 next();
 ">Continue</button>
 `;
@@ -180,7 +193,8 @@ return `
 <input id="a" placeholder="Asset Address"/>
 
 <button onclick="
-state.asset={type:t.value,ptype:pt.value,rooms:r.value,address:a.value};
+let t=active();
+t.asset={type:t.value,ptype:pt.value,rooms:r.value,address:a.value};
 next();
 ">Continue</button>
 `;
@@ -189,20 +203,26 @@ next();
 function paymentMode(){
 return `
 <h3>Payment Mode</h3>
+
 <select id="m">
 <option value="DIRECT">Direct</option>
 <option value="ESCROW">Escrow</option>
 </select>
 
-<button onclick="state.paymentMode=m.value;next()">Continue</button>
+<button onclick="
+active().paymentMode=m.value;
+next();
+">Continue</button>
 `;
 }
 
 function escrow(){
-if(state.paymentMode!=="ESCROW"){next();return"";}
+if(active().paymentMode!=="ESCROW"){
+  return engine();
+}
 
 return `
-<h3>Escrow</h3>
+<h3>Escrow Setup</h3>
 
 <select id="c">
 <option>Handover Confirmed</option>
@@ -211,45 +231,49 @@ return `
 </select>
 
 <button onclick="
-state.escrow.releaseCondition=c.value;
-state.escrow.status='HELD';
+active().escrow.status='HELD';
+active().escrow.releaseCondition=c.value;
 next();
 ">Continue</button>
 `;
 }
 
-/* ================= CORE ENGINE ================= */
+/* ================= ENGINE ================= */
 
 function engine(){
 
-// RISK
+let t = active();
+
 let s=0;
-if(state.purpose==="Property Sale")s+=3;
-if(state.asset.ptype==="Commercial")s+=3;
-if(state.paymentMode==="DIRECT")s+=2;
 
-state.risk.score=s;
-state.risk.level=s<=2?"LOW":s<=5?"MEDIUM":"HIGH";
-state.pool.level=state.risk.level;
+if(t.purpose==="Property Sale")s+=3;
+if(t.asset.ptype==="Commercial")s+=3;
+if(t.paymentMode==="DIRECT")s+=2;
 
-// POOL UPDATE
-let p=state.poolLedger[state.pool.level];
+t.risk.score=s;
+t.risk.level=s<=2?"LOW":s<=5?"MEDIUM":"HIGH";
+t.pool.level=t.risk.level;
+
+/* POOL */
+let p=t.poolLedger[t.pool.level];
 p.total++;p.success++;
 
-// CAPITAL
-let w=state.pool.level==="LOW"?1:state.pool.level==="MEDIUM"?3:5;
-state.capital[state.pool.level].totalWeight+=w;
+/* CAPITAL */
+let w=t.pool.level==="LOW"?1:t.pool.level==="MEDIUM"?3:5;
+t.capital[t.pool.level].totalWeight+=w;
 
-// LIQUIDITY
-let l=state.liquidity[state.pool.level];
+/* LIQUIDITY */
+let l=t.liquidity[t.pool.level];
 l.flow++;l.stress+=w;
 l.capacity=Math.max(0,100-l.stress*5);
 l.score=(l.capacity*100)/(l.stress+1);
 
-state.liquidity.systemIndex=
-(state.liquidity.LOW.score+
-state.liquidity.MEDIUM.score+
-state.liquidity.HIGH.score)/3;
+t.liquidity.systemIndex=
+(t.liquidity.LOW.score+
+t.liquidity.MEDIUM.score+
+t.liquidity.HIGH.score)/3;
+
+save();
 
 return review();
 }
@@ -257,14 +281,16 @@ return review();
 /* ================= REVIEW ================= */
 
 function review(){
+let t=active();
+
 return `
 <h3>REVIEW</h3>
 
 <div class="card">
-TRX: ${state.transactionId}<br>
-Risk: ${state.risk.level}<br>
-Pool: ${state.pool.level}<br>
-Liquidity: ${state.liquidity.systemIndex.toFixed(2)}
+TRX: ${t.id}<br>
+Risk: ${t.risk.level}<br>
+Pool: ${t.pool.level}<br>
+Liquidity: ${t.liquidity.systemIndex.toFixed(2)}
 </div>
 
 <button onclick="next()">LOCK</button>
@@ -274,8 +300,10 @@ Liquidity: ${state.liquidity.systemIndex.toFixed(2)}
 /* ================= COMPLETE ================= */
 
 function complete(){
+let t=active();
+
 setTimeout(()=>{
-QRCode.toCanvas(document.getElementById("q"),JSON.stringify(state));
+QRCode.toCanvas(document.getElementById("q"),JSON.stringify(t));
 },300);
 
 return `
@@ -289,16 +317,16 @@ return `
 /* ================= PDF ================= */
 
 function pdf(){
+let t=active();
 const {jsPDF}=window.jspdf;
-const d=new jsPDF();
+let d=new jsPDF();
 let y=10;
 
 d.text("COMET OS RECORD",10,y);y+=8;
-
-d.text("TRX:"+state.transactionId,10,y);y+=6;
-d.text("RISK:"+state.risk.level,10,y);y+=6;
-d.text("POOL:"+state.pool.level,10,y);y+=6;
-d.text("LIQUIDITY:"+state.liquidity.systemIndex.toFixed(2),10,y);
+d.text("TRX:"+t.id,10,y);y+=6;
+d.text("RISK:"+t.risk.level,10,y);y+=6;
+d.text("POOL:"+t.pool.level,10,y);y+=6;
+d.text("LIQ:"+t.liquidity.systemIndex.toFixed(2),10,y);
 
 d.save("COMET_OS.pdf");
 }
@@ -306,13 +334,15 @@ d.save("COMET_OS.pdf");
 /* ================= DASHBOARDS ================= */
 
 function userDashboard(){
+let t=active();
+
 return `
 <h3>USER DASHBOARD</h3>
 
 <div class="card">
-TRX:${state.transactionId}<br>
-Risk:${state.risk.level}<br>
-Pool:${state.pool.level}
+TRX: ${t.id}<br>
+Risk: ${t.risk?.level || "N/A"}<br>
+Pool: ${t.pool?.level || "N/A"}
 </div>
 
 <button onclick="next()">Continue</button>
@@ -320,23 +350,35 @@ Pool:${state.pool.level}
 }
 
 function agentDashboard(){
+let t=active();
+
 return `
 <h3>AGENT DASHBOARD</h3>
 
 <div class="card">
-TRX:${state.transactionId}<br>
-Escrow:${state.escrow.status}
+TRX: ${t.id}<br>
+Escrow: ${t.escrow?.status || "NONE"}
 </div>
 `;
 }
 
 function institutionDashboard(){
+
 return `
 <h3>INSTITUTION VIEW</h3>
 
 <div class="card">
-POOL PERFORMANCE + CAPITAL + LIQUIDITY SYSTEM ACTIVE
+TOTAL TRANSACTIONS: ${system.transactions.length}
 </div>
+
+${system.transactions.map(t=>`
+<div class="card">
+${t.id}<br>
+Risk:${t.risk?.level||"N/A"}<br>
+Pool:${t.pool?.level||"N/A"}<br>
+Liquidity:${t.liquidity?.systemIndex?.toFixed?.(2)||0}
+</div>
+`).join("")}
 `;
 }
 
@@ -344,9 +386,11 @@ POOL PERFORMANCE + CAPITAL + LIQUIDITY SYSTEM ACTIVE
 
 function view(){
 
-if(state.uiRole==="USER"){
+if(system.uiRole==="USER"){
 
-switch(state.step){
+let t = active();
+
+switch(t.step){
 case 0:return intro();
 case 1:return role();
 case 2:return purpose();
@@ -360,8 +404,8 @@ case 8:return complete();
 
 }
 
-if(state.uiRole==="AGENT")return agentDashboard();
-if(state.uiRole==="INSTITUTION")return institutionDashboard();
+if(system.uiRole==="AGENT")return agentDashboard();
+if(system.uiRole==="INSTITUTION")return institutionDashboard();
 
 return roleSelect();
 }
@@ -379,4 +423,4 @@ render();
 
 </script>
 </body>
-</html>
+</html>6
