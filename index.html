@@ -9,13 +9,64 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{margin:0;font-family:Arial;background:#000;color:#fff;font-size:18px;}
-#app{height:100vh;display:flex;flex-direction:column;}
-.topbar{padding:14px;text-align:center;background:#0f172a;font-weight:bold;}
-.screen{flex:1;padding:16px;overflow-y:auto;}
-.card{background:#1f2937;padding:14px;border-radius:10px;margin-top:10px;}
-input,select{width:100%;padding:14px;margin-top:10px;font-size:18px;border-radius:8px;border:none;background:#111827;color:#fff;}
-button{width:100%;padding:16px;margin-top:12px;background:#2563eb;border:none;color:#fff;font-size:18px;border-radius:10px;}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  color:#fff;
+  font-size:20px;
+}
+
+#app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.topbar{
+  padding:18px;
+  text-align:center;
+  background:#0f172a;
+  font-size:22px;
+  font-weight:700;
+}
+
+.screen{
+  flex:1;
+  padding:18px;
+  overflow-y:auto;
+}
+
+.card{
+  background:#1f2937;
+  padding:18px;
+  border-radius:12px;
+  margin-top:14px;
+  line-height:1.6;
+}
+
+input,select{
+  width:100%;
+  padding:16px;
+  margin-top:12px;
+  font-size:18px;
+  border-radius:10px;
+  border:none;
+  background:#111827;
+  color:#fff;
+}
+
+button{
+  width:100%;
+  padding:18px;
+  margin-top:14px;
+  background:#2563eb;
+  border:none;
+  color:#fff;
+  font-size:18px;
+  border-radius:12px;
+  font-weight:600;
+}
 </style>
 </head>
 
@@ -24,132 +75,158 @@ button{width:100%;padding:16px;margin-top:12px;background:#2563eb;border:none;co
 
 <script>
 
-/* ================= PERSISTENT SYSTEM ================= */
+/* ================= STATE MACHINE ================= */
+
+const STATES = {
+  INTRO:"INTRO",
+  ROLE:"ROLE",
+  PURPOSE:"PURPOSE",
+  KYC:"KYC",
+  ASSET:"ASSET",
+  PAYMENT:"PAYMENT",
+  ESCROW:"ESCROW",
+  ENGINE:"ENGINE",
+  REVIEW:"REVIEW",
+  COMPLETE:"COMPLETE"
+};
+
+const TRANSITIONS = {
+  INTRO:["ROLE"],
+  ROLE:["PURPOSE"],
+  PURPOSE:["KYC"],
+  KYC:["ASSET"],
+  ASSET:["PAYMENT"],
+  PAYMENT:["ESCROW","ENGINE"],
+  ESCROW:["ENGINE"],
+  ENGINE:["REVIEW"],
+  REVIEW:["COMPLETE"]
+};
+
+/* ================= SYSTEM ================= */
 
 let system = JSON.parse(localStorage.getItem("COMET_OS")) || {
-  transactions: [],
-  activeId: null,
-  uiRole: "USER"
+  transactions:[],
+  activeId:null,
+  uiRole:"USER"
 };
 
 function save(){
-  localStorage.setItem("COMET_OS", JSON.stringify(system));
+  localStorage.setItem("COMET_OS",JSON.stringify(system));
 }
 
-/* ================= BOOT GUARANTEE (FIX FOR BLANK PAGE) ================= */
-
-function ensureSystemReady(){
-
+function ensure(){
   if(!system.transactions.length){
     createTransaction();
   }
-
   if(!system.activeId){
     system.activeId = system.transactions[0].id;
   }
-
   save();
 }
-
-/* ================= ACTIVE TRANSACTION ================= */
 
 function active(){
-  if(!system.activeId) return null;
-  return system.transactions.find(t => t.id === system.activeId) || null;
+  return system.transactions.find(t=>t.id===system.activeId);
 }
-
-/* ================= TRANSACTION FACTORY ================= */
 
 function createTransaction(){
+let t={
+  id:"TRX-"+Date.now(),
+  state:STATES.INTRO,
 
-  let trx = {
-    id:"TRX-"+Date.now(),
-    step:0,
+  role:{},
+  purpose:"",
+  kyc:{},
+  asset:{},
 
-    role:{},
-    purpose:"",
-    kyc:{},
-    agent:{},
-    asset:{},
+  paymentMode:"",
+  escrow:{status:""},
 
-    paymentMode:"DIRECT",
-    escrow:{status:"NONE"},
+  risk:{score:0},
+  pool:{level:"LOW"},
+  liquidity:{systemIndex:100},
 
-    risk:{},
-    pool:{},
+  audit:[]
+};
 
-    poolLedger:{
-      LOW:{total:0,success:0,dispute:0,fail:0,score:100},
-      MEDIUM:{total:0,success:0,dispute:0,fail:0,score:100},
-      HIGH:{total:0,success:0,dispute:0,fail:0,score:100}
-    },
-
-    capital:{
-      LOW:{totalWeight:0},
-      MEDIUM:{totalWeight:0},
-      HIGH:{totalWeight:0}
-    },
-
-    liquidity:{
-      LOW:{flow:0,stress:0,capacity:100,score:100},
-      MEDIUM:{flow:0,stress:0,capacity:100,score:100},
-      HIGH:{flow:0,stress:0,capacity:100,score:100},
-      systemIndex:100
-    }
-  };
-
-  system.transactions.push(trx);
-  system.activeId = trx.id;
-
-  save();
+system.transactions.push(t);
+system.activeId=t.id;
+save();
 }
 
-/* ================= FLOW CONTROL ================= */
+/* ================= AUDIT ================= */
 
-function next(){
-  let t = active();
-  if(!t) return;
+function log(type,data={}){
+let t=active();
+if(!t) return;
 
-  t.step++;
-  save();
-  render();
+t.audit.push({
+time:new Date().toISOString(),
+state:t.state,
+type,
+data
+});
+save();
 }
 
-/* ================= ROLE SELECT ================= */
+/* ================= STATE CONTROL ================= */
 
-function roleSelect(){
-return `
-<h3>Select Dashboard</h3>
+function go(next){
+let t=active();
+if(!t) return;
 
-<select id="r">
-<option value="USER">User</option>
-<option value="AGENT">Agent</option>
-<option value="INSTITUTION">Institution</option>
-</select>
+let allowed=TRANSITIONS[t.state]||[];
 
-<button onclick="
-system.uiRole=r.value;
-createTransaction();
+if(!allowed.includes(next)){
+alert("Blocked transition");
+return;
+}
+
+log("STATE_CHANGE",{from:t.state,to:next});
+t.state=next;
+save();
 render();
-">Continue</button>
-`;
 }
 
-/* ================= FRONT PAGE ================= */
+/* ================= ENGINE ================= */
+
+function engine(){
+let t=active();
+
+let score=0;
+
+if(t.purpose==="Property Sale")score+=3;
+if(t.asset?.category==="Commercial")score+=3;
+if(t.paymentMode==="DIRECT")score+=2;
+
+t.risk.score=score;
+t.pool.level=score<=2?"LOW":score<=5?"MEDIUM":"HIGH";
+
+t.liquidity.systemIndex = 100 - score*5;
+
+log("ENGINE_CALC",t.risk);
+
+return review();
+}
+
+/* ================= UI ================= */
 
 function intro(){
 return `
-<h3>COMET OS</h3>
+<h2>COMET OS</h2>
 
 <div class="card">
-Transaction Intelligence Ledger System
+Transaction Intelligence System
 </div>
 
-<button onclick="next()">Start Transaction</button>
+<div class="card">
+FSTL<br>
+No. 19 Egbor Avenue, GRA, Benin City, Edo State, Nigeria<br>
++2348035888622 | fstlsite@gmail.com
+</div>
+
+<button onclick="go(STATES.ROLE)">Start</button>
 `;
 }
-
-/* ================= TRANSACTION FLOW ================= */
 
 function role(){
 return `
@@ -163,7 +240,7 @@ return `
 
 <button onclick="
 active().role.type=r.value;
-next();
+go(STATES.PURPOSE);
 ">Continue</button>
 `;
 }
@@ -180,7 +257,7 @@ return `
 
 <button onclick="
 active().purpose=p.value;
-next();
+go(STATES.KYC);
 ">Continue</button>
 `;
 }
@@ -197,8 +274,15 @@ return `
 
 <button onclick="
 let t=active();
-t.kyc={name:n.value,phone:ph.value,nin:nin.value,bvn:bvn.value,address:ad.value};
-next();
+t.kyc={
+name:n.value,
+phone:ph.value,
+nin:nin.value,
+bvn:bvn.value,
+address:ad.value
+};
+log('KYC',t.kyc);
+go(STATES.ASSET);
 ">Continue</button>
 `;
 }
@@ -207,32 +291,31 @@ function asset(){
 return `
 <h3>Asset</h3>
 
-<select id="t">
-<option>Property</option>
-<option>Farm</option>
-<option>Equipment</option>
-</select>
-
-<select id="pt">
+<select id="c">
 <option>Residential</option>
 <option>Commercial</option>
 <option>Land</option>
 </select>
 
-<input id="r" placeholder="Rooms"/>
 <input id="a" placeholder="Asset Address"/>
+<input id="r" placeholder="Rooms"/>
 
 <button onclick="
 let t=active();
-t.asset={type:t.value,ptype:pt.value,rooms:r.value,address:a.value};
-next();
+t.asset={
+category:c.value,
+address:a.value,
+rooms:r.value
+};
+log('ASSET',t.asset);
+go(STATES.PAYMENT);
 ">Continue</button>
 `;
 }
 
-function paymentMode(){
+function payment(){
 return `
-<h3>Payment Mode</h3>
+<h3>Payment</h3>
 
 <select id="m">
 <option value="DIRECT">Direct</option>
@@ -241,223 +324,132 @@ return `
 
 <button onclick="
 active().paymentMode=m.value;
-next();
+log('PAYMENT',m.value);
+go(STATES.ESCROW);
 ">Continue</button>
 `;
 }
 
 function escrow(){
-
 let t=active();
 
-if(!t) return `<div class="card">Loading...</div>`;
-
 if(t.paymentMode!=="ESCROW"){
-  return engine();
+go(STATES.ENGINE);
+return "";
 }
 
 return `
-<h3>Escrow Setup</h3>
+<h3>Escrow</h3>
 
-<select id="c">
-<option>Handover Confirmed</option>
+<select id="e">
 <option>Inspection Approved</option>
-<option>Tenant Occupied</option>
+<option>Handover Confirmed</option>
 </select>
 
 <button onclick="
 active().escrow.status='HELD';
-active().escrow.releaseCondition=c.value;
-next();
+active().escrow.condition=e.value;
+go(STATES.ENGINE);
 ">Continue</button>
 `;
 }
 
-/* ================= ENGINE ================= */
-
-function engine(){
-
-let t = active();
-if(!t) return "";
-
-let s=0;
-
-if(t.purpose==="Property Sale")s+=3;
-if(t.asset.ptype==="Commercial")s+=3;
-if(t.paymentMode==="DIRECT")s+=2;
-
-t.risk.score=s;
-t.risk.level=s<=2?"LOW":s<=5?"MEDIUM":"HIGH";
-t.pool.level=t.risk.level;
-
-/* POOL */
-let p=t.poolLedger[t.pool.level];
-p.total++;p.success++;
-
-/* CAPITAL */
-let w=t.pool.level==="LOW"?1:t.pool.level==="MEDIUM"?3:5;
-t.capital[t.pool.level].totalWeight+=w;
-
-/* LIQUIDITY */
-let l=t.liquidity[t.pool.level];
-l.flow++;l.stress+=w;
-l.capacity=Math.max(0,100-l.stress*5);
-l.score=(l.capacity*100)/(l.stress+1);
-
-t.liquidity.systemIndex=
-(t.liquidity.LOW.score+
-t.liquidity.MEDIUM.score+
-t.liquidity.HIGH.score)/3;
-
-save();
-
-return review();
-}
-
-/* ================= REVIEW ================= */
-
 function review(){
-
-let t=active();
-if(!t) return "";
-
 return `
 <h3>REVIEW</h3>
 
 <div class="card">
-TRX: ${t.id}<br>
-Risk: ${t.risk.level}<br>
-Pool: ${t.pool.level}<br>
-Liquidity: ${t.liquidity.systemIndex.toFixed(2)}
+Risk: ${active().risk.score}<br>
+Pool: ${active().pool.level}<br>
+Liquidity: ${active().liquidity.systemIndex}
 </div>
 
-<button onclick="next()">LOCK</button>
+<button onclick="go(STATES.COMPLETE)">LOCK</button>
 `;
 }
-
-/* ================= COMPLETE ================= */
 
 function complete(){
 
 let t=active();
-if(!t) return "";
 
 setTimeout(()=>{
-QRCode.toCanvas(document.getElementById("q"),JSON.stringify(t));
+let c=document.getElementById("qr");
+if(c){
+QRCode.toCanvas(c,"COMET-OS::"+t.id);
+}
 },300);
 
 return `
 <h3>COMPLETE</h3>
-<canvas id="q"></canvas>
 
-<button onclick="pdf()">PDF</button>
+<canvas id="qr" style="background:#fff;padding:10px;border-radius:10px;"></canvas>
+
+<button onclick="pdf()">EXPORT PDF</button>
+
+<div class="card">
+Audit Events: ${t.audit.length}
+</div>
 `;
 }
 
 /* ================= PDF ================= */
 
 function pdf(){
-
 let t=active();
-if(!t) return;
-
 const {jsPDF}=window.jspdf;
 let d=new jsPDF();
 let y=10;
 
-d.text("COMET OS RECORD",10,y);y+=8;
-d.text("TRX:"+t.id,10,y);y+=6;
-d.text("RISK:"+t.risk.level,10,y);y+=6;
-d.text("POOL:"+t.pool.level,10,y);y+=6;
-d.text("LIQ:"+t.liquidity.systemIndex.toFixed(2),10,y);
+function line(x){d.text(String(x),10,y);y+=7;}
+
+line("COMET OS LEDGER");
+line(t.id);
+
+line("");
+line("RISK:"+t.risk.score);
+line("POOL:"+t.pool.level);
+line("LIQ:"+t.liquidity.systemIndex);
+
+line("");
+line("FSTL");
+line("No. 19 Egbor Avenue, GRA, Benin City");
+line("+2348035888622");
+line("fstlsite@gmail.com");
+
+line("");
+line("AUDIT");
+t.audit.forEach(a=>{
+line(a.type+" | "+a.state);
+});
 
 d.save("COMET_OS.pdf");
-}
-
-/* ================= DASHBOARDS ================= */
-
-function userDashboard(){
-let t=active();
-return `
-<h3>USER DASHBOARD</h3>
-
-<div class="card">
-TRX: ${t?.id || "None"}<br>
-Risk: ${t?.risk?.level || "N/A"}<br>
-Pool: ${t?.pool?.level || "N/A"}
-</div>
-
-<button onclick="next()">Continue</button>
-`;
-}
-
-function agentDashboard(){
-let t=active();
-return `
-<h3>AGENT DASHBOARD</h3>
-
-<div class="card">
-TRX: ${t?.id || "None"}<br>
-Escrow: ${t?.escrow?.status || "NONE"}
-</div>
-`;
-}
-
-function institutionDashboard(){
-return `
-<h3>INSTITUTION VIEW</h3>
-
-<div class="card">
-TOTAL TRANSACTIONS: ${system.transactions.length}
-</div>
-
-${system.transactions.map(t=>`
-<div class="card">
-${t.id}<br>
-Risk:${t.risk?.level||"N/A"}<br>
-Pool:${t.pool?.level||"N/A"}<br>
-Liquidity:${t.liquidity?.systemIndex?.toFixed?.(2)||0}
-</div>
-`).join("")}
-`;
 }
 
 /* ================= ROUTER ================= */
 
 function view(){
+ensure();
 
-ensureSystemReady();
+let t=active();
 
-if(system.uiRole==="USER"){
-  let t = active();
-
-  if(!t){
-    return `<div class="card">Initializing...</div>`;
-  }
-
-  switch(t.step){
-    case 0:return intro();
-    case 1:return role();
-    case 2:return purpose();
-    case 3:return kyc();
-    case 4:return asset();
-    case 5:return paymentMode();
-    case 6:return escrow();
-    case 7:return engine();
-    case 8:return complete();
-  }
+switch(t.state){
+case STATES.INTRO:return intro();
+case STATES.ROLE:return role();
+case STATES.PURPOSE:return purpose();
+case STATES.KYC:return kyc();
+case STATES.ASSET:return asset();
+case STATES.PAYMENT:return payment();
+case STATES.ESCROW:return escrow();
+case STATES.ENGINE:return engine();
+case STATES.REVIEW:return review();
+case STATES.COMPLETE:return complete();
 }
-
-if(system.uiRole==="AGENT")return agentDashboard();
-if(system.uiRole==="INSTITUTION")return institutionDashboard();
-
-return roleSelect();
 }
 
 /* ================= RENDER ================= */
 
 function render(){
-ensureSystemReady();
+ensure();
 
 document.getElementById("app").innerHTML=`
 <div class="topbar">COMET OS</div>
