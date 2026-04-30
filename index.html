@@ -1,244 +1,372 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS</title>
+<title>COMET OS v10 — Full Stack Transaction System</title>
 
 <style>
 body{
   margin:0;
   font-family:system-ui;
-  background:#0b0b0b;
+  background:#0a0a0a;
   color:#fff;
 }
 
 #app{
-  padding:20px;
+  max-width:520px;
+  margin:auto;
+  padding:16px;
 }
 
 .card{
-  background:#1a1a1a;
+  background:#171717;
   padding:16px;
-  border-radius:12px;
+  border-radius:16px;
   margin-bottom:12px;
+  box-shadow:0 0 0 1px #222;
+}
+
+input, select{
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border-radius:12px;
+  border:none;
+  background:#222;
+  color:#fff;
 }
 
 button{
   width:100%;
   padding:14px;
   border:none;
-  border-radius:10px;
+  border-radius:12px;
   margin-top:10px;
-  font-weight:bold;
+  font-weight:600;
 }
 
 .primary{ background:#00c853; color:#000;}
-.warn{ background:#ffab00; color:#000;}
+.secondary{ background:#2c2c2c; color:#fff;}
 .danger{ background:#d50000; color:#fff;}
 
-input{
-  width:100%;
-  padding:12px;
-  margin-top:8px;
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  background:#333;
   border-radius:8px;
-  border:none;
-  background:#2a2a2a;
-  color:#fff;
+  font-size:12px;
+  margin:3px;
 }
+
+.small{ font-size:12px; opacity:0.75; }
+hr{ border:0; border-top:1px solid #333; margin:12px 0; }
+
+.center{text-align:center;}
 </style>
 </head>
 
 <body>
-
 <div id="app"></div>
+
+<canvas id="qr" width="220" height="220" style="display:none;"></canvas>
 
 <script>
 
+const app = document.getElementById("app");
+const qr = document.getElementById("qr");
+const ctx = qr.getContext("2d");
+
 /* ======================
-   STATE (FRONTEND ONLY)
+   STATE
 ====================== */
 let state = {
-  role: null,
-  data: {
-    agent: "",
-    owner: "",
-    property: ""
+  stage:"kyc",
+  mode:null,
+
+  kyc:{
+    owner_verified:false,
+    buyer_verified:false,
+    tenant_verified:false,
+    agent_verified:false
   },
-  signals: {
-    contradictions: 0,
-    completeness: 0
+
+  inputs:{
+    owner:"",
+    seller:"",
+    buyer:"",
+    tenant:"",
+    agent:"",
+    property:""
   },
-  verdict: null
+
+  payment:{
+    required:0,
+    status:"NOT_INITIATED"
+  },
+
+  trust:0,
+  verdict:null,
+  graph:null
 };
 
 /* ======================
-   NAV RENDER
+   NAV
 ====================== */
-function render(){
-
-  if(!state.role){
-    return roleScreen();
-  }
-
-  if(!state.verdict){
-    return agentScreen();
-  }
-
-  return resultScreen();
-
-}
-
-/* ======================
-   ROLE SELECT
-====================== */
-function roleScreen(){
-  app.innerHTML = `
-  <div class="card">
-    <h2>COMET OS</h2>
-    <p>Select Role</p>
-    <button class="primary" onclick="setRole('agent')">Agent</button>
-    <button onclick="setRole('institution')">Institution</button>
-    <button onclick="setRole('government')">Government</button>
-  </div>
-  `;
-}
-
-/* ======================
-   SET ROLE
-====================== */
-function setRole(r){
-  state.role = r;
+function go(s){
+  state.stage=s;
   render();
 }
 
 /* ======================
-   AGENT INPUT SCREEN
+   KYC SCREEN
 ====================== */
-function agentScreen(){
+function kyc(){
 
-  app.innerHTML = `
+  app.innerHTML=`
   <div class="card">
-    <h3>Transaction Input</h3>
+    <h2>KYC VERIFICATION</h2>
+    <p class="small">Simulated identity binding layer</p>
 
-    <input placeholder="Agent Name"
-      oninput="updateField('agent', this.value)">
+    <input placeholder="Owner Name" oninput="set('owner',this.value)">
+    <input placeholder="Buyer Name" oninput="set('buyer',this.value)">
+    <input placeholder="Tenant Name (optional)" oninput="set('tenant',this.value)">
+    <input placeholder="Agent Name (optional)" oninput="set('agent',this.value)">
 
-    <input placeholder="Owner Name"
-      oninput="updateField('owner', this.value)">
+    <button class="primary" onclick="go('mode')">VERIFY & CONTINUE</button>
+  </div>`;
+}
 
-    <input placeholder="Property ID"
-      oninput="updateField('property', this.value)">
-      
-    <button class="primary" onclick="runComet()">Run COMET OS</button>
-  </div>
+/* ======================
+   MODE SCREEN
+====================== */
+function mode(){
 
+  app.innerHTML=`
+  <div class="card center">
+    <h2>Select Transaction</h2>
+
+    <button class="primary" onclick="select('SALE')">SALE</button>
+    <button class="primary" onclick="select('LEASE')">LEASE</button>
+  </div>`;
+}
+
+function select(m){
+  state.mode=m;
+  go("input");
+}
+
+/* ======================
+   INPUT SCREEN
+====================== */
+function input(){
+
+  const m = state.mode;
+
+  app.innerHTML=`
   <div class="card">
-    <h4>System Status</h4>
-    <p>Completeness: ${state.signals.completeness}%</p>
-    <p>Contradictions: ${state.signals.contradictions}</p>
-  </div>
-  `;
+    <h2>${m} TRANSACTION</h2>
+
+    <input placeholder="Owner" value="${state.inputs.owner}" oninput="set('owner',this.value)">
+    <input placeholder="Seller (optional)" value="${state.inputs.seller}" oninput="set('seller',this.value)">
+    <input placeholder="Buyer" value="${state.inputs.buyer}" oninput="set('buyer',this.value)">
+    <input placeholder="Tenant" value="${state.inputs.tenant}" oninput="set('tenant',this.value)">
+    <input placeholder="Agent (optional)" value="${state.inputs.agent}" oninput="set('agent',this.value)">
+    <input placeholder="Property ID" value="${state.inputs.property}" oninput="set('property',this.value)">
+
+    <button class="primary" onclick="run()">RUN VALIDATION</button>
+  </div>`;
 }
 
 /* ======================
-   UPDATE INPUT
+   SET
 ====================== */
-function updateField(field, value){
-  state.data[field] = value;
-  patrol(); // continuous observation
+function set(k,v){
+  state.inputs[k]=v;
 }
 
 /* ======================
-   PATROL MODEL
+   VALIDATION ENGINE
 ====================== */
-function patrol(){
+function run(){
 
-  let d = state.data;
+  const i = state.inputs;
+  const m = state.mode;
 
-  // reset signals
-  state.signals.contradictions = 0;
-  state.signals.completeness = 0;
+  let score = 100;
 
-  // completeness check
-  let filled = Object.values(d).filter(v=>v).length;
-  state.signals.completeness = Math.floor((filled/3)*100);
+  if(!i.owner) score-=30;
+  if(!i.property) score-=30;
 
-  // contradiction rules
-  if(d.agent && d.owner && d.agent === d.owner){
-    state.signals.contradictions++;
-  }
+  if(m==="SALE" && !i.buyer) score-=25;
+  if(m==="LEASE" && !i.tenant) score-=25;
 
-  if(d.property && d.property.length < 3){
-    state.signals.contradictions++;
-  }
+  if(i.buyer && i.tenant) score-=40;
+  if(i.owner && i.seller && i.owner!==i.seller) score-=10;
 
-  render();
+  state.trust = Math.max(0,score);
+
+  state.payment.required = calculateFee();
+  state.payment.status = "PENDING";
+
+  state.verdict = null;
+
+  go("payment");
 }
 
 /* ======================
-   COMET PROCESS
+   PAYMENT ENGINE
 ====================== */
-function runComet(){
+function calculateFee(){
 
-  let c = state.signals.contradictions;
-  let comp = state.signals.completeness;
+  let base = state.mode==="SALE" ? 5000 : 2000;
 
-  // ZERO TOLERANCE
-  if(c > 0){
-    state.verdict = "BLOCK";
-  }
-  else if(comp < 100){
-    state.verdict = "REVIEW";
-  }
-  else{
-    state.verdict = "APPROVE";
-  }
+  if(state.trust < 60) base += 2000;
+  if(state.inputs.agent) base += 1000;
 
-  render();
+  return base;
 }
 
-/* ======================
-   RESULT SCREEN
-====================== */
-function resultScreen(){
+function payment(){
 
-  let v = state.verdict;
-
-  let color = "primary";
-  if(v === "REVIEW") color = "warn";
-  if(v === "BLOCK") color = "danger";
-
-  let explanation = {
-    APPROVE: "Transaction structurally sound",
-    REVIEW: "Incomplete data detected",
-    BLOCK: "Critical inconsistency detected"
-  };
-
-  app.innerHTML = `
+  app.innerHTML=`
   <div class="card">
-    <h2>VERDICT: ${v}</h2>
-    <p>${explanation[v]}</p>
-    <button class="${color}" onclick="reset()">Start New</button>
-  </div>
-  `;
+    <h2>PAYMENT REQUIRED</h2>
 
+    <p class="small">Transaction Fee: ${state.payment.required}</p>
+    <p class="small">Status: ${state.payment.status}</p>
+
+    <button class="primary" onclick="pay()">CONFIRM PAYMENT</button>
+  </div>`;
+}
+
+function pay(){
+  state.payment.status="CONFIRMED";
+  finalize();
+}
+
+/* ======================
+   FINAL ENGINE
+====================== */
+function finalize(){
+
+  const t = state.trust;
+
+  if(state.payment.status!=="CONFIRMED"){
+    state.verdict="LOCKED (PAYMENT REQUIRED)";
+  } else {
+    if(t>=80) state.verdict="APPROVED";
+    else if(t>=50) state.verdict="REVIEW";
+    else state.verdict="BLOCKED";
+  }
+
+  state.graph = state.inputs;
+
+  go("result");
+}
+
+/* ======================
+   RESULT
+====================== */
+function result(){
+
+  app.innerHTML=`
+  <div class="card center">
+    <h2>${state.verdict}</h2>
+
+    <div class="badge">TRUST ${state.trust}</div>
+    <div class="badge">FEE ${state.payment.required}</div>
+
+    <hr>
+
+    <pre class="small">${JSON.stringify(state.graph,null,2)}</pre>
+
+    <button class="primary" onclick="qrExport()">EXPORT QR</button>
+    <button class="secondary" onclick="download()">DOWNLOAD DOSSIER</button>
+    <button class="danger" onclick="reset()">RESET</button>
+  </div>`;
+}
+
+/* ======================
+   QR
+====================== */
+function qrExport(){
+
+  qr.style.display="block";
+
+  const data = JSON.stringify({
+    mode:state.mode,
+    trust:state.trust,
+    verdict:state.verdict,
+    payment:state.payment
+  });
+
+  ctx.fillStyle="#fff";
+  ctx.fillRect(0,0,220,220);
+  ctx.fillStyle="#000";
+  ctx.font="9px monospace";
+
+  data.match(/.{1,22}/g).forEach((l,i)=>{
+    ctx.fillText(l,10,20+(i*14));
+  });
+
+  const a=document.createElement("a");
+  a.href=qr.toDataURL();
+  a.download="COMET_QR.png";
+  a.click();
+}
+
+/* ======================
+   DOSSIER
+====================== */
+function download(){
+
+  const blob = new Blob([
+    JSON.stringify({
+      mode:state.mode,
+      trust:state.trust,
+      payment:state.payment,
+      inputs:state.inputs,
+      verdict:state.verdict
+    },null,2)
+  ],{type:"application/json"});
+
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="COMET_DOSSIER.json";
+  a.click();
 }
 
 /* ======================
    RESET
 ====================== */
 function reset(){
-  state.verdict = null;
-  state.data = {agent:"", owner:"", property:""};
-  state.signals = {contradictions:0, completeness:0};
+  state = {
+    stage:"kyc",
+    mode:null,
+    inputs:{owner:"",seller:"",buyer:"",tenant:"",agent:"",property:""},
+    payment:{required:0,status:"NOT_INITIATED"},
+    trust:0,
+    verdict:null,
+    graph:null
+  };
+  qr.style.display="none";
   render();
 }
 
-/* INIT */
+/* ======================
+   ROUTER
+====================== */
+function render(){
+  if(state.stage==="kyc") return kyc();
+  if(state.stage==="mode") return mode();
+  if(state.stage==="input") return input();
+  if(state.stage==="payment") return payment();
+  if(state.stage==="result") return result();
+}
+
 render();
 
 </script>
-
 </body>
 </html>
