@@ -1,464 +1,244 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>COMET OS</title>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body{
   margin:0;
-  font-family:Arial;
-  background:#000;
+  font-family:system-ui;
+  background:#0b0b0b;
   color:#fff;
-  font-size:20px;
 }
 
 #app{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-}
-
-.topbar{
-  padding:18px;
-  text-align:center;
-  background:#0f172a;
-  font-size:22px;
-  font-weight:700;
-}
-
-.screen{
-  flex:1;
-  padding:18px;
-  overflow-y:auto;
+  padding:20px;
 }
 
 .card{
-  background:#1f2937;
-  padding:18px;
-  border-radius:12px;
-  margin-top:14px;
-  line-height:1.6;
-}
-
-input,select{
-  width:100%;
+  background:#1a1a1a;
   padding:16px;
-  margin-top:12px;
-  font-size:18px;
-  border-radius:10px;
-  border:none;
-  background:#111827;
-  color:#fff;
+  border-radius:12px;
+  margin-bottom:12px;
 }
 
 button{
   width:100%;
-  padding:18px;
-  margin-top:14px;
-  background:#2563eb;
+  padding:14px;
   border:none;
+  border-radius:10px;
+  margin-top:10px;
+  font-weight:bold;
+}
+
+.primary{ background:#00c853; color:#000;}
+.warn{ background:#ffab00; color:#000;}
+.danger{ background:#d50000; color:#fff;}
+
+input{
+  width:100%;
+  padding:12px;
+  margin-top:8px;
+  border-radius:8px;
+  border:none;
+  background:#2a2a2a;
   color:#fff;
-  font-size:18px;
-  border-radius:12px;
-  font-weight:600;
 }
 </style>
 </head>
 
 <body>
+
 <div id="app"></div>
 
 <script>
 
-/* ================= STATE MACHINE ================= */
-
-const STATES = {
-  INTRO:"INTRO",
-  ROLE:"ROLE",
-  PURPOSE:"PURPOSE",
-  KYC:"KYC",
-  ASSET:"ASSET",
-  PAYMENT:"PAYMENT",
-  ESCROW:"ESCROW",
-  ENGINE:"ENGINE",
-  REVIEW:"REVIEW",
-  COMPLETE:"COMPLETE"
+/* ======================
+   STATE (FRONTEND ONLY)
+====================== */
+let state = {
+  role: null,
+  data: {
+    agent: "",
+    owner: "",
+    property: ""
+  },
+  signals: {
+    contradictions: 0,
+    completeness: 0
+  },
+  verdict: null
 };
 
-const TRANSITIONS = {
-  INTRO:["ROLE"],
-  ROLE:["PURPOSE"],
-  PURPOSE:["KYC"],
-  KYC:["ASSET"],
-  ASSET:["PAYMENT"],
-  PAYMENT:["ESCROW","ENGINE"],
-  ESCROW:["ENGINE"],
-  ENGINE:["REVIEW"],
-  REVIEW:["COMPLETE"]
-};
-
-/* ================= SYSTEM ================= */
-
-let system = JSON.parse(localStorage.getItem("COMET_OS")) || {
-  transactions:[],
-  activeId:null,
-  uiRole:"USER"
-};
-
-function save(){
-  localStorage.setItem("COMET_OS",JSON.stringify(system));
-}
-
-function ensure(){
-  if(!system.transactions.length){
-    createTransaction();
-  }
-  if(!system.activeId){
-    system.activeId = system.transactions[0].id;
-  }
-  save();
-}
-
-function active(){
-  return system.transactions.find(t=>t.id===system.activeId);
-}
-
-function createTransaction(){
-let t={
-  id:"TRX-"+Date.now(),
-  state:STATES.INTRO,
-
-  role:{},
-  purpose:"",
-  kyc:{},
-  asset:{},
-
-  paymentMode:"",
-  escrow:{status:""},
-
-  risk:{score:0},
-  pool:{level:"LOW"},
-  liquidity:{systemIndex:100},
-
-  audit:[]
-};
-
-system.transactions.push(t);
-system.activeId=t.id;
-save();
-}
-
-/* ================= AUDIT ================= */
-
-function log(type,data={}){
-let t=active();
-if(!t) return;
-
-t.audit.push({
-time:new Date().toISOString(),
-state:t.state,
-type,
-data
-});
-save();
-}
-
-/* ================= STATE CONTROL ================= */
-
-function go(next){
-let t=active();
-if(!t) return;
-
-let allowed=TRANSITIONS[t.state]||[];
-
-if(!allowed.includes(next)){
-alert("Blocked transition");
-return;
-}
-
-log("STATE_CHANGE",{from:t.state,to:next});
-t.state=next;
-save();
-render();
-}
-
-/* ================= ENGINE ================= */
-
-function engine(){
-let t=active();
-
-let score=0;
-
-if(t.purpose==="Property Sale")score+=3;
-if(t.asset?.category==="Commercial")score+=3;
-if(t.paymentMode==="DIRECT")score+=2;
-
-t.risk.score=score;
-t.pool.level=score<=2?"LOW":score<=5?"MEDIUM":"HIGH";
-
-t.liquidity.systemIndex = 100 - score*5;
-
-log("ENGINE_CALC",t.risk);
-
-return review();
-}
-
-/* ================= UI ================= */
-
-function intro(){
-return `
-<h2>COMET OS</h2>
-
-<div class="card">
-Transaction Intelligence System
-</div>
-
-<div class="card">
-FSTL<br>
-No. 19 Egbor Avenue, GRA, Benin City, Edo State, Nigeria<br>
-+2348035888622 | fstlsite@gmail.com
-</div>
-
-<button onclick="go(STATES.ROLE)">Start</button>
-`;
-}
-
-function role(){
-return `
-<h3>Role</h3>
-
-<select id="r">
-<option>Seller / Landlord</option>
-<option>Buyer / Tenant</option>
-<option>Agent</option>
-</select>
-
-<button onclick="
-active().role.type=r.value;
-go(STATES.PURPOSE);
-">Continue</button>
-`;
-}
-
-function purpose(){
-return `
-<h3>Purpose</h3>
-
-<select id="p">
-<option>Property Sale</option>
-<option>Rental</option>
-<option>Transfer</option>
-</select>
-
-<button onclick="
-active().purpose=p.value;
-go(STATES.KYC);
-">Continue</button>
-`;
-}
-
-function kyc(){
-return `
-<h3>KYC</h3>
-
-<input id="n" placeholder="Name"/>
-<input id="ph" placeholder="Phone/WhatsApp"/>
-<input id="nin" placeholder="NIN"/>
-<input id="bvn" placeholder="BVN"/>
-<input id="ad" placeholder="Address"/>
-
-<button onclick="
-let t=active();
-t.kyc={
-name:n.value,
-phone:ph.value,
-nin:nin.value,
-bvn:bvn.value,
-address:ad.value
-};
-log('KYC',t.kyc);
-go(STATES.ASSET);
-">Continue</button>
-`;
-}
-
-function asset(){
-return `
-<h3>Asset</h3>
-
-<select id="c">
-<option>Residential</option>
-<option>Commercial</option>
-<option>Land</option>
-</select>
-
-<input id="a" placeholder="Asset Address"/>
-<input id="r" placeholder="Rooms"/>
-
-<button onclick="
-let t=active();
-t.asset={
-category:c.value,
-address:a.value,
-rooms:r.value
-};
-log('ASSET',t.asset);
-go(STATES.PAYMENT);
-">Continue</button>
-`;
-}
-
-function payment(){
-return `
-<h3>Payment</h3>
-
-<select id="m">
-<option value="DIRECT">Direct</option>
-<option value="ESCROW">Escrow</option>
-</select>
-
-<button onclick="
-active().paymentMode=m.value;
-log('PAYMENT',m.value);
-go(STATES.ESCROW);
-">Continue</button>
-`;
-}
-
-function escrow(){
-let t=active();
-
-if(t.paymentMode!=="ESCROW"){
-go(STATES.ENGINE);
-return "";
-}
-
-return `
-<h3>Escrow</h3>
-
-<select id="e">
-<option>Inspection Approved</option>
-<option>Handover Confirmed</option>
-</select>
-
-<button onclick="
-active().escrow.status='HELD';
-active().escrow.condition=e.value;
-go(STATES.ENGINE);
-">Continue</button>
-`;
-}
-
-function review(){
-return `
-<h3>REVIEW</h3>
-
-<div class="card">
-Risk: ${active().risk.score}<br>
-Pool: ${active().pool.level}<br>
-Liquidity: ${active().liquidity.systemIndex}
-</div>
-
-<button onclick="go(STATES.COMPLETE)">LOCK</button>
-`;
-}
-
-function complete(){
-
-let t=active();
-
-setTimeout(()=>{
-let c=document.getElementById("qr");
-if(c){
-QRCode.toCanvas(c,"COMET-OS::"+t.id);
-}
-},300);
-
-return `
-<h3>COMPLETE</h3>
-
-<canvas id="qr" style="background:#fff;padding:10px;border-radius:10px;"></canvas>
-
-<button onclick="pdf()">EXPORT PDF</button>
-
-<div class="card">
-Audit Events: ${t.audit.length}
-</div>
-`;
-}
-
-/* ================= PDF ================= */
-
-function pdf(){
-let t=active();
-const {jsPDF}=window.jspdf;
-let d=new jsPDF();
-let y=10;
-
-function line(x){d.text(String(x),10,y);y+=7;}
-
-line("COMET OS LEDGER");
-line(t.id);
-
-line("");
-line("RISK:"+t.risk.score);
-line("POOL:"+t.pool.level);
-line("LIQ:"+t.liquidity.systemIndex);
-
-line("");
-line("FSTL");
-line("No. 19 Egbor Avenue, GRA, Benin City");
-line("+2348035888622");
-line("fstlsite@gmail.com");
-
-line("");
-line("AUDIT");
-t.audit.forEach(a=>{
-line(a.type+" | "+a.state);
-});
-
-d.save("COMET_OS.pdf");
-}
-
-/* ================= ROUTER ================= */
-
-function view(){
-ensure();
-
-let t=active();
-
-switch(t.state){
-case STATES.INTRO:return intro();
-case STATES.ROLE:return role();
-case STATES.PURPOSE:return purpose();
-case STATES.KYC:return kyc();
-case STATES.ASSET:return asset();
-case STATES.PAYMENT:return payment();
-case STATES.ESCROW:return escrow();
-case STATES.ENGINE:return engine();
-case STATES.REVIEW:return review();
-case STATES.COMPLETE:return complete();
-}
-}
-
-/* ================= RENDER ================= */
-
+/* ======================
+   NAV RENDER
+====================== */
 function render(){
-ensure();
 
-document.getElementById("app").innerHTML=`
-<div class="topbar">COMET OS</div>
-<div class="screen">${view()}</div>
-`;
+  if(!state.role){
+    return roleScreen();
+  }
+
+  if(!state.verdict){
+    return agentScreen();
+  }
+
+  return resultScreen();
+
 }
 
+/* ======================
+   ROLE SELECT
+====================== */
+function roleScreen(){
+  app.innerHTML = `
+  <div class="card">
+    <h2>COMET OS</h2>
+    <p>Select Role</p>
+    <button class="primary" onclick="setRole('agent')">Agent</button>
+    <button onclick="setRole('institution')">Institution</button>
+    <button onclick="setRole('government')">Government</button>
+  </div>
+  `;
+}
+
+/* ======================
+   SET ROLE
+====================== */
+function setRole(r){
+  state.role = r;
+  render();
+}
+
+/* ======================
+   AGENT INPUT SCREEN
+====================== */
+function agentScreen(){
+
+  app.innerHTML = `
+  <div class="card">
+    <h3>Transaction Input</h3>
+
+    <input placeholder="Agent Name"
+      oninput="updateField('agent', this.value)">
+
+    <input placeholder="Owner Name"
+      oninput="updateField('owner', this.value)">
+
+    <input placeholder="Property ID"
+      oninput="updateField('property', this.value)">
+      
+    <button class="primary" onclick="runComet()">Run COMET OS</button>
+  </div>
+
+  <div class="card">
+    <h4>System Status</h4>
+    <p>Completeness: ${state.signals.completeness}%</p>
+    <p>Contradictions: ${state.signals.contradictions}</p>
+  </div>
+  `;
+}
+
+/* ======================
+   UPDATE INPUT
+====================== */
+function updateField(field, value){
+  state.data[field] = value;
+  patrol(); // continuous observation
+}
+
+/* ======================
+   PATROL MODEL
+====================== */
+function patrol(){
+
+  let d = state.data;
+
+  // reset signals
+  state.signals.contradictions = 0;
+  state.signals.completeness = 0;
+
+  // completeness check
+  let filled = Object.values(d).filter(v=>v).length;
+  state.signals.completeness = Math.floor((filled/3)*100);
+
+  // contradiction rules
+  if(d.agent && d.owner && d.agent === d.owner){
+    state.signals.contradictions++;
+  }
+
+  if(d.property && d.property.length < 3){
+    state.signals.contradictions++;
+  }
+
+  render();
+}
+
+/* ======================
+   COMET PROCESS
+====================== */
+function runComet(){
+
+  let c = state.signals.contradictions;
+  let comp = state.signals.completeness;
+
+  // ZERO TOLERANCE
+  if(c > 0){
+    state.verdict = "BLOCK";
+  }
+  else if(comp < 100){
+    state.verdict = "REVIEW";
+  }
+  else{
+    state.verdict = "APPROVE";
+  }
+
+  render();
+}
+
+/* ======================
+   RESULT SCREEN
+====================== */
+function resultScreen(){
+
+  let v = state.verdict;
+
+  let color = "primary";
+  if(v === "REVIEW") color = "warn";
+  if(v === "BLOCK") color = "danger";
+
+  let explanation = {
+    APPROVE: "Transaction structurally sound",
+    REVIEW: "Incomplete data detected",
+    BLOCK: "Critical inconsistency detected"
+  };
+
+  app.innerHTML = `
+  <div class="card">
+    <h2>VERDICT: ${v}</h2>
+    <p>${explanation[v]}</p>
+    <button class="${color}" onclick="reset()">Start New</button>
+  </div>
+  `;
+
+}
+
+/* ======================
+   RESET
+====================== */
+function reset(){
+  state.verdict = null;
+  state.data = {agent:"", owner:"", property:""};
+  state.signals = {contradictions:0, completeness:0};
+  render();
+}
+
+/* INIT */
 render();
 
 </script>
+
 </body>
 </html>
