@@ -1,372 +1,302 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS v10 — Full Stack Transaction System</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FSTL COMET OS v6.2</title>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#0a0a0a;
-  color:#fff;
-}
-
-#app{
-  max-width:520px;
-  margin:auto;
-  padding:16px;
-}
-
-.card{
-  background:#171717;
-  padding:16px;
-  border-radius:16px;
-  margin-bottom:12px;
-  box-shadow:0 0 0 1px #222;
-}
-
-input, select{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border-radius:12px;
-  border:none;
-  background:#222;
-  color:#fff;
-}
-
-button{
-  width:100%;
-  padding:14px;
-  border:none;
-  border-radius:12px;
-  margin-top:10px;
-  font-weight:600;
-}
-
-.primary{ background:#00c853; color:#000;}
-.secondary{ background:#2c2c2c; color:#fff;}
-.danger{ background:#d50000; color:#fff;}
-
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  background:#333;
-  border-radius:8px;
-  font-size:12px;
-  margin:3px;
-}
-
-.small{ font-size:12px; opacity:0.75; }
-hr{ border:0; border-top:1px solid #333; margin:12px 0; }
-
-.center{text-align:center;}
+body{margin:0;font-family:Arial;background:linear-gradient(180deg,#061A2B,#0A2F4A);color:#fff;}
+header{text-align:center;padding:20px;}
+h1{margin:0;font-size:22px;}
+.sub{font-size:13px;opacity:0.85;margin-top:6px;}
+.container{padding:14px;display:flex;flex-direction:column;gap:14px;}
+.card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px;}
+input,select{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.25);color:#fff;}
+button{width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#061A2B;font-weight:bold;}
+.result{font-size:18px;font-weight:bold;margin-top:10px;}
+.badge{font-size:12px;background:rgba(255,255,255,0.12);padding:6px;border-radius:8px;margin-top:6px;}
+canvas{background:#fff;margin-top:10px;border-radius:8px;}
+.error{color:#ffb3b3;font-size:12px;margin-top:6px;}
+.loading{color:#fff;font-size:12px;margin-top:6px;}
+.hidden{display:none;}
 </style>
 </head>
 
 <body>
-<div id="app"></div>
 
-<canvas id="qr" width="220" height="220" style="display:none;"></canvas>
+<header>
+<h1>FSTL COMET OS v6.2</h1>
+<div class="sub">Final polished trust system — resilient, stable, presentation-complete</div>
+</header>
+
+<div class="container">
+
+<div class="card">
+<select id="role" onchange="switchMode()">
+<option>Buyer</option>
+<option>Seller</option>
+<option>Tenant</option>
+<option>Landlord</option>
+<option>Agent</option>
+<option>Institution</option>
+</select>
+</div>
+
+<div class="card">
+<input id="name" placeholder="Your Name"/>
+<input id="counter" placeholder="Counterparty Name"/>
+<input id="location" placeholder="Property Location"/>
+</div>
+
+<div class="card" id="ownership">
+<input id="value" placeholder="Property Value"/>
+</div>
+
+<div class="card hidden" id="rental">
+<input id="rent" placeholder="Monthly Rent"/>
+<input id="duration" placeholder="Lease Duration (months)"/>
+<input id="payments" placeholder="Payments Made"/>
+</div>
+
+<div class="card">
+<input id="bank" placeholder="Bank Reference"/>
+<input id="tx" placeholder="Transaction ID (TX-XXXXX)"/>
+<input id="bvn" placeholder="BVN Address"/>
+</div>
+
+<div class="card">
+<button onclick="run()">RUN SYSTEM</button>
+
+<div id="loading" class="loading hidden">Processing...</div>
+<div id="error" class="error"></div>
+<div id="decision" class="result">—</div>
+<div id="risk" class="badge"></div>
+<div id="hash" class="badge"></div>
+
+<canvas id="qr" width="120" height="120"></canvas>
+
+<button onclick="pdf()">DOWNLOAD EVIDENCE PACK</button>
+</div>
+
+</div>
 
 <script>
 
-const app = document.getElementById("app");
-const qr = document.getElementById("qr");
-const ctx = qr.getContext("2d");
+/* ===== DOM ===== */
+const roleSel = document.getElementById("role");
+const errorEl = document.getElementById("error");
+const decisionEl = document.getElementById("decision");
+const riskEl = document.getElementById("risk");
+const hashEl = document.getElementById("hash");
+const qrCanvas = document.getElementById("qr");
+const loadingEl = document.getElementById("loading");
 
-/* ======================
-   STATE
-====================== */
-let state = {
-  stage:"kyc",
-  mode:null,
+/* ===== STORAGE FALLBACK ===== */
+let db=null;
+let memoryStore=[];
 
-  kyc:{
-    owner_verified:false,
-    buyer_verified:false,
-    tenant_verified:false,
-    agent_verified:false
-  },
+const req=indexedDB.open("comet_v6_2",1);
 
-  inputs:{
-    owner:"",
-    seller:"",
-    buyer:"",
-    tenant:"",
-    agent:"",
-    property:""
-  },
-
-  payment:{
-    required:0,
-    status:"NOT_INITIATED"
-  },
-
-  trust:0,
-  verdict:null,
-  graph:null
+req.onupgradeneeded=e=>{
+  db=e.target.result;
+  db.createObjectStore("events",{keyPath:"id"});
 };
 
-/* ======================
-   NAV
-====================== */
-function go(s){
-  state.stage=s;
-  render();
+req.onsuccess=e=>db=e.target.result;
+
+req.onerror=()=>{
+  db=null; // fallback mode
+};
+
+/* ===== MODE ===== */
+function switchMode(){
+  const r=roleSel.value;
+  const rental=["Tenant","Landlord"];
+  document.getElementById("rental").classList.toggle("hidden",!rental.includes(r));
+  document.getElementById("ownership").classList.toggle("hidden",rental.includes(r));
+}
+window.onload=switchMode;
+
+/* ===== SAFE HASH ===== */
+async function safeHash(str){
+  try{
+    if(window.crypto && crypto.subtle){
+      const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+  }catch{}
+  let h=0; for(let i=0;i<str.length;i++) h=(h<<5)-h+str.charCodeAt(i);
+  return h.toString();
 }
 
-/* ======================
-   KYC SCREEN
-====================== */
-function kyc(){
+/* ===== QR ===== */
+function drawQR(text){
+  const ctx=qrCanvas.getContext("2d");
+  ctx.clearRect(0,0,120,120);
 
-  app.innerHTML=`
-  <div class="card">
-    <h2>KYC VERIFICATION</h2>
-    <p class="small">Simulated identity binding layer</p>
+  try{
+    if(window.QRCode){
+      QRCode.toCanvas(qrCanvas,text,{width:120});
+      return;
+    }
+  }catch{}
 
-    <input placeholder="Owner Name" oninput="set('owner',this.value)">
-    <input placeholder="Buyer Name" oninput="set('buyer',this.value)">
-    <input placeholder="Tenant Name (optional)" oninput="set('tenant',this.value)">
-    <input placeholder="Agent Name (optional)" oninput="set('agent',this.value)">
-
-    <button class="primary" onclick="go('mode')">VERIFY & CONTINUE</button>
-  </div>`;
+  ctx.fillStyle="#000";
+  for(let i=0;i<text.length;i++){
+    ctx.fillRect((i*5)%120,(i*9)%120,2,2);
+  }
 }
 
-/* ======================
-   MODE SCREEN
-====================== */
-function mode(){
+/* ===== VALIDATION ===== */
+function validate(role){
+  const name=document.getElementById("name").value.trim();
+  const counter=document.getElementById("counter").value.trim();
+  const location=document.getElementById("location").value.trim();
+  const bank=document.getElementById("bank").value.trim();
+  const tx=document.getElementById("tx").value.trim();
 
-  app.innerHTML=`
-  <div class="card center">
-    <h2>Select Transaction</h2>
+  if(!name || !counter || !location) return "Complete all identity fields.";
+  if(!/^TX-[A-Z0-9]+$/i.test(tx)) return "Invalid TX format.";
+  if(bank.length<6) return "Invalid bank reference.";
 
-    <button class="primary" onclick="select('SALE')">SALE</button>
-    <button class="primary" onclick="select('LEASE')">LEASE</button>
-  </div>`;
+  if(role==="Tenant"||role==="Landlord"){
+    let d=parseInt(document.getElementById("duration").value);
+    let p=parseInt(document.getElementById("payments").value);
+    if(!d||d<=0) return "Invalid lease duration.";
+    if(p>d) return "Payments cannot exceed duration.";
+  }
+  return null;
 }
 
-function select(m){
-  state.mode=m;
-  go("input");
+/* ===== STORAGE ===== */
+function logEvent(type,data,TX){
+  const record={id:crypto.randomUUID(),type,data,TX,time:new Date().toISOString()};
+  if(db){
+    const tx=db.transaction("events","readwrite");
+    tx.objectStore("events").add(record);
+  }else{
+    memoryStore.push(record);
+  }
 }
 
-/* ======================
-   INPUT SCREEN
-====================== */
-function input(){
-
-  const m = state.mode;
-
-  app.innerHTML=`
-  <div class="card">
-    <h2>${m} TRANSACTION</h2>
-
-    <input placeholder="Owner" value="${state.inputs.owner}" oninput="set('owner',this.value)">
-    <input placeholder="Seller (optional)" value="${state.inputs.seller}" oninput="set('seller',this.value)">
-    <input placeholder="Buyer" value="${state.inputs.buyer}" oninput="set('buyer',this.value)">
-    <input placeholder="Tenant" value="${state.inputs.tenant}" oninput="set('tenant',this.value)">
-    <input placeholder="Agent (optional)" value="${state.inputs.agent}" oninput="set('agent',this.value)">
-    <input placeholder="Property ID" value="${state.inputs.property}" oninput="set('property',this.value)">
-
-    <button class="primary" onclick="run()">RUN VALIDATION</button>
-  </div>`;
+function replay(TX){
+  return new Promise(res=>{
+    if(db){
+      const tx=db.transaction("events","readonly");
+      const store=tx.objectStore("events");
+      const req=store.getAll();
+      req.onsuccess=()=>res(req.result.filter(e=>e.TX===TX));
+    }else{
+      res(memoryStore.filter(e=>e.TX===TX));
+    }
+  });
 }
 
-/* ======================
-   SET
-====================== */
-function set(k,v){
-  state.inputs[k]=v;
-}
+/* ===== RUN ===== */
+async function run(){
 
-/* ======================
-   VALIDATION ENGINE
-====================== */
-function run(){
+  errorEl.innerText="";
+  loadingEl.classList.remove("hidden");
 
-  const i = state.inputs;
-  const m = state.mode;
+  const role=roleSel.value;
+  const err=validate(role);
 
-  let score = 100;
-
-  if(!i.owner) score-=30;
-  if(!i.property) score-=30;
-
-  if(m==="SALE" && !i.buyer) score-=25;
-  if(m==="LEASE" && !i.tenant) score-=25;
-
-  if(i.buyer && i.tenant) score-=40;
-  if(i.owner && i.seller && i.owner!==i.seller) score-=10;
-
-  state.trust = Math.max(0,score);
-
-  state.payment.required = calculateFee();
-  state.payment.status = "PENDING";
-
-  state.verdict = null;
-
-  go("payment");
-}
-
-/* ======================
-   PAYMENT ENGINE
-====================== */
-function calculateFee(){
-
-  let base = state.mode==="SALE" ? 5000 : 2000;
-
-  if(state.trust < 60) base += 2000;
-  if(state.inputs.agent) base += 1000;
-
-  return base;
-}
-
-function payment(){
-
-  app.innerHTML=`
-  <div class="card">
-    <h2>PAYMENT REQUIRED</h2>
-
-    <p class="small">Transaction Fee: ${state.payment.required}</p>
-    <p class="small">Status: ${state.payment.status}</p>
-
-    <button class="primary" onclick="pay()">CONFIRM PAYMENT</button>
-  </div>`;
-}
-
-function pay(){
-  state.payment.status="CONFIRMED";
-  finalize();
-}
-
-/* ======================
-   FINAL ENGINE
-====================== */
-function finalize(){
-
-  const t = state.trust;
-
-  if(state.payment.status!=="CONFIRMED"){
-    state.verdict="LOCKED (PAYMENT REQUIRED)";
-  } else {
-    if(t>=80) state.verdict="APPROVED";
-    else if(t>=50) state.verdict="REVIEW";
-    else state.verdict="BLOCKED";
+  if(err){
+    errorEl.innerText=err;
+    loadingEl.classList.add("hidden");
+    return;
   }
 
-  state.graph = state.inputs;
+  const TX="TX-"+crypto.randomUUID().slice(0,8);
 
-  go("result");
-}
+  const name=document.getElementById("name").value;
+  const counter=document.getElementById("counter").value;
+  const location=document.getElementById("location").value;
+  const bank=document.getElementById("bank").value;
+  const tx=document.getElementById("tx").value;
+  const bvn=document.getElementById("bvn").value;
 
-/* ======================
-   RESULT
-====================== */
-function result(){
+  logEvent("ROLE",{role},TX);
+  logEvent("PARTY",{name,counter},TX);
+  logEvent("ASSET",{location},TX);
+  logEvent("PAY",{bank,tx,bvn},TX);
 
-  app.innerHTML=`
-  <div class="card center">
-    <h2>${state.verdict}</h2>
+  let score=50;
 
-    <div class="badge">TRUST ${state.trust}</div>
-    <div class="badge">FEE ${state.payment.required}</div>
+  let pay=0;
+  if(bank.length>5) pay++;
+  if(/^TX-[A-Z0-9]+$/i.test(tx)) pay++;
+  if(bvn && location && bvn.toLowerCase().includes(location.toLowerCase())) pay++;
 
-    <hr>
+  score+=pay*10;
 
-    <pre class="small">${JSON.stringify(state.graph,null,2)}</pre>
+  if(role==="Tenant"||role==="Landlord"){
+    const d=parseInt(document.getElementById("duration").value);
+    const p=parseInt(document.getElementById("payments").value);
+    logEvent("LEASE",{duration:d,payments:p},TX);
+    score+=Math.min(p/d,1)*30;
+  }else{
+    const value=document.getElementById("value").value;
+    logEvent("VALUE",{value},TX);
+    if(value) score+=10;
+  }
 
-    <button class="primary" onclick="qrExport()">EXPORT QR</button>
-    <button class="secondary" onclick="download()">DOWNLOAD DOSSIER</button>
-    <button class="danger" onclick="reset()">RESET</button>
-  </div>`;
-}
+  let decision="REJECTED",risk="HIGH";
+  if(score>85 && pay===3){decision="SAFE";risk="LOW";}
+  else if(score>65){decision="REVIEW";risk="MEDIUM";}
 
-/* ======================
-   QR
-====================== */
-function qrExport(){
+  const events=await replay(TX);
+  const hash=await safeHash(JSON.stringify(events));
 
-  qr.style.display="block";
+  decisionEl.innerText=decision;
+  riskEl.innerText=risk;
+  hashEl.innerText="HASH: "+hash;
 
-  const data = JSON.stringify({
-    mode:state.mode,
-    trust:state.trust,
-    verdict:state.verdict,
-    payment:state.payment
-  });
+  drawQR(`${TX}|${role}|${hash}|${new Date().toISOString()}`);
 
-  ctx.fillStyle="#fff";
-  ctx.fillRect(0,0,220,220);
-  ctx.fillStyle="#000";
-  ctx.font="9px monospace";
-
-  data.match(/.{1,22}/g).forEach((l,i)=>{
-    ctx.fillText(l,10,20+(i*14));
-  });
-
-  const a=document.createElement("a");
-  a.href=qr.toDataURL();
-  a.download="COMET_QR.png";
-  a.click();
-}
-
-/* ======================
-   DOSSIER
-====================== */
-function download(){
-
-  const blob = new Blob([
-    JSON.stringify({
-      mode:state.mode,
-      trust:state.trust,
-      payment:state.payment,
-      inputs:state.inputs,
-      verdict:state.verdict
-    },null,2)
-  ],{type:"application/json"});
-
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="COMET_DOSSIER.json";
-  a.click();
-}
-
-/* ======================
-   RESET
-====================== */
-function reset(){
-  state = {
-    stage:"kyc",
-    mode:null,
-    inputs:{owner:"",seller:"",buyer:"",tenant:"",agent:"",property:""},
-    payment:{required:0,status:"NOT_INITIATED"},
-    trust:0,
-    verdict:null,
-    graph:null
+  window._pdfData={
+    TX,role,decision,risk,hash,events
   };
-  qr.style.display="none";
-  render();
+
+  loadingEl.classList.add("hidden");
 }
 
-/* ======================
-   ROUTER
-====================== */
-function render(){
-  if(state.stage==="kyc") return kyc();
-  if(state.stage==="mode") return mode();
-  if(state.stage==="input") return input();
-  if(state.stage==="payment") return payment();
-  if(state.stage==="result") return result();
-}
+/* ===== PDF ===== */
+function pdf(){
+  if(!window._pdfData){alert("Run system first");return;}
 
-render();
+  const {jsPDF}=window.jspdf || {};
+  if(!jsPDF){alert("PDF lib not loaded");return;}
+
+  const d=new jsPDF();
+  let y=10;
+
+  function line(text){
+    const lines=d.splitTextToSize(text,180);
+    lines.forEach(l=>{
+      if(y>280){d.addPage();y=10;}
+      d.text(l,10,y);
+      y+=6;
+    });
+  }
+
+  line("COMET OS EVIDENCE PACK");
+  line("TX: "+_pdfData.TX);
+  line("ROLE: "+_pdfData.role);
+  line("DECISION: "+_pdfData.decision);
+  line("RISK: "+_pdfData.risk);
+  line("HASH: "+_pdfData.hash);
+  line("EVENTS:");
+  line(JSON.stringify(_pdfData.events,null,2));
+
+  d.save("comet_evidence_pack.pdf");
+}
 
 </script>
+
 </body>
 </html>
