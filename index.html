@@ -3,64 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS</title>
+<title>COMET OS v9.4</title>
 
 <style>
 body{
   margin:0;
-  font-family:Arial;
-  background:#081b2e;
+  font-family: Arial;
+  background:#0b2a4a;
   color:#fff;
 }
 
 .container{
   max-width:520px;
   margin:auto;
-  padding:16px;
+  padding:20px;
+  text-align:center;
 }
 
-.card{
-  background:#0d2a45;
-  padding:14px;
-  border-radius:10px;
-  margin-bottom:12px;
+.question{
+  font-size:20px;
+  margin:40px 0 20px;
 }
 
 input{
   width:100%;
   padding:14px;
-  margin-bottom:10px;
+  font-size:16px;
   border:none;
   border-radius:10px;
-  font-size:16px;
+  margin-bottom:12px;
 }
 
 button{
   width:100%;
   padding:14px;
+  font-size:16px;
   border:none;
   border-radius:10px;
   font-weight:bold;
-  margin-top:6px;
-}
-
-.primary{
   background:#fff;
-  color:#081b2e;
+  color:#0b2a4a;
+  margin-top:8px;
 }
-
-.secondary{
-  background:#123a5c;
-  color:#fff;
-}
-
-.log{
-  font-family:monospace;
-  font-size:12px;
-  white-space:pre-wrap;
-}
-
-h3{margin:0 0 10px;}
 </style>
 </head>
 
@@ -68,169 +52,79 @@ h3{margin:0 0 10px;}
 
 <div class="container">
 
-  <div class="card">
-    <h3>CREATE CAPITAL UNIT</h3>
+  <div id="question" class="question"></div>
+  <input id="input" />
 
-    <input id="asset" placeholder="Asset (Land / Rent / Claim)" />
-    <input id="location" placeholder="Location" />
-    <input id="claimant" placeholder="Claimant" />
-    <input id="value" placeholder="Value" />
-
-    <button class="primary" onclick="createCU()">GENERATE</button>
-  </div>
-
-  <div class="card">
-    <h3>VALIDATION</h3>
-
-    <input id="signal1" placeholder="Bank Signal" />
-    <input id="signal2" placeholder="Community Signal" />
-
-    <button class="secondary" onclick="applySignals()">APPLY</button>
-  </div>
-
-  <div class="card">
-    <h3>POOL DASHBOARD</h3>
-    <div id="dashboard" class="log"></div>
-  </div>
-
-  <div class="card">
-    <h3>CAPITAL UNITS</h3>
-    <div id="units" class="log"></div>
-  </div>
+  <button onclick="back()">BACK</button>
+  <button onclick="next()">NEXT</button>
 
 </div>
 
 <script>
 
-/* ========= STORAGE ========= */
+/* ========= STATE ========= */
 
-let state = JSON.parse(localStorage.getItem("comet_pool") || "{}");
-state.units = state.units || [];
+let state = JSON.parse(localStorage.getItem("comet_state") || "{}");
+state.events = state.events || [];
+
+let auditLog = [];
+let index = 0;
+
+/* ========= FLOW ========= */
+
+const flow = [
+  { key:"role", q:"Select role" },
+  { key:"name", q:"Full name" },
+  { key:"phone", q:"Phone number" },
+  { key:"type", q:"Transaction type" },
+  { key:"location", q:"Location" },
+  { key:"amount", q:"Amount" },
+  { key:"ref", q:"Payment reference" }
+];
 
 /* ========= HASH ========= */
 
-async function hash(data){
+async function sha256(data){
   const enc = new TextEncoder().encode(JSON.stringify(data));
   const buf = await crypto.subtle.digest("SHA-256", enc);
-  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  return [...new Uint8Array(buf)]
+    .map(b => b.toString(16).padStart(2,'0'))
+    .join('');
 }
 
-/* ========= CREATE CU ========= */
+/* ========= EVENT ========= */
 
-async function createCU(){
+async function safeEvent(step,value){
 
-  let unit = {
-    id: "CU-" + Date.now().toString(36).toUpperCase(),
-    asset: asset.value,
-    location: location.value,
-    claimant: claimant.value,
-    value: parseFloat(value.value) || 0,
-    validations: 0,
-    time: Date.now()
+  let prevHash = state.events.length
+    ? state.events[state.events.length-1].hash
+    : "GENESIS";
+
+  let event = {
+    step,
+    value,
+    time: Date.now(),
+    prevHash
   };
 
-  // base risk
-  let risk = 100;
-  if(!unit.asset) risk -= 20;
-  if(!unit.location) risk -= 20;
-  if(!unit.claimant) risk -= 20;
-  if(!unit.value) risk -= 20;
+  event.hash = await sha256(event);
 
-  unit.risk = risk;
+  state.events.push(event);
 
-  unit.fingerprint = await hash(unit);
-
-  state.units.push(unit);
+  auditLog.push(event);
 
   save();
-  render();
 
-  clearInputs();
 }
 
-/* ========= APPLY VALIDATION ========= */
-
-function applySignals(){
-
-  let u = state.units[state.units.length-1];
-  if(!u) return;
-
-  let boost = 0;
-
-  if(signal1.value) boost += 10;
-  if(signal2.value) boost += 10;
-
-  u.validations += boost > 0 ? 1 : 0;
-  u.risk = Math.max(10, u.risk - boost);
-
-  save();
-  render();
-
-  signal1.value = "";
-  signal2.value = "";
-}
-
-/* ========= DASHBOARD ========= */
-
-function renderDashboard(){
-
-  let total = state.units.length;
-
-  let totalValue = state.units.reduce((a,b)=>a+b.value,0);
-
-  let low = state.units.filter(u=>u.risk <= 40).length;
-  let med = state.units.filter(u=>u.risk > 40 && u.risk <=70).length;
-  let high = state.units.filter(u=>u.risk > 70).length;
-
-  document.getElementById("dashboard").innerText = `
-TOTAL UNITS: ${total}
-TOTAL VALUE: ${totalValue}
-
-LOW RISK: ${low}
-MEDIUM: ${med}
-HIGH: ${high}
-  `;
-}
-
-/* ========= RENDER UNITS ========= */
-
-function renderUnits(){
-
-  document.getElementById("units").innerText = state.units.map(u=>`
-ID: ${u.id}
-ASSET: ${u.asset}
-LOCATION: ${u.location}
-CLAIMANT: ${u.claimant}
-VALUE: ${u.value}
-RISK: ${u.risk}
-VALIDATIONS: ${u.validations}
--------------------------
-  `).join("\n");
-}
-
-/* ========= CORE ========= */
-
-function render(){
-  renderDashboard();
-  renderUnits();
-}
+/* ========= STORAGE ========= */
 
 function save(){
-  localStorage.setItem("comet_pool", JSON.stringify(state));
+  localStorage.setItem("comet_state", JSON.stringify(state));
 }
 
-function clearInputs(){
-  asset.value = "";
-  location.value = "";
-  claimant.value = "";
-  value.value = "";
-}
+/* ========= RENDER ========= */
 
-/* ========= INIT ========= */
-
-render();
-
-</script>
-
-</body>
-</html>
+function render(){
+  document.getElementById("question").innerText = flow[index].q;
+  document
