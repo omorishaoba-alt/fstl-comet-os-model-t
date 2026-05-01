@@ -1,300 +1,234 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FSTL COMET OS v6.2</title>
-
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMET OS</title>
 
 <style>
-body{margin:0;font-family:Arial;background:linear-gradient(180deg,#061A2B,#0A2F4A);color:#fff;}
-header{text-align:center;padding:20px;}
-h1{margin:0;font-size:22px;}
-.sub{font-size:13px;opacity:0.85;margin-top:6px;}
-.container{padding:14px;display:flex;flex-direction:column;gap:14px;}
-.card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px;}
-input,select{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.25);color:#fff;}
-button{width:100%;padding:14px;border:none;border-radius:12px;background:#fff;color:#061A2B;font-weight:bold;}
-.result{font-size:18px;font-weight:bold;margin-top:10px;}
-.badge{font-size:12px;background:rgba(255,255,255,0.12);padding:6px;border-radius:8px;margin-top:6px;}
-canvas{background:#fff;margin-top:10px;border-radius:8px;}
-.error{color:#ffb3b3;font-size:12px;margin-top:6px;}
-.loading{color:#fff;font-size:12px;margin-top:6px;}
-.hidden{display:none;}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#081b2e;
+  color:#fff;
+}
+
+.container{
+  max-width:520px;
+  margin:auto;
+  padding:16px;
+}
+
+.card{
+  background:#0d2a45;
+  padding:14px;
+  border-radius:10px;
+  margin-bottom:12px;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  margin-top:6px;
+}
+
+.primary{
+  background:#fff;
+  color:#081b2e;
+}
+
+.secondary{
+  background:#123a5c;
+  color:#fff;
+}
+
+.log{
+  font-family:monospace;
+  font-size:12px;
+  white-space:pre-wrap;
+}
+
+h3{margin:0 0 10px;}
 </style>
 </head>
 
 <body>
 
-<header>
-<h1>FSTL COMET OS v6.2</h1>
-<div class="sub">Final polished trust system — resilient, stable, presentation-complete</div>
-</header>
-
 <div class="container">
 
-<div class="card">
-<select id="role" onchange="switchMode()">
-<option>Buyer</option>
-<option>Seller</option>
-<option>Tenant</option>
-<option>Landlord</option>
-<option>Agent</option>
-<option>Institution</option>
-</select>
-</div>
+  <div class="card">
+    <h3>CREATE CAPITAL UNIT</h3>
 
-<div class="card">
-<input id="name" placeholder="Your Name"/>
-<input id="counter" placeholder="Counterparty Name"/>
-<input id="location" placeholder="Property Location"/>
-</div>
+    <input id="asset" placeholder="Asset (Land / Rent / Claim)" />
+    <input id="location" placeholder="Location" />
+    <input id="claimant" placeholder="Claimant" />
+    <input id="value" placeholder="Value" />
 
-<div class="card" id="ownership">
-<input id="value" placeholder="Property Value"/>
-</div>
+    <button class="primary" onclick="createCU()">GENERATE</button>
+  </div>
 
-<div class="card hidden" id="rental">
-<input id="rent" placeholder="Monthly Rent"/>
-<input id="duration" placeholder="Lease Duration (months)"/>
-<input id="payments" placeholder="Payments Made"/>
-</div>
+  <div class="card">
+    <h3>VALIDATION</h3>
 
-<div class="card">
-<input id="bank" placeholder="Bank Reference"/>
-<input id="tx" placeholder="Transaction ID (TX-XXXXX)"/>
-<input id="bvn" placeholder="BVN Address"/>
-</div>
+    <input id="signal1" placeholder="Bank Signal" />
+    <input id="signal2" placeholder="Community Signal" />
 
-<div class="card">
-<button onclick="run()">RUN SYSTEM</button>
+    <button class="secondary" onclick="applySignals()">APPLY</button>
+  </div>
 
-<div id="loading" class="loading hidden">Processing...</div>
-<div id="error" class="error"></div>
-<div id="decision" class="result">—</div>
-<div id="risk" class="badge"></div>
-<div id="hash" class="badge"></div>
+  <div class="card">
+    <h3>POOL DASHBOARD</h3>
+    <div id="dashboard" class="log"></div>
+  </div>
 
-<canvas id="qr" width="120" height="120"></canvas>
-
-<button onclick="pdf()">DOWNLOAD EVIDENCE PACK</button>
-</div>
+  <div class="card">
+    <h3>CAPITAL UNITS</h3>
+    <div id="units" class="log"></div>
+  </div>
 
 </div>
 
 <script>
 
-/* ===== DOM ===== */
-const roleSel = document.getElementById("role");
-const errorEl = document.getElementById("error");
-const decisionEl = document.getElementById("decision");
-const riskEl = document.getElementById("risk");
-const hashEl = document.getElementById("hash");
-const qrCanvas = document.getElementById("qr");
-const loadingEl = document.getElementById("loading");
+/* ========= STORAGE ========= */
 
-/* ===== STORAGE FALLBACK ===== */
-let db=null;
-let memoryStore=[];
+let state = JSON.parse(localStorage.getItem("comet_pool") || "{}");
+state.units = state.units || [];
 
-const req=indexedDB.open("comet_v6_2",1);
+/* ========= HASH ========= */
 
-req.onupgradeneeded=e=>{
-  db=e.target.result;
-  db.createObjectStore("events",{keyPath:"id"});
-};
-
-req.onsuccess=e=>db=e.target.result;
-
-req.onerror=()=>{
-  db=null; // fallback mode
-};
-
-/* ===== MODE ===== */
-function switchMode(){
-  const r=roleSel.value;
-  const rental=["Tenant","Landlord"];
-  document.getElementById("rental").classList.toggle("hidden",!rental.includes(r));
-  document.getElementById("ownership").classList.toggle("hidden",rental.includes(r));
-}
-window.onload=switchMode;
-
-/* ===== SAFE HASH ===== */
-async function safeHash(str){
-  try{
-    if(window.crypto && crypto.subtle){
-      const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
-      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
-    }
-  }catch{}
-  let h=0; for(let i=0;i<str.length;i++) h=(h<<5)-h+str.charCodeAt(i);
-  return h.toString();
+async function hash(data){
+  const enc = new TextEncoder().encode(JSON.stringify(data));
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-/* ===== QR ===== */
-function drawQR(text){
-  const ctx=qrCanvas.getContext("2d");
-  ctx.clearRect(0,0,120,120);
+/* ========= CREATE CU ========= */
 
-  try{
-    if(window.QRCode){
-      QRCode.toCanvas(qrCanvas,text,{width:120});
-      return;
-    }
-  }catch{}
+async function createCU(){
 
-  ctx.fillStyle="#000";
-  for(let i=0;i<text.length;i++){
-    ctx.fillRect((i*5)%120,(i*9)%120,2,2);
-  }
-}
-
-/* ===== VALIDATION ===== */
-function validate(role){
-  const name=document.getElementById("name").value.trim();
-  const counter=document.getElementById("counter").value.trim();
-  const location=document.getElementById("location").value.trim();
-  const bank=document.getElementById("bank").value.trim();
-  const tx=document.getElementById("tx").value.trim();
-
-  if(!name || !counter || !location) return "Complete all identity fields.";
-  if(!/^TX-[A-Z0-9]+$/i.test(tx)) return "Invalid TX format.";
-  if(bank.length<6) return "Invalid bank reference.";
-
-  if(role==="Tenant"||role==="Landlord"){
-    let d=parseInt(document.getElementById("duration").value);
-    let p=parseInt(document.getElementById("payments").value);
-    if(!d||d<=0) return "Invalid lease duration.";
-    if(p>d) return "Payments cannot exceed duration.";
-  }
-  return null;
-}
-
-/* ===== STORAGE ===== */
-function logEvent(type,data,TX){
-  const record={id:crypto.randomUUID(),type,data,TX,time:new Date().toISOString()};
-  if(db){
-    const tx=db.transaction("events","readwrite");
-    tx.objectStore("events").add(record);
-  }else{
-    memoryStore.push(record);
-  }
-}
-
-function replay(TX){
-  return new Promise(res=>{
-    if(db){
-      const tx=db.transaction("events","readonly");
-      const store=tx.objectStore("events");
-      const req=store.getAll();
-      req.onsuccess=()=>res(req.result.filter(e=>e.TX===TX));
-    }else{
-      res(memoryStore.filter(e=>e.TX===TX));
-    }
-  });
-}
-
-/* ===== RUN ===== */
-async function run(){
-
-  errorEl.innerText="";
-  loadingEl.classList.remove("hidden");
-
-  const role=roleSel.value;
-  const err=validate(role);
-
-  if(err){
-    errorEl.innerText=err;
-    loadingEl.classList.add("hidden");
-    return;
-  }
-
-  const TX="TX-"+crypto.randomUUID().slice(0,8);
-
-  const name=document.getElementById("name").value;
-  const counter=document.getElementById("counter").value;
-  const location=document.getElementById("location").value;
-  const bank=document.getElementById("bank").value;
-  const tx=document.getElementById("tx").value;
-  const bvn=document.getElementById("bvn").value;
-
-  logEvent("ROLE",{role},TX);
-  logEvent("PARTY",{name,counter},TX);
-  logEvent("ASSET",{location},TX);
-  logEvent("PAY",{bank,tx,bvn},TX);
-
-  let score=50;
-
-  let pay=0;
-  if(bank.length>5) pay++;
-  if(/^TX-[A-Z0-9]+$/i.test(tx)) pay++;
-  if(bvn && location && bvn.toLowerCase().includes(location.toLowerCase())) pay++;
-
-  score+=pay*10;
-
-  if(role==="Tenant"||role==="Landlord"){
-    const d=parseInt(document.getElementById("duration").value);
-    const p=parseInt(document.getElementById("payments").value);
-    logEvent("LEASE",{duration:d,payments:p},TX);
-    score+=Math.min(p/d,1)*30;
-  }else{
-    const value=document.getElementById("value").value;
-    logEvent("VALUE",{value},TX);
-    if(value) score+=10;
-  }
-
-  let decision="REJECTED",risk="HIGH";
-  if(score>85 && pay===3){decision="SAFE";risk="LOW";}
-  else if(score>65){decision="REVIEW";risk="MEDIUM";}
-
-  const events=await replay(TX);
-  const hash=await safeHash(JSON.stringify(events));
-
-  decisionEl.innerText=decision;
-  riskEl.innerText=risk;
-  hashEl.innerText="HASH: "+hash;
-
-  drawQR(`${TX}|${role}|${hash}|${new Date().toISOString()}`);
-
-  window._pdfData={
-    TX,role,decision,risk,hash,events
+  let unit = {
+    id: "CU-" + Date.now().toString(36).toUpperCase(),
+    asset: asset.value,
+    location: location.value,
+    claimant: claimant.value,
+    value: parseFloat(value.value) || 0,
+    validations: 0,
+    time: Date.now()
   };
 
-  loadingEl.classList.add("hidden");
+  // base risk
+  let risk = 100;
+  if(!unit.asset) risk -= 20;
+  if(!unit.location) risk -= 20;
+  if(!unit.claimant) risk -= 20;
+  if(!unit.value) risk -= 20;
+
+  unit.risk = risk;
+
+  unit.fingerprint = await hash(unit);
+
+  state.units.push(unit);
+
+  save();
+  render();
+
+  clearInputs();
 }
 
-/* ===== PDF ===== */
-function pdf(){
-  if(!window._pdfData){alert("Run system first");return;}
+/* ========= APPLY VALIDATION ========= */
 
-  const {jsPDF}=window.jspdf || {};
-  if(!jsPDF){alert("PDF lib not loaded");return;}
+function applySignals(){
 
-  const d=new jsPDF();
-  let y=10;
+  let u = state.units[state.units.length-1];
+  if(!u) return;
 
-  function line(text){
-    const lines=d.splitTextToSize(text,180);
-    lines.forEach(l=>{
-      if(y>280){d.addPage();y=10;}
-      d.text(l,10,y);
-      y+=6;
-    });
-  }
+  let boost = 0;
 
-  line("COMET OS EVIDENCE PACK");
-  line("TX: "+_pdfData.TX);
-  line("ROLE: "+_pdfData.role);
-  line("DECISION: "+_pdfData.decision);
-  line("RISK: "+_pdfData.risk);
-  line("HASH: "+_pdfData.hash);
-  line("EVENTS:");
-  line(JSON.stringify(_pdfData.events,null,2));
+  if(signal1.value) boost += 10;
+  if(signal2.value) boost += 10;
 
-  d.save("comet_evidence_pack.pdf");
+  u.validations += boost > 0 ? 1 : 0;
+  u.risk = Math.max(10, u.risk - boost);
+
+  save();
+  render();
+
+  signal1.value = "";
+  signal2.value = "";
 }
+
+/* ========= DASHBOARD ========= */
+
+function renderDashboard(){
+
+  let total = state.units.length;
+
+  let totalValue = state.units.reduce((a,b)=>a+b.value,0);
+
+  let low = state.units.filter(u=>u.risk <= 40).length;
+  let med = state.units.filter(u=>u.risk > 40 && u.risk <=70).length;
+  let high = state.units.filter(u=>u.risk > 70).length;
+
+  document.getElementById("dashboard").innerText = `
+TOTAL UNITS: ${total}
+TOTAL VALUE: ${totalValue}
+
+LOW RISK: ${low}
+MEDIUM: ${med}
+HIGH: ${high}
+  `;
+}
+
+/* ========= RENDER UNITS ========= */
+
+function renderUnits(){
+
+  document.getElementById("units").innerText = state.units.map(u=>`
+ID: ${u.id}
+ASSET: ${u.asset}
+LOCATION: ${u.location}
+CLAIMANT: ${u.claimant}
+VALUE: ${u.value}
+RISK: ${u.risk}
+VALIDATIONS: ${u.validations}
+-------------------------
+  `).join("\n");
+}
+
+/* ========= CORE ========= */
+
+function render(){
+  renderDashboard();
+  renderUnits();
+}
+
+function save(){
+  localStorage.setItem("comet_pool", JSON.stringify(state));
+}
+
+function clearInputs(){
+  asset.value = "";
+  location.value = "";
+  claimant.value = "";
+  value.value = "";
+}
+
+/* ========= INIT ========= */
+
+render();
 
 </script>
 
