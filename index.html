@@ -3,21 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS v10</title>
+<title>COMET OS v10 FINAL</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b2a4a;color:#fff}
+html{font-size:20px}
+body{margin:0;font-family:Arial;background:#0b2a4a;color:#fff;font-size:1rem;line-height:1.6}
 .container{max-width:520px;margin:auto;padding:20px;text-align:center}
+
 input,select,button{
-  width:100%;padding:14px;margin:10px 0;
-  border:none;border-radius:10px;font-size:16px
+  width:100%;
+  padding:16px;
+  margin:10px 0;
+  border:none;
+  border-radius:10px;
+  font-size:1.1rem;
 }
-button{background:#fff;color:#0b2a4a;font-weight:bold}
-h2,h3{margin-top:20px}
-pre{white-space:pre-wrap;text-align:left;background:#062033;padding:10px;border-radius:10px}
-.small{font-size:14px;opacity:0.85}
-.locked{opacity:0.4;pointer-events:none}
+
+button{
+  background:#fff;
+  color:#0b2a4a;
+  font-weight:bold;
+}
+
+h2{font-size:1.6rem}
+h3{font-size:1.3rem}
+
+pre{
+  white-space:pre-wrap;
+  text-align:left;
+  background:#062033;
+  padding:12px;
+  border-radius:10px;
+  font-size:0.95rem;
+}
+
+.small{font-size:0.95rem;opacity:0.85}
+
+hr{opacity:0.3}
 </style>
+
+<!-- QR + PDF ENGINE -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 </head>
 
 <body>
@@ -30,13 +59,30 @@ pre{white-space:pre-wrap;text-align:left;background:#062033;padding:10px;border-
 let state = {
   role:"",
   kyc:{},
-  tx:{},
+  contract:{},
   payment:{},
   events:[],
-  identityHistory: JSON.parse(localStorage.getItem("comet_history")||"[]")
+  history: JSON.parse(localStorage.getItem("comet_history")||"[]")
 };
 
-let screen = "cover";
+let screen="cover";
+
+/* ================= FSTL + BANK ================= */
+
+const FSTL = {
+  company:"First Standard Title Limited (FSTL)",
+  address:"No. 19 Egbor Avenue, GRA, Benin City, Nigeria",
+  phone:"+2358035888622",
+  email:"fstlsite@gmail.com",
+  role:"COMET OS Issuer & Verification Authority",
+  function:"Identity, risk scoring, transaction structuring"
+};
+
+const BANK = {
+  institution:"First Bank of Nigeria PLC",
+  accountHolder:"First Standard Title Limited",
+  settlementId:"FSTL-FBN-SETTLEMENT-001"
+};
 
 /* ================= HASH ================= */
 
@@ -47,340 +93,79 @@ async function hash(data){
     .map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-/* ================= EVENT ================= */
+/* ================= LOG ================= */
 
 async function log(step,val){
-  let prev = state.events.length
-    ? state.events[state.events.length-1].hash
-    : "GENESIS";
-
-  let e = {step,val,time:Date.now(),prev};
-  e.hash = await hash(e);
+  let prev=state.events.length?state.events[state.events.length-1].hash:"GENESIS";
+  let e={step,val,time:Date.now(),prev};
+  e.hash=await hash(e);
   state.events.push(e);
 }
 
-/* ================= IDENTITY SCORE ================= */
+/* ================= IDENTITY ================= */
 
 function identityScore(k,role){
-
 let score=0;
-let flags=[];
 
-/* INDIVIDUALS */
-if(["TENANT","BUYER","SELLER","LANDLORD"].includes(role)){
-if(k.name) score+=10; else flags.push("missing name");
-if(k.phone) score+=10; else flags.push("missing phone");
-if(k.bvn) score+=25; else flags.push("missing BVN");
-if(k.nin) score+=25; else flags.push("missing NIN");
-if(k.gender) score+=5;
-if(k.age||k.dob) score+=10;
+if(role==="TENANT"||role==="BUYER"||role==="LANDLORD"){
+if(k.name) score+=10;
+if(k.phone) score+=10;
+if(k.bvn) score+=25;
+if(k.nin) score+=25;
 if(k.address) score+=10;
 }
 
-/* AGENT */
 if(role==="AGENT"){
 if(k.name) score+=10;
 if(k.phone) score+=10;
 if(k.bvn) score+=20;
 if(k.nin) score+=20;
-if(k.agency) score+=20;
-if(k.address) score+=10;
 }
 
-/* INSTITUTION */
 if(role==="INSTITUTION"){
-if(k.entity) score+=10;
 if(k.rc) score+=30;
 if(k.license) score+=30;
-if(k.repBVN) score+=20;
-if(!k.license){score-=50;flags.push("unlicensed");}
 }
 
-/* LEVEL */
-let level =
-score<30?"CRITICAL":
-score<50?"HIGH":
-score<70?"MEDIUM":"LOW";
-
-return {score,level,flags};
-
-}
-
-/* ================= AUTHORITY ================= */
-
-function authority(score){
-return{
-canProceed:score>=30,
-canPay:score>=50,
-canSeal:score>=70
-};
+let level=score<30?"CRITICAL":score<50?"HIGH":score<70?"MEDIUM":"LOW";
+return {score,level};
 }
 
 /* ================= TRIANGULATION ================= */
 
 function triangulate(){
-
 let score=100;
 let flags=[];
 
-if(state.role==="TENANT"&&!state.tx.landlord){
-score-=20;flags.push("missing landlord");
-}
+if(!state.contract.asset){score-=20;flags.push("missing contract");}
+if(!state.payment.amount){score-=20;flags.push("missing payment");}
 
-if(state.role==="BUYER"&&!state.tx.seller){
-score-=20;flags.push("missing seller");
-}
-
-let amount=parseFloat(state.payment.amount||0);
-let ref=state.payment.ref;
-
-if(!ref){score-=15;flags.push("missing ref");}
-
-if(ref&&["123","000","test"].includes(ref)){
-score-=15;flags.push("suspicious ref");
-}
-
-let price=parseFloat(state.tx.price||state.tx.rent||0);
-
-if(amount&&price&&amount!==price){
+if(state.contract.price && state.payment.amount &&
+state.contract.price != state.payment.amount){
 score-=20;flags.push("value mismatch");
 }
 
-if(amount>100000000){
+if(state.payment.amount>100000000){
 score-=20;flags.push("high value risk");
 }
 
-let level=score<50?"HIGH":score<75?"MEDIUM":"LOW";
-
-return{score,level,flags};
-
+return {score,flags};
 }
 
-/* ================= REPUTATION ENGINE ================= */
+/* ================= TX (TRIANGLE GATE) ================= */
 
-function reputationEngine(){
+function generateTX(id){
+let valid =
+id.score>=30 &&
+state.payment.amount &&
+state.payment.ref &&
+state.contract.asset;
 
-let h=state.identityHistory;
-let rep=100;
-let flags=[];
+if(!valid) return null;
 
-if(h.length<1){rep-=20;flags.push("no history");}
-if(h.length>5){rep+=10;}
-
-let disputes=h.filter(x=>x.dispute).length;
-if(disputes>0){rep-=disputes*20;}
-
-let consistent=h.filter(x=>x.status==="completed").length;
-if(consistent>3){rep+=15;}
-
-let level=rep<40?"UNTRUSTED":rep<70?"WATCHLIST":"TRUSTED";
-
-return{rep,level,flags};
-
+return "TX-" + Date.now().toString(36).toUpperCase();
 }
 
-/* ================= RENDER ================= */
+/* ================= QR ================= */
 
-function render(){
-
-let html="";
-
-/* COVER */
-if(screen==="cover"){
-html=`
-<h2>COMET OS</h2>
-<div class="small">Structured Property Intelligence System</div>
-<button onclick="next('intro')">ENTER</button>`;
-}
-
-/* INTRO */
-if(screen==="intro"){
-html=`
-<h3>Introduction</h3>
-<div class="small">
-COMET OS builds structured, verifiable financial cases.<br><br>
-Identity is evaluated before system access is granted.
-</div>
-<button onclick="next('role')">CONTINUE</button>`;
-}
-
-/* ROLE */
-if(screen==="role"){
-html=`
-<h3>Role</h3>
-<select id="role">
-<option value="">--select--</option>
-<option>TENANT</option>
-<option>LANDLORD</option>
-<option>BUYER</option>
-<option>AGENT</option>
-<option>INSTITUTION</option>
-</select>
-<button onclick="setRole()">NEXT</button>`;
-}
-
-/* KYC */
-if(screen==="kyc"){
-html=`
-<h3>KYC</h3>
-<input id="name" placeholder="Name">
-<input id="phone" placeholder="Phone">
-<input id="bvn" placeholder="BVN">
-<input id="nin" placeholder="NIN">
-<input id="gender" placeholder="Gender">
-<input id="age" placeholder="Age">
-<input id="address" placeholder="Address">
-<button onclick="saveKYC()">NEXT</button>`;
-}
-
-/* TX */
-if(screen==="tx"){
-html=`
-<h3>Transaction</h3>
-<input id="landlord" placeholder="Landlord">
-<input id="tenant" placeholder="Tenant">
-<input id="seller" placeholder="Seller">
-<input id="price" placeholder="Price">
-<input id="rent" placeholder="Rent">
-<button onclick="saveTX()">NEXT</button>`;
-}
-
-/* PAYMENT */
-if(screen==="payment"){
-html=`
-<h3>Payment</h3>
-<input id="ref" placeholder="Reference">
-<input id="amount" placeholder="Amount">
-<button onclick="savePayment()">FINALIZE</button>`;
-}
-
-/* FINAL */
-if(screen==="final"){
-finalize();
-return;
-}
-
-document.getElementById("app").innerHTML=html;
-}
-
-/* ================= FLOW ================= */
-
-function next(s){screen=s;render();}
-
-async function setRole(){
-state.role=role.value;
-await log("role",state.role);
-next("kyc");
-}
-
-async function saveKYC(){
-state.kyc={
-name:name.value,
-phone:phone.value,
-bvn:bvn.value,
-nin:nin.value,
-gender:gender.value,
-age:age.value,
-address:address.value
-};
-await log("kyc",state.kyc);
-next("tx");
-}
-
-async function saveTX(){
-state.tx={
-landlord:landlord.value,
-tenant:tenant.value,
-seller:seller.value,
-price:price.value,
-rent:rent.value
-};
-await log("tx",state.tx);
-next("payment");
-}
-
-async function savePayment(){
-state.payment={
-ref:ref.value,
-amount:amount.value
-};
-await log("payment",state.payment);
-next("final");
-}
-
-/* ================= FINAL ================= */
-
-async function finalize(){
-
-let txid="TX-"+Date.now().toString(36);
-
-let id=identityScore(state.kyc,state.role);
-let auth=authority(id.score);
-let tri=triangulate();
-let rep=reputationEngine();
-
-let fingerprint=await hash(state.events);
-
-let seal=await hash({txid,id,tri,rep});
-
-state.identityHistory.push({
-txid,
-status:"completed",
-dispute:false,
-counterparty:state.tx
-});
-
-localStorage.setItem("comet_history",JSON.stringify(state.identityHistory));
-
-document.getElementById("app").innerHTML=`
-<h3>COMET OS CASE</h3>
-
-<pre>
-
-TX: ${txid}
-
-ROLE: ${state.role}
-
-IDENTITY:
-Score: ${id.score}
-Level: ${id.level}
-
-AUTHORITY:
-${JSON.stringify(auth,null,2)}
-
-REPUTATION:
-${JSON.stringify(rep,null,2)}
-
-TRIANGULATION:
-${JSON.stringify(tri,null,2)}
-
-KYC:
-${JSON.stringify(state.kyc,null,2)}
-
-TRANSACTION:
-${JSON.stringify(state.tx,null,2)}
-
-PAYMENT:
-${JSON.stringify(state.payment,null,2)}
-
-FINGERPRINT:
-${fingerprint}
-
-SEAL:
-${seal}
-
-</pre>
-
-<button onclick="window.print()">EXPORT PDF</button>
-<button onclick="location.reload()">NEW CASE</button>
-`;
-
-}
-
-/* ================= INIT ================= */
-
-render();
-
-</script>
-</body>
-</html>
+async
