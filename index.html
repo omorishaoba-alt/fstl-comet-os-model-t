@@ -168,4 +168,239 @@ return "TX-" + Date.now().toString(36).toUpperCase();
 
 /* ================= QR ================= */
 
-async
+async function qr(text){
+return await QRCode.toDataURL(text,{width:180,margin:1});
+}
+
+/* ================= FLOW ================= */
+
+function render(){
+
+let html="";
+
+if(screen==="cover"){
+html=`
+<h2>COMET OS</h2>
+<button onclick="go('intro')">ENTER</button>`;
+}
+
+if(screen==="intro"){
+html=`
+<h3>INTRODUCTION</h3>
+
+<div class="small">
+COMET OS is a structured verification system for identity, contract and transaction integrity.
+</div>
+
+<hr>
+
+<div class="small" style="text-align:left">
+
+<b>FSTL ISSUER</b><br><br>
+${FSTL.company}<br>
+${FSTL.address}<br>
+${FSTL.phone}<br>
+${FSTL.email}<br><br>
+
+Role: ${FSTL.role}<br>
+Function: ${FSTL.function}
+
+</div>
+
+<button onclick="go('role')">CONTINUE</button>`;
+}
+
+if(screen==="role"){
+html=`
+<h3>ROLE</h3>
+<select id="role">
+<option value="">--</option>
+<option>TENANT</option>
+<option>LANDLORD</option>
+<option>BUYER</option>
+<option>SELLER</option>
+<option>AGENT</option>
+<option>INSTITUTION</option>
+</select>
+<button onclick="setRole()">NEXT</button>`;
+}
+
+if(screen==="kyc"){
+html=`
+<h3>KYC</h3>
+<input id="name" placeholder="Name">
+<input id="phone" placeholder="Phone">
+<input id="bvn" placeholder="BVN">
+<input id="nin" placeholder="NIN">
+<input id="address" placeholder="Address">
+<button onclick="saveKYC()">NEXT</button>`;
+}
+
+if(screen==="contract"){
+html=`
+<h3>CONTRACT</h3>
+<input id="asset" placeholder="Asset / Property">
+<input id="price" placeholder="Price / Rent">
+<button onclick="saveContract()">NEXT</button>`;
+}
+
+if(screen==="payment"){
+html=`
+<h3>PAYMENT</h3>
+<input id="ref" placeholder="Reference">
+<input id="amount" placeholder="Amount">
+<button onclick="finalize()">FINALIZE</button>`;
+}
+
+document.getElementById("app").innerHTML=html;
+}
+
+function go(s){screen=s;render();}
+
+async function setRole(){
+state.role=role.value;
+await log("role",state.role);
+go("kyc");
+}
+
+async function saveKYC(){
+state.kyc={
+name:name.value,
+phone:phone.value,
+bvn:bvn.value,
+nin:nin.value,
+address:address.value
+};
+await log("kyc",state.kyc);
+go("contract");
+}
+
+async function saveContract(){
+state.contract={
+asset:asset.value,
+price:price.value
+};
+await log("contract",state.contract);
+go("payment");
+}
+
+/* ================= FINAL ================= */
+
+async function finalize(){
+
+state.payment={
+ref:ref.value,
+amount:amount.value
+};
+
+await log("payment",state.payment);
+
+let id=identityScore(state.kyc,state.role);
+let tri=triangulate();
+
+let txid=generateTX(id);
+
+if(!txid){
+document.getElementById("app").innerHTML=
+"<h3>TRANSACTION INVALID</h3><div class='small'>Triangle incomplete</div>";
+return;
+}
+
+let fingerprint=await hash(state.events);
+let seal=await hash({txid,fingerprint,id,tri});
+
+/* QR */
+let qrPayload={
+txid,
+role:state.role,
+score:id.score,
+level:id.level,
+seal,
+fstl:FSTL.company,
+bank:BANK.settlementId
+};
+
+let qrImg=await qr(JSON.stringify(qrPayload));
+
+state.history.push({txid,status:"complete"});
+localStorage.setItem("comet_history",JSON.stringify(state.history));
+
+/* FINAL OUTPUT */
+document.getElementById("app").innerHTML=`
+
+<h3>COMET OS CASE FILE</h3>
+
+<img src="${qrImg}" style="margin:10px auto;display:block"/>
+
+<pre id="caseBlock">
+
+TX: ${txid}
+
+ROLE: ${state.role}
+
+IDENTITY:
+Score: ${id.score}
+Level: ${id.level}
+
+TRIANGULATION:
+${JSON.stringify(tri,null,2)}
+
+KYC:
+${JSON.stringify(state.kyc,null,2)}
+
+CONTRACT:
+${JSON.stringify(state.contract,null,2)}
+
+PAYMENT:
+${JSON.stringify(state.payment,null,2)}
+
+SEAL:
+${seal}
+
+FSTL:
+${FSTL.company}
+${FSTL.address}
+
+BANK:
+${BANK.institution}
+${BANK.settlementId}
+
+</pre>
+
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+<button onclick="location.reload()">NEW CASE</button>
+
+`;
+
+}
+
+/* ================= PDF EXPORT (FIXED) ================= */
+
+async function downloadPDF(){
+
+const { jsPDF } = window.jspdf;
+
+const canvas = await html2canvas(document.getElementById("app"),{
+scale:2,
+useCORS:true,
+backgroundColor:"#0b2a4a"
+});
+
+const img = canvas.toDataURL("image/png");
+
+const pdf = new jsPDF("p","mm","a4");
+
+const w = 210;
+const h = (canvas.height * w) / canvas.width;
+
+pdf.addImage(img,"PNG",0,0,w,h);
+pdf.save("COMET_OS_CASE.pdf");
+
+}
+
+/* INIT */
+render();
+
+</script>
+</body>
+</html>
