@@ -5,20 +5,19 @@
 <title>FSTL COMET OS</title>
 
 <style>
-html { font-size:16px; }
+html { font-size:18px; }
 
 body {
   margin:0;
   font-family:Arial, sans-serif;
   background:#0b2a4a;
   color:#fff;
-  overflow-y:auto;
 }
 
 .container {
   max-width:520px;
   margin:auto;
-  padding:16px;
+  padding:18px;
 }
 
 .screen {
@@ -26,47 +25,41 @@ body {
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
-  padding-top:20px;
 }
 
 .title {
-  font-size:1.5rem;
+  font-size:1.7rem;
   font-weight:bold;
   margin-bottom:10px;
 }
 
 .card {
   background:#062033;
-  padding:12px;
-  border-radius:10px;
-  margin:10px 0;
-  line-height:1.4;
+  padding:16px;
+  border-radius:12px;
+  margin:12px 0;
+  line-height:1.6;
 }
 
 input, select {
   width:100%;
-  padding:14px;
-  margin-top:10px;
+  padding:16px;
+  margin-top:12px;
   border:none;
-  border-radius:6px;
-  font-size:16px;
+  border-radius:8px;
+  font-size:17px;
 }
 
 button {
   width:100%;
-  padding:14px;
-  margin-top:10px;
+  padding:16px;
+  margin-top:12px;
   border:none;
-  border-radius:8px;
-  font-size:16px;
+  border-radius:10px;
+  font-size:17px;
   font-weight:bold;
   background:#fff;
   color:#0b2a4a;
-}
-
-.small {
-  font-size:0.85rem;
-  opacity:0.8;
 }
 </style>
 </head>
@@ -78,316 +71,239 @@ button {
 
 /* ================= STATE ================= */
 
-let state = JSON.parse(localStorage.getItem("comet_state") || "{}");
-
-if(!state.identity){
-state = {
-identity:{nin:"", bvn:""},
-stability:{},
-behavior:{},
-transaction:{},
+let state = {
+role:"",
+nin:"",
+employment:0,
+contact:0,
+residence:0,
+income:false,
+financial:false,
+owner:"",
+buyer:"",
+property:"",
+ownerMatch:false,
+valueMatch:false,
 result:null
 };
-}
 
-let historyStack = [];
-let screen = "cover";
+let screen="intro";
 
-/* ================= SAVE ================= */
+/* ================= NAV ================= */
 
-function save(){
-localStorage.setItem("comet_state", JSON.stringify(state));
-}
-
-/* ================= NAVIGATION ================= */
-
-function go(next){
-historyStack.push(screen);
-screen = next;
+function go(s){
+screen=s;
 render();
-}
-
-function back(){
-if(historyStack.length){
-screen = historyStack.pop();
-render();
-}
-}
-
-/* ================= SAFE VALUE ================= */
-
-function val(id){
-let el = document.getElementById(id);
-return el ? el.value : "";
-}
-
-/* ================= VALIDATION ================= */
-
-function valid(){
-return state.identity.nin && state.identity.nin.length >= 6;
 }
 
 /* ================= ENGINE ================= */
 
-function runEngine(){
+function run(){
 
-if(!valid()){
+if(!state.nin || state.nin.length < 6){
 alert("Enter valid NIN");
 return;
 }
 
 let score = 0;
 
-if(state.identity.nin) score += 15;
+score += 15;
 
-score += state.stability.employment || 0;
-score += state.stability.contact || 0;
-score += state.stability.residence || 0;
+score += state.employment;
+score += state.contact;
+score += state.residence;
 
-if(state.behavior.income) score += 10;
-if(state.behavior.financial) score += 10;
+if(state.income) score += 10;
+if(state.financial) score += 10;
 
-if(state.transaction.ownerMatch) score += 10;
-if(state.transaction.valueMatch) score += 10;
+if(state.ownerMatch) score += 10;
+if(state.valueMatch) score += 10;
 
-let status = "BLOCKED";
-if(score >= 75) status = "VERIFIED";
-else if(score >= 50) status = "FLAGGED";
+let status="BLOCKED";
+if(score>=75) status="VERIFIED";
+else if(score>=50) status="FLAGGED";
 
-state.result = {score, status};
-save();
+state.result = {score,status};
 
-go("result");
+screen="result";
+render();
 }
 
-/* ================= RENDER ================= */
+/* ================= UI ================= */
 
 function render(){
 
-let html = "";
+let h="";
 
-/* COVER */
-if(screen==="cover"){
-html = `
+/* INTRO */
+if(screen==="intro"){
+h=`
 <div class="screen">
+
 <div class="title">FSTL COMET OS</div>
 
 <div class="card">
-A silent infrastructure backbone for transaction clarity.
+Before you pay, rent, or agree — see the full picture.
 </div>
 
 <div class="card">
-See who is involved, what is agreed, how value moves, and what risks exist — before you decide.
+This system helps you understand:
+who you are dealing with,
+what you are agreeing to,
+and the risks involved.
 </div>
 
-<button onclick="go('value')">ENTER SYSTEM</button>
+<button onclick="go('role')">START</button>
+
 </div>`;
 }
 
-/* VALUE */
-if(screen==="value"){
-html = `
+/* ROLE */
+if(screen==="role"){
+h=`
 <div class="screen">
-<div class="title">Why This Exists</div>
 
-<div class="card">
-All parties see the same structured transaction truth before making a decision.
-</div>
+<div class="title">Who are you?</div>
 
-<div class="card">
-This reduces confusion, hidden risk, and disputes.
-</div>
+<button onclick="state.role='Tenant'; go('identity')">Tenant</button>
+<button onclick="state.role='Landlord'; go('identity')">Landlord</button>
+<button onclick="state.role='Agent'; go('identity')">Agent</button>
 
-<button onclick="go('identity')">CONTINUE</button>
-<button onclick="back()">BACK</button>
 </div>`;
 }
 
 /* IDENTITY */
 if(screen==="identity"){
-html = `
+h=`
 <div class="screen">
-<div class="title">Identity</div>
 
-<input id="nin" placeholder="NIN (Required)" value="${state.identity.nin}">
-<input id="bvn" placeholder="BVN (Optional)" value="${state.identity.bvn}">
+<div class="title">Let's confirm who you are</div>
+
+<input id="nin" placeholder="Enter your NIN">
 
 <button onclick="
-state.identity.nin = val('nin');
-state.identity.bvn = val('bvn');
-save();
+state.nin=document.getElementById('nin').value;
 go('stability');
-">CONTINUE</button>
+">Continue</button>
 
-<button onclick="back()">BACK</button>
 </div>`;
 }
 
 /* STABILITY */
 if(screen==="stability"){
-html = `
+h=`
 <div class="screen">
-<div class="title">Stability</div>
+
+<div class="title">Tell us about your current situation</div>
 
 <select id="emp">
-<option value="0">Employment Duration</option>
+<option value="0">How long have you been working?</option>
 <option value="5">< 6 months</option>
 <option value="10">6–12 months</option>
 <option value="15">1+ years</option>
 </select>
 
-<select id="con">
-<option value="0">Contact Stability</option>
-<option value="5">< 6 months</option>
-<option value="10">6–24 months</option>
-<option value="15">2+ years</option>
-</select>
-
 <select id="res">
-<option value="0">Residence</option>
+<option value="0">Your living situation</option>
 <option value="5">Temporary</option>
 <option value="10">Rented</option>
 <option value="15">Permanent</option>
 </select>
 
 <button onclick="
-state.stability.employment=parseInt(val('emp'));
-state.stability.contact=parseInt(val('con'));
-state.stability.residence=parseInt(val('res'));
-save();
+state.employment=parseInt(emp.value);
+state.residence=parseInt(res.value);
 go('behavior');
-">CONTINUE</button>
+">Continue</button>
 
-<button onclick="back()">BACK</button>
 </div>`;
 }
 
 /* BEHAVIOR */
 if(screen==="behavior"){
-html = `
+h=`
 <div class="screen">
-<div class="title">Behavior</div>
+
+<div class="title">Financial situation</div>
 
 <select id="inc">
-<option value="">Income Stability</option>
-<option value="true">Stable</option>
-<option value="false">Unstable</option>
+<option value="">Is your income stable?</option>
+<option value="true">Yes</option>
+<option value="false">No</option>
 </select>
 
 <select id="fin">
-<option value="">Financial Independence</option>
-<option value="true">Independent</option>
-<option value="false">Dependent</option>
-</select>
-
-<button onclick="
-state.behavior.income = val('inc')==='true';
-state.behavior.financial = val('fin')==='true';
-save();
-go('transaction');
-">CONTINUE</button>
-
-<button onclick="back()">BACK</button>
-</div>`;
-}
-
-/* TRANSACTION */
-if(screen==="transaction"){
-html = `
-<div class="screen">
-<div class="title">Transaction</div>
-
-<input id="owner" placeholder="Owner Name">
-<input id="buyer" placeholder="Buyer / Tenant">
-<input id="property" placeholder="Property">
-
-<select id="own">
-<option value="">Ownership Match</option>
-<option value="true">Match</option>
-<option value="false">Mismatch</option>
-</select>
-
-<select id="valm">
-<option value="">Value Match</option>
+<option value="">Are you financially independent?</option>
 <option value="true">Yes</option>
 <option value="false">No</option>
 </select>
 
 <button onclick="
-state.transaction.owner = val('owner');
-state.transaction.buyer = val('buyer');
-state.transaction.property = val('property');
-state.transaction.ownerMatch = val('own')==='true';
-state.transaction.valueMatch = val('valm')==='true';
-save();
-runEngine();
-">RUN CHECK</button>
+state.income=(inc.value==='true');
+state.financial=(fin.value==='true');
+go('transaction');
+">Continue</button>
 
-<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* TRANSACTION */
+if(screen==="transaction"){
+h=`
+<div class="screen">
+
+<div class="title">About this property deal</div>
+
+<input id="owner" placeholder="Who owns the property?">
+<input id="buyer" placeholder="Who is paying or renting?">
+<input id="property" placeholder="Describe the property">
+
+<select id="own">
+<option value="">Does ownership look correct?</option>
+<option value="true">Yes</option>
+<option value="false">No</option>
+</select>
+
+<select id="valm">
+<option value="">Does the price/value make sense?</option>
+<option value="true">Yes</option>
+<option value="false">No</option>
+</select>
+
+<button onclick="
+state.owner=owner.value;
+state.buyer=buyer.value;
+state.property=property.value;
+state.ownerMatch=(own.value==='true');
+state.valueMatch=(valm.value==='true');
+run();
+">Check this deal</button>
+
 </div>`;
 }
 
 /* RESULT */
 if(screen==="result"){
-let r = state.result || {};
-
-html = `
+h=`
 <div class="screen">
-<div class="title">Result</div>
+
+<div class="title">Your Result</div>
 
 <div class="card">
-Status: ${r.status}<br>
-Score: ${r.score}/100
+Status: ${state.result.status}<br>
+Score: ${state.result.score}/100
 </div>
 
 <div class="card">
-Owner: ${state.transaction.owner || ""}<br>
-Buyer: ${state.transaction.buyer || ""}<br>
-Property: ${state.transaction.property || ""}
+This gives you a clearer view before you decide.
 </div>
 
-<button onclick="downloadReport()">DOWNLOAD REPORT</button>
-<button onclick="location.reload()">NEW</button>
+<button onclick="location.reload()">Start Again</button>
+
 </div>`;
 }
 
-document.getElementById("app").innerHTML = html;
-}
-
-/* ================= REPORT ================= */
-
-function downloadReport(){
-
-let r = state.result || {};
-
-let text = `
-FSTL COMET OS REPORT
-----------------------
-
-STATUS: ${r.status}
-SCORE: ${r.score}/100
-
-OWNER: ${state.transaction.owner}
-BUYER: ${state.transaction.buyer}
-
-PROPERTY:
-${state.transaction.property}
-
-NIN: ${state.identity.nin}
-
-SYSTEM:
-COMET OS - Transaction Clarity Infrastructure
-`;
-
-let blob = new Blob([text], {type:"text/plain"});
-let url = URL.createObjectURL(blob);
-
-let a = document.createElement("a");
-a.href = url;
-a.download = "COMET_OS_REPORT.txt";
-a.click();
-
-URL.revokeObjectURL(url);
+document.getElementById("app").innerHTML=h;
 }
 
 /* INIT */
