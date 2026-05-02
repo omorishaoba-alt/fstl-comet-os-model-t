@@ -1,58 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMET OS v10 OFFLINE CORE</title>
+<title>FSTL COMET OS</title>
 
 <style>
-html{font-size:20px}
-body{
+html { font-size:16px; }
+
+body {
   margin:0;
-  font-family:Arial;
+  font-family:Arial, sans-serif;
   background:#0b2a4a;
   color:#fff;
-  font-size:1rem;
-  line-height:1.6;
+  overflow-y:auto;
 }
 
-.container{
+.container {
   max-width:520px;
   margin:auto;
-  padding:20px;
-  text-align:center;
-}
-
-input,select,button{
-  width:100%;
   padding:16px;
-  margin:10px 0;
-  border:none;
-  border-radius:10px;
-  font-size:1.1rem;
-  box-sizing:border-box;
 }
 
-button{
-  background:#fff;
-  color:#0b2a4a;
+.screen {
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  padding-top:20px;
+}
+
+.title {
+  font-size:1.5rem;
   font-weight:bold;
+  margin-bottom:10px;
 }
 
-h2{font-size:1.6rem}
-h3{font-size:1.3rem}
-
-pre{
-  white-space:pre-wrap;
-  text-align:left;
+.card {
   background:#062033;
   padding:12px;
   border-radius:10px;
-  font-size:0.95rem;
+  margin:10px 0;
+  line-height:1.4;
 }
 
-.small{font-size:0.95rem;opacity:0.85}
-hr{opacity:0.3}
+input, select {
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+}
+
+button {
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+  font-size:16px;
+  font-weight:bold;
+  background:#fff;
+  color:#0b2a4a;
+}
+
+.small {
+  font-size:0.85rem;
+  opacity:0.8;
+}
 </style>
 </head>
 
@@ -61,343 +76,322 @@ hr{opacity:0.3}
 
 <script>
 
-/* ================= SAFE BOOT ================= */
-
-window.onerror = function(e){
-document.getElementById("app").innerHTML =
-"<h3>COMET OS SAFE MODE</h3><div class='small'>"+e+"</div>";
-};
-
-window.onload = function(){
-render();
-};
-
 /* ================= STATE ================= */
 
-let state = {
-role:"",
-kyc:{},
-contract:{},
-payment:{},
-events:[]
+let state = JSON.parse(localStorage.getItem("comet_state") || "{}");
+
+if(!state.identity){
+state = {
+identity:{nin:"", bvn:""},
+stability:{},
+behavior:{},
+transaction:{},
+result:null
 };
-
-let screen="cover";
-
-/* ================= FSTL + BANK ================= */
-
-const FSTL = {
-company:"First Standard Title Limited (FSTL)",
-address:"No. 19 Egbor Avenue, GRA, Benin City, Nigeria",
-phone:"+2358035888622",
-email:"fstlsite@gmail.com",
-role:"COMET OS Issuer & Verification Authority",
-function:"Identity, risk scoring, transaction structuring"
-};
-
-const BANK = {
-institution:"First Bank of Nigeria PLC",
-accountHolder:"First Standard Title Limited",
-settlementId:"FSTL-FBN-SETTLEMENT-001"
-};
-
-/* ================= HASH (NATIVE SAFE) ================= */
-
-async function hash(data){
-const txt = JSON.stringify(data);
-let h = 0;
-for(let i=0;i<txt.length;i++){
-h = (h << 5) - h + txt.charCodeAt(i);
-h |= 0;
-}
-return "HX" + Math.abs(h);
 }
 
-/* ================= LOG ================= */
+let historyStack = [];
+let screen = "cover";
 
-async function log(step,val){
-state.events.push({
-step,
-val,
-time:Date.now()
-});
+/* ================= SAVE ================= */
+
+function save(){
+localStorage.setItem("comet_state", JSON.stringify(state));
 }
 
-/* ================= IDENTITY ENGINE ================= */
+/* ================= NAVIGATION ================= */
 
-function identityScore(k,role){
-let score=0;
-
-if(k.name) score+=10;
-if(k.phone) score+=10;
-if(k.bvn) score+=25;
-if(k.nin) score+=25;
-if(k.address) score+=10;
-
-if(role==="AGENT") score+=5;
-if(role==="INSTITUTION") score+=10;
-
-let level=score<30?"CRITICAL":score<50?"HIGH":score<70?"MEDIUM":"LOW";
-return{score,level};
+function go(next){
+historyStack.push(screen);
+screen = next;
+render();
 }
 
-/* ================= TRIANGULATION ================= */
-
-function triangulate(){
-let score=100;
-let flags=[];
-
-if(!state.contract.asset){score-=25;flags.push("missing contract");}
-if(!state.payment.amount){score-=25;flags.push("missing payment");}
-
-if(state.contract.price && state.payment.amount &&
-state.contract.price != state.payment.amount){
-score-=20;flags.push("mismatch");
+function back(){
+if(historyStack.length){
+screen = historyStack.pop();
+render();
+}
 }
 
-return{score,flags};
+/* ================= SAFE VALUE ================= */
+
+function val(id){
+let el = document.getElementById(id);
+return el ? el.value : "";
 }
 
-/* ================= TX ENGINE ================= */
+/* ================= VALIDATION ================= */
 
-function generateTX(id){
-let valid =
-id.score>=30 &&
-state.payment.amount &&
-state.payment.ref &&
-state.contract.asset;
-
-if(!valid) return null;
-
-return "TX-" + Date.now().toString(36).toUpperCase();
+function valid(){
+return state.identity.nin && state.identity.nin.length >= 6;
 }
 
-/* ================= SIMPLE QR (NO LIBRARY) ================= */
+/* ================= ENGINE ================= */
 
-function simpleQR(data){
-return "COMET QR PAYLOAD:\n\n" + data;
-}
+function runEngine(){
 
-/* ================= RENDER ENGINE ================= */
-
-function render(){
-
-let html="";
-
-if(screen==="cover"){
-html=`
-<h2>COMET OS</h2>
-<button onclick="go('intro')">ENTER</button>`;
-}
-
-if(screen==="intro"){
-html=`
-<h3>INTRODUCTION</h3>
-
-<div class="small">
-Frontend-first COMET OS verification engine.
-No dependencies. Mobile-safe execution.
-</div>
-
-<hr>
-
-<div class="small" style="text-align:left">
-
-<b>FSTL ISSUER</b><br><br>
-${FSTL.company}<br>
-${FSTL.address}<br>
-${FSTL.phone}<br>
-${FSTL.email}<br><br>
-
-Role: ${FSTL.role}<br>
-Function: ${FSTL.function}
-
-</div>
-
-<button onclick="go('role')">CONTINUE</button>`;
-}
-
-if(screen==="role"){
-html=`
-<h3>ROLE</h3>
-<select id="role">
-<option value="">--</option>
-<option>TENANT</option>
-<option>LANDLORD</option>
-<option>BUYER</option>
-<option>SELLER</option>
-<option>AGENT</option>
-<option>INSTITUTION</option>
-</select>
-<button onclick="setRole()">NEXT</button>`;
-}
-
-if(screen==="kyc"){
-html=`
-<h3>KYC</h3>
-<input id="name" placeholder="Name">
-<input id="phone" placeholder="Phone">
-<input id="bvn" placeholder="BVN">
-<input id="nin" placeholder="NIN">
-<input id="address" placeholder="Address">
-<button onclick="saveKYC()">NEXT</button>`;
-}
-
-if(screen==="contract"){
-html=`
-<h3>CONTRACT</h3>
-<input id="asset" placeholder="Asset">
-<input id="price" placeholder="Price">
-<button onclick="saveContract()">NEXT</button>`;
-}
-
-if(screen==="payment"){
-html=`
-<h3>PAYMENT</h3>
-<input id="ref" placeholder="Reference">
-<input id="amount" placeholder="Amount">
-<button onclick="finalize()">FINALIZE</button>`;
-}
-
-document.getElementById("app").innerHTML=html;
-}
-
-function go(s){screen=s;render();}
-
-/* ================= SAFE INPUT HANDLING ================= */
-
-async function setRole(){
-state.role=document.getElementById("role")?.value || "";
-await log("role",state.role);
-go("kyc");
-}
-
-async function saveKYC(){
-state.kyc={
-name:document.getElementById("name")?.value || "",
-phone:document.getElementById("phone")?.value || "",
-bvn:document.getElementById("bvn")?.value || "",
-nin:document.getElementById("nin")?.value || "",
-address:document.getElementById("address")?.value || ""
-};
-await log("kyc",state.kyc);
-go("contract");
-}
-
-async function saveContract(){
-state.contract={
-asset:document.getElementById("asset")?.value || "",
-price:document.getElementById("price")?.value || ""
-};
-await log("contract",state.contract);
-go("payment");
-}
-
-/* ================= FINAL ENGINE ================= */
-
-async function finalize(){
-
-state.payment={
-ref:document.getElementById("ref")?.value || "",
-amount:document.getElementById("amount")?.value || ""
-};
-
-await log("payment",state.payment);
-
-let id = identityScore(state.kyc,state.role);
-let tri = triangulate();
-let txid = generateTX(id);
-
-if(!txid){
-document.getElementById("app").innerHTML =
-"<h3>TRANSACTION INVALID</h3><div class='small'>Triangle incomplete</div>";
+if(!valid()){
+alert("Enter valid NIN");
 return;
 }
 
-let fingerprint = await hash(state.events);
-let seal = await hash({txid,fingerprint,id,tri});
+let score = 0;
 
-let qrPayload = {
-txid,
-role:state.role,
-score:id.score,
-level:id.level,
-seal,
-fstl:FSTL.company,
-bank:BANK.settlementId
-};
+if(state.identity.nin) score += 15;
 
-let qrText = simpleQR(JSON.stringify(qrPayload));
+score += state.stability.employment || 0;
+score += state.stability.contact || 0;
+score += state.stability.residence || 0;
 
-document.getElementById("app").innerHTML=`
+if(state.behavior.income) score += 10;
+if(state.behavior.financial) score += 10;
 
-<h3>COMET OS CASE FILE</h3>
+if(state.transaction.ownerMatch) score += 10;
+if(state.transaction.valueMatch) score += 10;
 
-<pre>${qrText}</pre>
+let status = "BLOCKED";
+if(score >= 75) status = "VERIFIED";
+else if(score >= 50) status = "FLAGGED";
 
-<pre id="caseBlock">
+state.result = {score, status};
+save();
 
-TX: ${txid}
-
-ROLE: ${state.role}
-
-IDENTITY:
-Score: ${id.score}
-Level: ${id.level}
-
-TRIANGULATION:
-${JSON.stringify(tri,null,2)}
-
-KYC:
-${JSON.stringify(state.kyc,null,2)}
-
-CONTRACT:
-${JSON.stringify(state.contract,null,2)}
-
-PAYMENT:
-${JSON.stringify(state.payment,null,2)}
-
-SEAL:
-${seal}
-
-FSTL:
-${FSTL.company}
-${FSTL.address}
-
-BANK:
-${BANK.institution}
-${BANK.settlementId}
-
-FINGERPRINT:
-${fingerprint}
-
-</pre>
-
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-<button onclick="location.reload()">NEW CASE</button>
-
-`;
-
+go("result");
 }
 
-/* ================= OFFLINE PDF (TEXT DOWNLOAD ONLY) ================= */
+/* ================= RENDER ================= */
 
-function downloadPDF(){
+function render(){
 
-const text =
-document.getElementById("caseBlock")?.innerText || "EMPTY CASE";
+let html = "";
 
-const blob = new Blob([text], {type:"text/plain"});
-const url = URL.createObjectURL(blob);
+/* COVER */
+if(screen==="cover"){
+html = `
+<div class="screen">
+<div class="title">FSTL COMET OS</div>
 
-const a = document.createElement("a");
+<div class="card">
+A silent infrastructure backbone for transaction clarity.
+</div>
+
+<div class="card">
+See who is involved, what is agreed, how value moves, and what risks exist — before you decide.
+</div>
+
+<button onclick="go('value')">ENTER SYSTEM</button>
+</div>`;
+}
+
+/* VALUE */
+if(screen==="value"){
+html = `
+<div class="screen">
+<div class="title">Why This Exists</div>
+
+<div class="card">
+All parties see the same structured transaction truth before making a decision.
+</div>
+
+<div class="card">
+This reduces confusion, hidden risk, and disputes.
+</div>
+
+<button onclick="go('identity')">CONTINUE</button>
+<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* IDENTITY */
+if(screen==="identity"){
+html = `
+<div class="screen">
+<div class="title">Identity</div>
+
+<input id="nin" placeholder="NIN (Required)" value="${state.identity.nin}">
+<input id="bvn" placeholder="BVN (Optional)" value="${state.identity.bvn}">
+
+<button onclick="
+state.identity.nin = val('nin');
+state.identity.bvn = val('bvn');
+save();
+go('stability');
+">CONTINUE</button>
+
+<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* STABILITY */
+if(screen==="stability"){
+html = `
+<div class="screen">
+<div class="title">Stability</div>
+
+<select id="emp">
+<option value="0">Employment Duration</option>
+<option value="5">< 6 months</option>
+<option value="10">6–12 months</option>
+<option value="15">1+ years</option>
+</select>
+
+<select id="con">
+<option value="0">Contact Stability</option>
+<option value="5">< 6 months</option>
+<option value="10">6–24 months</option>
+<option value="15">2+ years</option>
+</select>
+
+<select id="res">
+<option value="0">Residence</option>
+<option value="5">Temporary</option>
+<option value="10">Rented</option>
+<option value="15">Permanent</option>
+</select>
+
+<button onclick="
+state.stability.employment=parseInt(val('emp'));
+state.stability.contact=parseInt(val('con'));
+state.stability.residence=parseInt(val('res'));
+save();
+go('behavior');
+">CONTINUE</button>
+
+<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* BEHAVIOR */
+if(screen==="behavior"){
+html = `
+<div class="screen">
+<div class="title">Behavior</div>
+
+<select id="inc">
+<option value="">Income Stability</option>
+<option value="true">Stable</option>
+<option value="false">Unstable</option>
+</select>
+
+<select id="fin">
+<option value="">Financial Independence</option>
+<option value="true">Independent</option>
+<option value="false">Dependent</option>
+</select>
+
+<button onclick="
+state.behavior.income = val('inc')==='true';
+state.behavior.financial = val('fin')==='true';
+save();
+go('transaction');
+">CONTINUE</button>
+
+<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* TRANSACTION */
+if(screen==="transaction"){
+html = `
+<div class="screen">
+<div class="title">Transaction</div>
+
+<input id="owner" placeholder="Owner Name">
+<input id="buyer" placeholder="Buyer / Tenant">
+<input id="property" placeholder="Property">
+
+<select id="own">
+<option value="">Ownership Match</option>
+<option value="true">Match</option>
+<option value="false">Mismatch</option>
+</select>
+
+<select id="valm">
+<option value="">Value Match</option>
+<option value="true">Yes</option>
+<option value="false">No</option>
+</select>
+
+<button onclick="
+state.transaction.owner = val('owner');
+state.transaction.buyer = val('buyer');
+state.transaction.property = val('property');
+state.transaction.ownerMatch = val('own')==='true';
+state.transaction.valueMatch = val('valm')==='true';
+save();
+runEngine();
+">RUN CHECK</button>
+
+<button onclick="back()">BACK</button>
+</div>`;
+}
+
+/* RESULT */
+if(screen==="result"){
+let r = state.result || {};
+
+html = `
+<div class="screen">
+<div class="title">Result</div>
+
+<div class="card">
+Status: ${r.status}<br>
+Score: ${r.score}/100
+</div>
+
+<div class="card">
+Owner: ${state.transaction.owner || ""}<br>
+Buyer: ${state.transaction.buyer || ""}<br>
+Property: ${state.transaction.property || ""}
+</div>
+
+<button onclick="downloadReport()">DOWNLOAD REPORT</button>
+<button onclick="location.reload()">NEW</button>
+</div>`;
+}
+
+document.getElementById("app").innerHTML = html;
+}
+
+/* ================= REPORT ================= */
+
+function downloadReport(){
+
+let r = state.result || {};
+
+let text = `
+FSTL COMET OS REPORT
+----------------------
+
+STATUS: ${r.status}
+SCORE: ${r.score}/100
+
+OWNER: ${state.transaction.owner}
+BUYER: ${state.transaction.buyer}
+
+PROPERTY:
+${state.transaction.property}
+
+NIN: ${state.identity.nin}
+
+SYSTEM:
+COMET OS - Transaction Clarity Infrastructure
+`;
+
+let blob = new Blob([text], {type:"text/plain"});
+let url = URL.createObjectURL(blob);
+
+let a = document.createElement("a");
 a.href = url;
-a.download = "COMET_OS_CASE.txt";
+a.download = "COMET_OS_REPORT.txt";
 a.click();
 
 URL.revokeObjectURL(url);
-
 }
+
+/* INIT */
+render();
 
 </script>
 </body>
