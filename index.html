@@ -1,422 +1,343 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>FSTL COMET OS</title>
 
 <style>
-body {
-margin:0;
-font-family:Arial;
-background:#0b2a4a;
-color:#fff;
-font-size:20px;
-line-height:1.6;
-}
+html { font-size:18px; }
 
-.container {
-max-width:540px;
-margin:auto;
-padding:18px;
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0b2a4a;
+  color:#fff;
+  line-height:1.6;
 }
 
 .center {
-height:100vh;
-display:flex;
-align-items:center;
-justify-content:center;
-text-align:center;
-padding:20px;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:20px;
 }
 
-.title {
-font-size:2rem;
-font-weight:bold;
-margin-bottom:14px;
-text-align:center;
-}
+.container { padding:16px; max-width:520px; margin:auto; }
+
+.title { font-size:1.7rem; font-weight:bold; margin-bottom:10px; }
 
 .card {
-background:#062033;
-padding:18px;
-border-radius:12px;
-margin-bottom:14px;
+  background:#062033;
+  padding:14px;
+  border-radius:10px;
+  margin-bottom:12px;
 }
 
 button {
-width:100%;
-padding:18px;
-font-size:18px;
-border:none;
-border-radius:12px;
-margin-top:12px;
-background:#fff;
-color:#0b2a4a;
-font-weight:bold;
+  width:100%;
+  padding:16px;
+  margin-top:10px;
+  border:0;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:bold;
+  background:#fff;
+  color:#0b2a4a;
 }
 
 input, select {
-width:100%;
-padding:16px;
-margin-top:10px;
-font-size:18px;
-border-radius:8px;
-border:none;
-}
-
-.contact {
-font-size:0.95rem;
-opacity:0.9;
+  width:100%;
+  padding:14px;
+  margin-top:8px;
+  border-radius:8px;
+  border:0;
+  font-size:15px;
 }
 
 .status {
-background:#001a2e;
-padding:14px;
-border-radius:10px;
-margin-top:10px;
+  background:#001a2e;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
 }
 </style>
 </head>
 
 <body>
+
 <div id="app"></div>
 
 <script>
 
+/* ================= CORE STATE ================= */
+
 let screen = "cover";
+let role = "";
+let state = {};
+let status = "WAITING";
+let reason = [];
 
-let state = {
-role:"",
-nin:"",
-income:0,
-employment:0,
-residence:0,
-ownerMatch:0,
-valueMatch:0,
-score:0,
-status:"",
-mode:"individual"
-};
+/* ================= NAV ================= */
 
-/* NAV */
-function go(s){
-screen = s;
-render();
+function go(s){ screen = s; render(); }
+
+/* ================= ENGINE ================= */
+
+function evaluate(){
+
+status = "APPROVED";
+reason = [];
+
+/* RESET SAFE STATE */
+let blocked = false;
+
+/* ---------------- BUYER ---------------- */
+if(role === "Buyer"){
+
+if(!state.nin || state.nin.length < 6){
+blocked = true;
+reason.push("Identity insufficient");
 }
 
-/* COVER */
+if(!state.funds){
+blocked = true;
+reason.push("Funds unclear");
+}
+
+if(state.income === "low"){
+reason.push("Low income strength");
+}
+}
+
+/* ---------------- TENANT ---------------- */
+if(role === "Tenant"){
+
+if(state.income === "low" && state.employment === "low"){
+reason.push("High rental risk");
+}
+
+if(state.employment === "low"){
+reason.push("Income instability");
+}
+}
+
+/* ---------------- LANDLORD / SELLER ---------------- */
+if(role === "Landlord" || role === "Seller"){
+
+if(!state.owner){
+blocked = true;
+reason.push("Ownership not credible");
+}
+
+if(role === "Seller" && !state.transfer){
+blocked = true;
+reason.push("Transfer authority unclear");
+}
+}
+
+/* ---------------- AGENT ---------------- */
+if(role === "Agent"){
+
+if(!state.link){
+blocked = true;
+reason.push("No verified connection");
+}
+}
+
+/* ---------------- FINAL STATE ---------------- */
+
+if(blocked) status = "BLOCKED";
+else if(reason.length > 0) status = "CONDITIONAL";
+
+}
+
+/* ================= UI ================= */
+
 function render(){
 
-let h="";
+evaluate();
 
+let h = "";
+
+/* -------- COVER -------- */
 if(screen === "cover"){
 h = `
 <div class="center">
 <div>
 <div class="title">FSTL COMET OS</div>
-
-<div class="card">
-A transaction intelligence system for property decisions.
-</div>
-
+<div class="card">Decision infrastructure layer</div>
 <button onclick="go('intro')">ENTER</button>
 </div>
 </div>`;
 }
 
-/* INTRO */
+/* -------- INTRO -------- */
 if(screen === "intro"){
 h = `
 <div class="container">
 
-<div class="title">System Introduction</div>
+<div class="title">System Purpose</div>
 
 <div class="card">
-COMET OS helps structure property decisions before commitment.
-</div>
-
-<div class="card">
-It reduces uncertainty between tenants, buyers, landlords, sellers, and agents.
+Structured decision evaluation for property transactions.
 </div>
 
 <div class="card">
-It converts raw transaction inputs into structured decision intelligence.
+Not a form. Not a website. A decision kernel.
 </div>
 
-<div class="card contact">
-<b>FSTL – First Standard Title Limited</b><br><br>
-Email: fstlsite@gmail<br>
-Phone/WhatsApp: +23480358886622<br>
-Address: 19 Egbor Avenue, GRA, Benin City, Nigeria
-</div>
-
-<button onclick="go('mode')">CONTINUE</button>
+<button onclick="go('role')">CONTINUE</button>
 
 </div>`;
 }
 
-/* MODE SELECT */
-if(screen === "mode"){
-h = `
-<div class="container">
-
-<div class="title">Select Mode</div>
-
-<div class="card">
-Choose system environment.
-</div>
-
-<button onclick="state.mode='individual'; go('role')">Individual System</button>
-<button onclick="state.mode='institution'; go('inst_intro')">Institution / MDA System</button>
-
-</div>`;
-}
-
-/* ROLE SELECT */
+/* -------- ROLE -------- */
 if(screen === "role"){
 h = `
 <div class="container">
 
 <div class="title">Select Role</div>
 
-<button onclick="state.role='Tenant'; go('context')">Tenant</button>
-<button onclick="state.role='Buyer'; go('context')">Buyer</button>
-<button onclick="state.role='Landlord'; go('context')">Landlord</button>
-<button onclick="state.role='Seller'; go('context')">Seller</button>
-<button onclick="state.role='Agent'; go('context')">Agent</button>
+<button onclick="role='Tenant'; go('context')">Tenant</button>
+<button onclick="role='Buyer'; go('context')">Buyer</button>
+<button onclick="role='Landlord'; go('context')">Landlord</button>
+<button onclick="role='Seller'; go('context')">Seller</button>
+<button onclick="role='Agent'; go('context')">Agent</button>
 
 </div>`;
 }
 
-/* ROLE CONTEXT */
+/* -------- CONTEXT -------- */
 if(screen === "context"){
 
-let text="";
-
-if(state.role==="Tenant"){
-text="Evaluates rental affordability, stability, and risk before commitment.";
-}
-if(state.role==="Buyer"){
-text="Evaluates purchase readiness, funding clarity, and ownership validity.";
-}
-if(state.role==="Landlord"){
-text="Evaluates tenant reliability and occupancy risk.";
-}
-if(state.role==="Seller"){
-text="Evaluates ownership clarity and transfer readiness.";
-}
-if(state.role==="Agent"){
-text="Evaluates transaction linkage strength and credibility.";
-}
+let t = {
+Tenant:"Rental risk evaluation",
+Buyer:"Purchase capacity evaluation",
+Landlord:"Tenant risk evaluation",
+Seller:"Transfer legitimacy evaluation",
+Agent:"Deal integrity evaluation"
+};
 
 h = `
 <div class="container">
 
 <div class="title">Role Context</div>
 
-<div class="card">${text}</div>
+<div class="card">${t[role]}</div>
 
-<button onclick="go('os')">CONTINUE</button>
+<button onclick="go('os')">ENTER SYSTEM</button>
 
 </div>`;
 }
 
-/* INDIVIDUAL OS */
+/* -------- OS -------- */
 if(screen === "os"){
 
 h = `
 <div class="container">
 
-<div class="title">${state.role} Input Engine</div>
+<div class="title">${role} Engine</div>
 
 <div class="card">
-<b>NIN Identity</b>
-<input placeholder="Enter NIN" oninput="state.nin=this.value; update();">
+NIN<br>
+<input oninput="state.nin=this.value">
 </div>
 `;
 
 /* TENANT */
-if(state.role==="Tenant"){
+if(role === "Tenant"){
 h += `
 <div class="card">
-<b>Tenant Profile</b>
-
-<select onchange="state.income=parseInt(this.value); update();">
-<option value="0">Income Level</option>
-<option value="5">Low</option>
-<option value="10">Medium</option>
-<option value="15">High</option>
+Income
+<select onchange="state.income=this.value">
+<option value="low">Low</option>
+<option value="mid">Medium</option>
+<option value="high">High</option>
 </select>
 
-<select onchange="state.employment=parseInt(this.value); update();">
-<option value="0">Stability</option>
-<option value="5">Unstable</option>
-<option value="10">Moderate</option>
-<option value="15">Stable</option>
-</select>
-
-<select onchange="state.residence=parseInt(this.value); update();">
-<option value="0">Residence Duration</option>
-<option value="5"><6 months</option>
-<option value="10">6–24 months</option>
-<option value="15">2+ years</option>
+Employment
+<select onchange="state.employment=this.value">
+<option value="low">Low</option>
+<option value="high">High</option>
 </select>
 </div>`;
 }
 
 /* BUYER */
-if(state.role==="Buyer"){
+if(role === "Buyer"){
 h += `
 <div class="card">
-<b>Buyer Profile</b>
-
-<select onchange="state.income=parseInt(this.value); update();">
-<option value="0">Income Strength</option>
-<option value="5">Low</option>
-<option value="10">Medium</option>
-<option value="15">High</option>
+Income
+<select onchange="state.income=this.value">
+<option value="low">Low</option>
+<option value="mid">Medium</option>
+<option value="high">High</option>
 </select>
 
-<select onchange="state.ownerMatch=parseInt(this.value); update();">
-<option value="0">Funding Clarity</option>
-<option value="5">Partial</option>
-<option value="15">Clear</option>
+Funds
+<select onchange="state.funds=this.value">
+<option value="none">Unclear</option>
+<option value="partial">Partial</option>
+<option value="clear">Clear</option>
 </select>
 </div>`;
 }
 
 /* LANDLORD / SELLER */
-if(state.role==="Landlord"||state.role==="Seller"){
+if(role === "Landlord" || role === "Seller"){
 h += `
 <div class="card">
-<b>Ownership Status</b>
-
-<select onchange="state.ownerMatch=parseInt(this.value); update();">
-<option value="0">Ownership Clarity</option>
-<option value="15">Clear</option>
-<option value="5">Uncertain</option>
+Ownership
+<select onchange="state.owner=this.value">
+<option value="no">Unclear</option>
+<option value="yes">Clear</option>
 </select>
-</div>`;
+`;
+
+if(role === "Seller"){
+h += `
+Transfer
+<select onchange="state.transfer=this.value">
+<option value="no">No</option>
+<option value="yes">Yes</option>
+</select>`;
+}
+
+h += `</div>`;
 }
 
 /* AGENT */
-if(state.role==="Agent"){
+if(role === "Agent"){
 h += `
 <div class="card">
-<b>Agent Profile</b>
-
-<select onchange="state.employment=parseInt(this.value); update();">
-<option value="0">Experience</option>
-<option value="5">Low</option>
-<option value="10">Medium</option>
-<option value="15">High</option>
+Connection
+<select onchange="state.link=this.value">
+<option value="no">Weak</option>
+<option value="yes">Strong</option>
 </select>
 </div>`;
 }
 
+/* STATUS */
 h += `
-<div class="status" id="status">
-Status: Waiting<br>
-Score: 0/100
+<div class="status">
+Status: ${status}<br><br>
+Reasons:<br>
+${reason.length ? reason.join("<br>") : "None"}
 </div>
-
-</div>`;
-}
-
-/* INSTITUTION INTRO */
-if(screen === "inst_intro"){
-h = `
-<div class="container">
-
-<div class="title">Institutional Mode</div>
-
-<div class="card">
-Pre-approval intelligence layer for government and MDA systems.
-</div>
-
-<div class="card">
-Improves revenue accuracy, compliance clarity, and fraud detection before official processing.
-</div>
-
-<button onclick="go('inst_forms')">ENTER</button>
-
-</div>`;
-}
-
-/* INSTITUTION FORMS */
-if(screen === "inst_forms"){
-h = `
-<div class="container">
-
-<div class="title">MDA Intake System</div>
-
-<div class="card">
-Property ID
-<input>
-</div>
-
-<div class="card">
-Transaction Type
-<select>
-<option>Registration</option>
-<option>Transfer</option>
-<option>Tax Review</option>
-</select>
-</div>
-
-<div class="card">
-Ownership Status
-<select>
-<option>Clear</option>
-<option>Disputed</option>
-<option>Pending</option>
-</select>
-</div>
-
-<div class="card">
-Revenue Risk Check
-<select>
-<option>Low</option>
-<option>Medium</option>
-<option>High</option>
-</select>
-</div>
-
-<button>Generate Institutional Report</button>
 
 </div>`;
 }
 
 document.getElementById("app").innerHTML = h;
-update();
 }
 
-/* ENGINE */
-function update(){
-
-let score=0;
-
-if(state.nin?.length>5) score+=20;
-score += state.income||0;
-score += state.employment||0;
-score += state.residence||0;
-score += state.ownerMatch||0;
-
-let status="BLOCKED";
-if(score>70) status="VERIFIED";
-else if(score>45) status="FLAGGED";
-
-state.score=score;
-state.status=status;
-
-let el=document.getElementById("status");
-if(el){
-el.innerHTML=`Status: ${status}<br>Score: ${score}/100`;
-}
-}
-
+/* INIT */
 render();
 
 </script>
+
 </body>
 </html>
