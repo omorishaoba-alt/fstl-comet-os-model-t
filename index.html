@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>FSTL COMET OS</title>
 
+<link rel="manifest" href="manifest.json">
+
 <style>
 html { font-size:18px; }
-
 body {
   margin:0;
   font-family:Arial;
@@ -24,9 +26,17 @@ body {
   padding:20px;
 }
 
-.container { padding:16px; max-width:520px; margin:auto; }
+.container {
+  padding:16px;
+  max-width:520px;
+  margin:auto;
+}
 
-.title { font-size:1.7rem; font-weight:bold; margin-bottom:10px; }
+.title {
+  font-size:1.7rem;
+  font-weight:bold;
+  margin-bottom:10px;
+}
 
 .card {
   background:#062033;
@@ -66,13 +76,15 @@ input, select {
 </head>
 
 <body>
-
 <div id="app"></div>
 
 <script>
+/* ================= PWA ================= */
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
 
-/* ================= CORE STATE ================= */
-
+/* ================= STATE ENGINE ================= */
 let screen = "cover";
 let role = "";
 let state = {};
@@ -80,263 +92,217 @@ let status = "WAITING";
 let reason = [];
 
 /* ================= NAV ================= */
-
-function go(s){ screen = s; render(); }
+function go(s){
+  screen = s;
+  render();
+}
 
 /* ================= ENGINE ================= */
-
 function evaluate(){
+  status = "WAITING";
+  reason = [];
+  let blocked = false;
 
-status = "APPROVED";
-reason = [];
+  /* ---- BUYER ---- */
+  if(role === "Buyer"){
+    if(!state.nin || state.nin.length < 6){
+      blocked = true;
+      reason.push("Identity insufficient");
+    }
+    if(!state.funds){
+      blocked = true;
+      reason.push("Funds unclear");
+    }
+    if(state.income === "low"){
+      reason.push("Low income strength");
+    }
+  }
 
-/* RESET SAFE STATE */
-let blocked = false;
+  /* ---- TENANT ---- */
+  if(role === "Tenant"){
+    if(state.income === "low" && state.employment === "low"){
+      blocked = true;
+      reason.push("High rental risk");
+    }
+    if(state.employment === "low"){
+      reason.push("Income instability");
+    }
+  }
 
-/* ---------------- BUYER ---------------- */
-if(role === "Buyer"){
+  /* ---- LANDLORD / SELLER ---- */
+  if(role === "Landlord" || role === "Seller"){
+    if(!state.owner || state.owner === "no"){
+      blocked = true;
+      reason.push("Ownership not credible");
+    }
+    if(role === "Seller" && (!state.transfer || state.transfer === "no")){
+      blocked = true;
+      reason.push("Transfer authority unclear");
+    }
+  }
 
-if(!state.nin || state.nin.length < 6){
-blocked = true;
-reason.push("Identity insufficient");
-}
+  /* ---- AGENT ---- */
+  if(role === "Agent"){
+    if(!state.link || state.link === "no"){
+      blocked = true;
+      reason.push("No verified connection");
+    }
+  }
 
-if(!state.funds){
-blocked = true;
-reason.push("Funds unclear");
-}
-
-if(state.income === "low"){
-reason.push("Low income strength");
-}
-}
-
-/* ---------------- TENANT ---------------- */
-if(role === "Tenant"){
-
-if(state.income === "low" && state.employment === "low"){
-reason.push("High rental risk");
-}
-
-if(state.employment === "low"){
-reason.push("Income instability");
-}
-}
-
-/* ---------------- LANDLORD / SELLER ---------------- */
-if(role === "Landlord" || role === "Seller"){
-
-if(!state.owner){
-blocked = true;
-reason.push("Ownership not credible");
-}
-
-if(role === "Seller" && !state.transfer){
-blocked = true;
-reason.push("Transfer authority unclear");
-}
-}
-
-/* ---------------- AGENT ---------------- */
-if(role === "Agent"){
-
-if(!state.link){
-blocked = true;
-reason.push("No verified connection");
-}
-}
-
-/* ---------------- FINAL STATE ---------------- */
-
-if(blocked) status = "BLOCKED";
-else if(reason.length > 0) status = "CONDITIONAL";
-
+  if(blocked) status = "BLOCKED";
+  else if(reason.length > 0) status = "CONDITIONAL";
+  else status = "APPROVED";
 }
 
 /* ================= UI ================= */
-
 function render(){
+  evaluate();
+  let h = "";
 
-evaluate();
+  if(screen === "cover"){
+    h = `
+    <div class="center">
+      <div>
+        <div class="title">FSTL COMET OS</div>
+        <div class="card">Decision Infrastructure Layer</div>
+        <button onclick="go('intro')">ENTER</button>
+      </div>
+    </div>`;
+  }
 
-let h = "";
+  if(screen === "intro"){
+    h = `
+    <div class="container">
+      <div class="title">System Purpose</div>
+      <div class="card">Structured decision evaluation for property transactions.</div>
+      <div class="card">Not a form. A decision kernel.</div>
+      <button onclick="go('role')">CONTINUE</button>
+    </div>`;
+  }
 
-/* -------- COVER -------- */
-if(screen === "cover"){
-h = `
-<div class="center">
-<div>
-<div class="title">FSTL COMET OS</div>
-<div class="card">Decision infrastructure layer</div>
-<button onclick="go('intro')">ENTER</button>
-</div>
-</div>`;
+  if(screen === "role"){
+    h = `
+    <div class="container">
+      <div class="title">Select Role</div>
+      <button onclick="role='Tenant'; go('context')">Tenant</button>
+      <button onclick="role='Buyer'; go('context')">Buyer</button>
+      <button onclick="role='Landlord'; go('context')">Landlord</button>
+      <button onclick="role='Seller'; go('context')">Seller</button>
+      <button onclick="role='Agent'; go('context')">Agent</button>
+    </div>`;
+  }
+
+  if(screen === "context"){
+    const t = {
+      Tenant:"Rental risk evaluation",
+      Buyer:"Purchase capacity evaluation",
+      Landlord:"Tenant risk evaluation",
+      Seller:"Transfer legitimacy evaluation",
+      Agent:"Deal integrity evaluation"
+    };
+
+    h = `
+    <div class="container">
+      <div class="title">Role Context</div>
+      <div class="card">${t[role]}</div>
+      <button onclick="go('os')">ENTER SYSTEM</button>
+    </div>`;
+  }
+
+  if(screen === "os"){
+    h = `
+    <div class="container">
+      <div class="title">${role} Engine</div>
+
+      <div class="card">
+        NIN<br>
+        <input oninput="state.nin=this.value; render()">
+      </div>
+    `;
+
+    if(role === "Tenant"){
+      h += `
+      <div class="card">
+        Income
+        <select onchange="state.income=this.value; render()">
+          <option value="low">Low</option>
+          <option value="mid">Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        Employment
+        <select onchange="state.employment=this.value; render()">
+          <option value="low">Low</option>
+          <option value="high">High</option>
+        </select>
+      </div>`;
+    }
+
+    if(role === "Buyer"){
+      h += `
+      <div class="card">
+        Income
+        <select onchange="state.income=this.value; render()">
+          <option value="low">Low</option>
+          <option value="mid">Medium</option>
+          <option value="high">High</option>
+        </select>
+
+        Funds
+        <select onchange="state.funds=this.value; render()">
+          <option value="none">Unclear</option>
+          <option value="partial">Partial</option>
+          <option value="clear">Clear</option>
+        </select>
+      </div>`;
+    }
+
+    if(role === "Landlord" || role === "Seller"){
+      h += `
+      <div class="card">
+        Ownership
+        <select onchange="state.owner=this.value; render()">
+          <option value="no">Unclear</option>
+          <option value="yes">Clear</option>
+        </select>
+      `;
+
+      if(role === "Seller"){
+        h += `
+        Transfer
+        <select onchange="state.transfer=this.value; render()">
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>`;
+      }
+
+      h += `</div>`;
+    }
+
+    if(role === "Agent"){
+      h += `
+      <div class="card">
+        Connection
+        <select onchange="state.link=this.value; render()">
+          <option value="no">Weak</option>
+          <option value="yes">Strong</option>
+        </select>
+      </div>`;
+    }
+
+    h += `
+    <div class="status">
+      Status: ${status}<br><br>
+      Reasons:<br>
+      ${reason.length ? reason.join("<br>") : "None"}
+    </div>
+    </div>`;
+  }
+
+  document.getElementById("app").innerHTML = h;
 }
 
-/* -------- INTRO -------- */
-if(screen === "intro"){
-h = `
-<div class="container">
-
-<div class="title">System Purpose</div>
-
-<div class="card">
-Structured decision evaluation for property transactions.
-</div>
-
-<div class="card">
-Not a form. Not a website. A decision kernel.
-</div>
-
-<button onclick="go('role')">CONTINUE</button>
-
-</div>`;
-}
-
-/* -------- ROLE -------- */
-if(screen === "role"){
-h = `
-<div class="container">
-
-<div class="title">Select Role</div>
-
-<button onclick="role='Tenant'; go('context')">Tenant</button>
-<button onclick="role='Buyer'; go('context')">Buyer</button>
-<button onclick="role='Landlord'; go('context')">Landlord</button>
-<button onclick="role='Seller'; go('context')">Seller</button>
-<button onclick="role='Agent'; go('context')">Agent</button>
-
-</div>`;
-}
-
-/* -------- CONTEXT -------- */
-if(screen === "context"){
-
-let t = {
-Tenant:"Rental risk evaluation",
-Buyer:"Purchase capacity evaluation",
-Landlord:"Tenant risk evaluation",
-Seller:"Transfer legitimacy evaluation",
-Agent:"Deal integrity evaluation"
-};
-
-h = `
-<div class="container">
-
-<div class="title">Role Context</div>
-
-<div class="card">${t[role]}</div>
-
-<button onclick="go('os')">ENTER SYSTEM</button>
-
-</div>`;
-}
-
-/* -------- OS -------- */
-if(screen === "os"){
-
-h = `
-<div class="container">
-
-<div class="title">${role} Engine</div>
-
-<div class="card">
-NIN<br>
-<input oninput="state.nin=this.value">
-</div>
-`;
-
-/* TENANT */
-if(role === "Tenant"){
-h += `
-<div class="card">
-Income
-<select onchange="state.income=this.value">
-<option value="low">Low</option>
-<option value="mid">Medium</option>
-<option value="high">High</option>
-</select>
-
-Employment
-<select onchange="state.employment=this.value">
-<option value="low">Low</option>
-<option value="high">High</option>
-</select>
-</div>`;
-}
-
-/* BUYER */
-if(role === "Buyer"){
-h += `
-<div class="card">
-Income
-<select onchange="state.income=this.value">
-<option value="low">Low</option>
-<option value="mid">Medium</option>
-<option value="high">High</option>
-</select>
-
-Funds
-<select onchange="state.funds=this.value">
-<option value="none">Unclear</option>
-<option value="partial">Partial</option>
-<option value="clear">Clear</option>
-</select>
-</div>`;
-}
-
-/* LANDLORD / SELLER */
-if(role === "Landlord" || role === "Seller"){
-h += `
-<div class="card">
-Ownership
-<select onchange="state.owner=this.value">
-<option value="no">Unclear</option>
-<option value="yes">Clear</option>
-</select>
-`;
-
-if(role === "Seller"){
-h += `
-Transfer
-<select onchange="state.transfer=this.value">
-<option value="no">No</option>
-<option value="yes">Yes</option>
-</select>`;
-}
-
-h += `</div>`;
-}
-
-/* AGENT */
-if(role === "Agent"){
-h += `
-<div class="card">
-Connection
-<select onchange="state.link=this.value">
-<option value="no">Weak</option>
-<option value="yes">Strong</option>
-</select>
-</div>`;
-}
-
-/* STATUS */
-h += `
-<div class="status">
-Status: ${status}<br><br>
-Reasons:<br>
-${reason.length ? reason.join("<br>") : "None"}
-</div>
-
-</div>`;
-}
-
-document.getElementById("app").innerHTML = h;
-}
-
-/* INIT */
 render();
-
 </script>
 
 </body>
